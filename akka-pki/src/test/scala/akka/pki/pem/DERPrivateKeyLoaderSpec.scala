@@ -28,6 +28,20 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
       // primes, and it fails to parse a multi-prime PKCS#8 key.
     }
 
+    "parse ECDSA keys" in {
+      val pkcs1 = load("ecdsa.pem")
+      val pkcs8 = load("pkcs8-ecdsa.pem")
+      pkcs1.getAlgorithm should ===("EC")
+      pkcs8.getAlgorithm should ===("EC")
+      // FIXME how can we compare, are they actually equal?
+
+    }
+
+    "parse EdDSA keys" in {
+      assume(sys.props("java.specification.version").toInt >= 15, "Only available in JDK 15 and newer")
+      load("ed25519.pem")
+    }
+
     "fail on unsupported PEM contents (Certificates are not private keys)" in {
       assertThrows[PEMLoadingException] {
         load("certificate.pem")

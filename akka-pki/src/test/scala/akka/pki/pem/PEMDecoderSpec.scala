@@ -40,32 +40,37 @@ class PEMDecoderSpec extends AnyWordSpec with Matchers with EitherValues {
 
     "decode data with no spaces" in {
       val result = PEMDecoder.decode(
-        "-----BEGIN FOO-----" + Base64.getEncoder.encodeToString("abc".getBytes()) + "-----END FOO-----")
-      result.label should ===("FOO")
+        "-----BEGIN CERTIFICATE-----" + Base64.getEncoder
+          .encodeToString("abc".getBytes()) + "-----END CERTIFICATE-----")
+      result.label should ===("CERTIFICATE")
       new String(result.bytes) should ===("abc")
     }
 
     "decode data with lots of spaces" in {
       val result = PEMDecoder.decode(
-        "\n \t \r -----BEGIN FOO-----\n" +
-        Base64.getEncoder.encodeToString("abc".getBytes()).flatMap(c => s"$c\n\r  \t\n") + "-----END FOO-----\n \t \r ")
-      result.label should ===("FOO")
+        "\n \t \r -----BEGIN CERTIFICATE-----\n" +
+        Base64.getEncoder
+          .encodeToString("abc".getBytes())
+          .flatMap(c => s"$c\n\r  \t\n") + "-----END CERTIFICATE-----\n \t \r ")
+      result.label should ===("CERTIFICATE")
       new String(result.bytes) should ===("abc")
     }
 
     "decode data with two padding characters" in {
       // A 4 byte input results in a 6 character output with 2 padding characters
       val result = PEMDecoder.decode(
-        "-----BEGIN FOO-----" + Base64.getEncoder.encodeToString("abcd".getBytes()) + "-----END FOO-----")
-      result.label should ===("FOO")
+        "-----BEGIN CERTIFICATE-----" + Base64.getEncoder
+          .encodeToString("abcd".getBytes()) + "-----END CERTIFICATE-----")
+      result.label should ===("CERTIFICATE")
       new String(result.bytes) should ===("abcd")
     }
 
     "decode data with one padding character" in {
       // A 5 byte input results in a 7 character output with 1 padding character1
       val result = PEMDecoder.decode(
-        "-----BEGIN FOO-----" + Base64.getEncoder.encodeToString("abcde".getBytes()) + "-----END FOO-----")
-      result.label should ===("FOO")
+        "-----BEGIN CERTIFICATE-----" + Base64.getEncoder
+          .encodeToString("abcde".getBytes()) + "-----END CERTIFICATE-----")
+      result.label should ===("CERTIFICATE")
       new String(result.bytes) should ===("abcde")
     }
 
