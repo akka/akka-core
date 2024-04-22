@@ -5,8 +5,9 @@
 package akka.pki.pem
 
 import java.util.Base64
-
 import akka.annotation.ApiMayChange
+
+import scala.jdk.CollectionConverters._
 
 /**
  * Decodes lax PEM encoded data, according to
@@ -44,8 +45,11 @@ object PEMDecoder {
   }
 
   /**
-   * Decodes the first certificate or private key entry in a PEM String into an identifier and the
+   * Decodes the first entry in a PEM String into an identifier and the
    * DER bytes of the content.
+   *
+   * Note that for EDCSA and possibly other key types a pem string will contain multiple entries,
+   * see [[decodeAll]] or [[getAllDecoded]] for extracting all entries.
    *
    * See https://tools.ietf.org/html/rfc7468 and https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
    *
@@ -55,10 +59,18 @@ object PEMDecoder {
   @throws[PEMLoadingException](
     "If the `pemData` is not valid PEM format (according to https://tools.ietf.org/html/rfc7468).")
   @ApiMayChange
-  def decode(pemData: String): DERData = {
+  def decode(pemData: String): DERData =
+    decodeAll(pemData).headOption.getOrElse(
+      throw new PEMLoadingException(
+        "Could not find a private key, a certificate or the given string is not PEM encoded data."))
+
+  /**
+   * Scala API: Decodes all entries in a PEM String.
+   */
+  @ApiMayChange
+  def decodeAll(pemData: String): Seq[DERData] =
     PEMRegex
       .findAllMatchIn(pemData)
-      .find(regexMatch => regexMatch.group(1).contains("PRIVATE KEY") || regexMatch.group(1).contains("CERTIFICATE"))
       .map { privateKeyRegexMatch =>
         try {
           new DERData(privateKeyRegexMatch.group(1), Base64.getMimeDecoder.decode(privateKeyRegexMatch.group(2)))
@@ -69,9 +81,16 @@ object PEMDecoder {
               iae)
         }
       }
-      .getOrElse(throw new PEMLoadingException(
-        "Could not find a private key, a certificate or the given string is not PEM encoded data."))
-  }
+      .toVector
+
+  /**
+   * Java API: Decodes all entries in a PEM String.
+   */
+  @ApiMayChange
+  @throws[PEMLoadingException](
+    "If the `pemData` is not valid PEM format (according to https://tools.ietf.org/html/rfc7468).")
+  def getAllDecoded(pemData: String): java.util.List[DERData] =
+    decodeAll(pemData).asJava
 
   @ApiMayChange
   final class DERData(val label: String, val bytes: Array[Byte])

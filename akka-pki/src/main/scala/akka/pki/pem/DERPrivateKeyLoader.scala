@@ -24,6 +24,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.RSAMultiPrimePrivateCrtKeySpec
 import java.security.spec.RSAOtherPrimeInfo
 import java.security.spec.RSAPrivateCrtKeySpec
+import scala.jdk.CollectionConverters._
 
 final class PEMLoadingException(message: String, cause: Throwable) extends RuntimeException(message, cause) {
   def this(msg: String) = this(msg, null)
@@ -32,9 +33,40 @@ final class PEMLoadingException(message: String, cause: Throwable) extends Runti
 object DERPrivateKeyLoader {
 
   /**
+   * Java API: Converts the DER payload in the first private key entry in the given  [[PEMDecoder.DERData]] into a [[java.security.PrivateKey]].
+   * The received DER data must be a valid PKCS#1 (identified in PEM as "RSA PRIVATE KEY") or non-encrypted PKCS#8 (identified
+   * in PEM as "PRIVATE KEY" or "EC PRIVATE KEY").
+   *
+   * @throws PEMLoadingException when the no entry in `derData` is a supported format
+   */
+  @ApiMayChange
+  @throws[PEMLoadingException]("when the `derData` is for an unsupported format")
+  def load(derData: java.util.List[DERData]): PrivateKey =
+    load(derData.asScala.toVector)
+
+  /**
+   * Scala API: Converts the DER payload in the first private key entry in the given  [[PEMDecoder.DERData]] into a [[java.security.PrivateKey]].
+   * The received DER data must be a valid PKCS#1 (identified in PEM as "RSA PRIVATE KEY") or non-encrypted PKCS#8 (identified
+   * in PEM as "PRIVATE KEY" or "EC PRIVATE KEY").
+   *
+   * @throws PEMLoadingException when the no entry in `derData` is a supported format
+   */
+  @ApiMayChange
+  @throws[PEMLoadingException]("when the `derData` is for an unsupported format")
+  def load(derData: Seq[DERData]): PrivateKey = {
+    derData
+      .find(entry =>
+        entry.label == "RSA PRIVATE KEY" || entry.label == "PRIVATE KEY" || entry.label == "EC PRIVATE KEY")
+      .map(load)
+      .getOrElse(throw new PEMLoadingException(
+        s"None of the provided entries [${derData.map(_.label).mkString("'", "', '", "'")}] is a supported type of private key"))
+  }
+
+  /**
    * Converts the DER payload in [[PEMDecoder.DERData]] into a [[java.security.PrivateKey]]. The received DER
-   * data must be a valid PKCS#1 (identified in PEM as "RSA PRIVATE KEY") or non-ecnrypted PKCS#8 (identified
-   * in PEM as "PRIVATE KEY").
+   * data must be a valid PKCS#1 PKCS#1 (identified in PEM as "RSA PRIVATE KEY") or non-encrypted PKCS#8 (identified
+   * * in PEM as "PRIVATE KEY" or "EC PRIVATE KEY").
+   *
    * @throws PEMLoadingException when the `derData` is for an unsupported format
    */
   @ApiMayChange

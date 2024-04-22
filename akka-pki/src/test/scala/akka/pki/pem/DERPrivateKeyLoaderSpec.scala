@@ -37,7 +37,7 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
 
     }
 
-    "parse EdDSA keys" in {
+    "parse ed25519 keys" in {
       assume(sys.props("java.specification.version").toInt >= 15, "Only available in JDK 15 and newer")
       load("ed25519.pem")
     }
@@ -51,7 +51,7 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
   }
 
   private def load(resource: String): PrivateKey = {
-    val derData: PEMDecoder.DERData = loadDerData(resource)
+    val derData: Seq[PEMDecoder.DERData] = loadDerData(resource)
     DERPrivateKeyLoader.load(derData)
   }
 
@@ -61,7 +61,7 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
     val path = new File(resourceUrl.toURI).toPath
     val bytes = Files.readAllBytes(path)
     val str = new String(bytes, Charset.forName("UTF-8"))
-    val derData = PEMDecoder.decode(str)
+    val derData = PEMDecoder.decodeAll(str)
     derData
   }
 

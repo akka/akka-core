@@ -46,6 +46,13 @@ class PEMDecoderSpec extends AnyWordSpec with Matchers with EitherValues {
       new String(result.bytes) should ===("abc")
     }
 
+    "decode data with whatever label" in {
+      val result = PEMDecoder.decode(
+        "-----BEGIN FOO-----" + Base64.getEncoder.encodeToString("abc".getBytes()) + "-----END FOO-----")
+      result.label should ===("FOO")
+      new String(result.bytes) should ===("abc")
+    }
+
     "decode data with lots of spaces" in {
       val result = PEMDecoder.decode(
         "\n \t \r -----BEGIN CERTIFICATE-----\n" +
