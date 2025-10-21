@@ -9,14 +9,6 @@
       <akka.version>2.9.8</akka.version>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>akka-repository</id>
-            <name>Akka library repository</name>
-            <url>https://repo.akka.io/maven</url>
-        </repository>
-    </repositories>
-
     <dependencies>
         <dependency>
             <groupId>com.typesafe.akka</groupId>

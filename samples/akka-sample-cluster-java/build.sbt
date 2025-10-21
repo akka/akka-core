@@ -15,7 +15,6 @@ lazy val `akka-sample-cluster-java` = project
     Compile / scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
     Compile / javacOptions ++= Seq("-parameters", "-Xlint:unchecked", "-Xlint:deprecation"),
     run / javaOptions ++= Seq("-Xms128m", "-Xmx1024m", "-Djava.library.path=./target/native"),
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor-typed"           % AkkaVersion,
       "com.typesafe.akka" %% "akka-cluster-typed"         % AkkaVersion,

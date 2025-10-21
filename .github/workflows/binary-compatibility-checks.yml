@@ -25,6 +25,18 @@ jobs:
         # to be fully defined here then since Akka build handles which patch version will be used.
         scalaVersion: [ "2.13", "3.3" ]
     steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v4
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
+
       - name: Checkout
         # https://github.com/actions/checkout/releases
         # v4.1.1

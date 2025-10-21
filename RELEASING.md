@@ -50,7 +50,7 @@ scaladoc generation build task, which is part of the release.
  
 ## Snapshot releases
 
-Snapshot releases are created from `main` and published to https://repo.akka.io/snapshots
+Snapshot releases are created from `main` and published to https://repo.akka.io/TOKEN/secure/snapshots/
 
 To create snapshot versions manually, use `sbt clean publishLocal`.
 If you have access, you can use `+publishSigned` to publish them to

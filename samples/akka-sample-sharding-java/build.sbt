@@ -3,8 +3,6 @@ val AkkaVersion = "2.9.8"
 val AkkaHttpVersion = "10.6.0"
 val LogbackVersion = "1.2.11"
 
-resolvers += "Akka library repository".at("https://repo.akka.io/maven")
-
 lazy val buildSettings = Seq(
   organization := "com.lightbend.akka.samples",
   scalaVersion := "2.13.12"

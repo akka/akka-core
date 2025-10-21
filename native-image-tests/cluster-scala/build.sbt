@@ -3,7 +3,6 @@ import scala.collection.Seq
 name := "cluster-scala"
 version := "1.0"
 scalaVersion := "2.13.14"
-resolvers += "Akka library repository".at("https://repo.akka.io/maven")
 
 // Note: this default isn't really used anywhere so not important to bump
 lazy val akkaVersion = sys.props.getOrElse("akka.version", "2.9.8")

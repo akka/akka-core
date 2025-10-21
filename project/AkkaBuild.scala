@@ -81,7 +81,6 @@ object AkkaBuild {
     }
 
   lazy val resolverSettings = Def.settings(
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     // should we be allowed to use artifacts published to the local maven repository
     if (System.getProperty("akka.build.useLocalMavenResolver", "false").toBoolean)
       resolvers += mavenLocalResolver
