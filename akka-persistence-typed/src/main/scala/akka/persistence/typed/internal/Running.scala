@@ -510,9 +510,9 @@ private[akka] object Running {
 
       replication.setContext(recoveryRunning = false, event.originReplica, concurrent = isConcurrent)
 
-      val (transformedEvent, additionalMetadata) = setup.replicatedEventTransformation match {
+      val (transformedEvent, additionalMetadata, additionalEvents) = setup.replicatedEventTransformation match {
         case None =>
-          (event.event, Nil)
+          (event.event, Nil, Nil)
         case Some(f) =>
           val metadataEntries = event.metadata match {
             case None                             => Nil
@@ -520,11 +520,10 @@ private[akka] object Running {
             case Some(meta)                       => meta :: Nil
           }
           val eventWithMetadata = EventWithMetadata(event.event, metadataEntries)
-          val newEventWithMetadata = f(state.state, eventWithMetadata)
-          if (newEventWithMetadata eq eventWithMetadata)
-            (event.event, Nil) // no change
-          else
-            (newEventWithMetadata.event, newEventWithMetadata.metadataEntries)
+          val newEventsWithMetadata = f(state.state, eventWithMetadata)
+          if (newEventsWithMetadata.isEmpty)
+            throw new IllegalStateException("At least one event is required in replicatedEventTransformation")
+          (newEventsWithMetadata.head.event, newEventsWithMetadata.head.metadataEntries, newEventsWithMetadata.tail)
       }
 
       val replicatedEventMetadata =
@@ -542,10 +541,10 @@ private[akka] object Running {
       setup.currentMetadata = newMetadata // make new metadata visible to event handler
 
       val stateAfterApply = state.applyEvent(setup, transformedEvent)
-      val eventToPersist = adaptEvent(stateAfterApply.state, transformedEvent)
+      val adaptedEvent = adaptEvent(stateAfterApply.state, transformedEvent)
       val eventAdapterManifest = setup.eventAdapter.manifest(transformedEvent)
 
-      replication.clearContext()
+      val updatedSeen = stateAfterApply.seenPerReplica.updated(event.originReplica, event.originSequenceNr)
 
       val sideEffects = ackToOnPersisted match {
         case None => Nil
@@ -555,20 +554,85 @@ private[akka] object Running {
           } :: Nil
       }
 
-      val newState2: RunningState[S] =
-        internalPersist(OptionVal.none, stateAfterApply, eventToPersist, eventAdapterManifest, newMetadata)
+      if (additionalEvents.isEmpty) {
+        replication.clearContext()
 
-      val shouldSnapshotAfterPersist = setup.shouldSnapshot(newState2.state, transformedEvent, newState2.seqNr)
-      val updatedSeen = newState2.seenPerReplica.updated(event.originReplica, event.originSequenceNr)
+        val newState2: RunningState[S] =
+          internalPersist(OptionVal.none, stateAfterApply, adaptedEvent, eventAdapterManifest, newMetadata)
 
-      persistingEvents(
-        newState2.copy(seenPerReplica = updatedSeen, version = updatedVersion),
-        state,
-        command = OptionVal.none[C],
-        numberOfEvents = 1,
-        shouldSnapshotAfterPersist,
-        shouldPublish = false,
-        sideEffects)
+        val shouldSnapshotAfterPersist = setup.shouldSnapshot(newState2.state, transformedEvent, newState2.seqNr)
+
+        // one event, this is the normal case
+        persistingEvents(
+          newState2.copy(seenPerReplica = updatedSeen, version = updatedVersion),
+          state,
+          command = OptionVal.none[C],
+          numberOfEvents = 1,
+          shouldSnapshotAfterPersist,
+          shouldPublish = false,
+          sideEffects)
+      } else {
+        // additional events, this is similar to the persistAll case
+
+        replication.setContext(recoveryRunning = false, replication.replicaId, concurrent = false) // local events are never concurrent
+        val replicatedEventMetadataTemplate = ReplicatedEventMetadata(
+          replication.replicaId,
+          0L,
+          state.version,
+          concurrent = false) // we replace it with actual seqnr later
+
+        var currentState = stateAfterApply
+        var eventsToPersist
+            : List[EventToPersist] = EventToPersist(adaptedEvent, eventAdapterManifest, newMetadata) :: Nil
+        var shouldSnapshotAfterPersist =
+          setup.shouldSnapshot(stateAfterApply.state, transformedEvent, stateAfterApply.seqNr)
+
+        additionalEvents.foreach { evtWithMeta =>
+          val event = evtWithMeta.event
+          setup.currentSequenceNumber += 1
+          setup.currentMetadata = CompositeMetadata.construct(evtWithMeta.metadataEntries)
+          val evtManifest = setup.eventAdapter.manifest(event)
+          val metadataEntries = {
+            val updatedVersion =
+              currentState.version
+                .updated(replicatedEventMetadataTemplate.originReplica.id, setup.currentSequenceNumber)
+            if (setup.internalLogger.isDebugEnabled)
+              setup.internalLogger.trace(
+                "Additional event [{}] from replicated event , version vector [{}]",
+                Logging.simpleName(event.getClass),
+                updatedVersion)
+            currentState = currentState.copy(version = updatedVersion)
+            replicatedEventMetadataTemplate.copy(
+              originSequenceNr = setup.currentSequenceNumber,
+              version = updatedVersion) +: evtWithMeta.metadataEntries
+          }
+          val metadata = CompositeMetadata.construct(metadataEntries)
+
+          currentState = currentState.applyEvent(setup, event)
+          if (shouldSnapshotAfterPersist == NoSnapshot)
+            shouldSnapshotAfterPersist = setup.shouldSnapshot(currentState.state, event, setup.currentSequenceNumber)
+
+          val adaptedEvent = adaptEvent(currentState.state, event)
+
+          eventsToPersist = EventToPersist(adaptedEvent, evtManifest, metadata) :: eventsToPersist
+        }
+
+        replication.clearContext()
+
+        val newState2 =
+          internalPersistAll(OptionVal.none, currentState, eventsToPersist.reverse)
+
+        persistingEvents(
+          newState2.copy(seenPerReplica = updatedSeen),
+          state,
+          command = OptionVal.none[C],
+          eventsToPersist.size,
+          shouldSnapshotAfterPersist,
+          shouldPublish = true,
+          sideEffects = sideEffects)
+
+      }
+
     }
 
     private def handleEventPersist(

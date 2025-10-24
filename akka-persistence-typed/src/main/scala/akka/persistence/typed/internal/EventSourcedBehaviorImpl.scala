@@ -121,7 +121,7 @@ private[akka] final case class EventSourcedBehaviorImpl[Command, Event, State](
     publishEvents: Boolean = true,
     customStashCapacity: Option[Int] = None,
     replicatedEventInterceptor: Option[ReplicationInterceptor[State, Event]] = None,
-    replicatedEventTransformation: Option[(State, EventWithMetadata[Event]) => EventWithMetadata[Event]] = None)
+    replicatedEventTransformation: Option[(State, EventWithMetadata[Event]) => Seq[EventWithMetadata[Event]]] = None)
     extends EventSourcedBehavior[Command, Event, State] {
 
   import EventSourcedBehaviorImpl.WriterIdentity
@@ -345,6 +345,10 @@ private[akka] final case class EventSourcedBehaviorImpl[Command, Event, State](
 
   override def withReplicatedEventTransformation(
       f: (State, EventWithMetadata[Event]) => EventWithMetadata[Event]): EventSourcedBehavior[Command, Event, State] =
+    copy(replicatedEventTransformation = Some((s: State, e: EventWithMetadata[Event]) => f(s, e) :: Nil))
+
+  override def withReplicatedEventsTransformation(f: (State, EventWithMetadata[Event]) => Seq[EventWithMetadata[Event]])
+      : EventSourcedBehavior[Command, Event, State] =
     copy(replicatedEventTransformation = Some(f))
 
 }
