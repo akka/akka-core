@@ -1,6 +1,6 @@
 # Cluster Sharding sample
 
-The KillrWeather sample illustrates how to use [Akka Cluster Sharding](http://doc.akka.io/libraries/akka-core/current/scala/typed/cluster-sharding.html) in Scala, for the same sample in Java see [Cluster Sharding Sample Java](https://github.com/akka/akka-core-samples/tree/2.6/akka-sample-sharding-java).
+The KillrWeather sample illustrates how to use [Akka Cluster Sharding](http://doc.akka.io/libraries/akka-core/current/scala/typed/cluster-sharding.html) in Scala.
 It also shows the basic usage of [Akka HTTP](https://doc.akka.io/libraries/akka-http/current/index.html).
 
 To try this example locally, download the sources files with [akka-sample-sharding-scala.zip](https://doc.akka.io/libraries/akka-core/current//attachments/akka-sample-sharding-scala.zip).

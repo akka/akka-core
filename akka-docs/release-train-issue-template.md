@@ -56,7 +56,7 @@ Key links:
 
 ### Announcements
 
-- Add a summary of relevant changes into [release notes](https://github.com/akka/akka-core-sdk/blob/main/docs/src/modules/reference/pages/release-notes.adoc)
+- Add a summary of relevant changes into [release notes](https://github.com/akka/akka-sdk/blob/main/docs/src/modules/reference/pages/release-notes.adoc)
 
 For minor or major releases:
 
@@ -65,10 +65,10 @@ For minor or major releases:
 ### Afterwards
 
 - [ ] Update `MiMa.latestPatchOf` and PR that change (`project/MiMa.scala`)
-- [ ] Update [akka-dependencies bom](https://github.com/lightbend/akka-dependencies) and version for [Akka module versions](https://doc.akka.io/libraries/akka-dependencies/current/) in [akka-dependencies repo](https://github.com/akka/akka-core-dependencies)
-- [ ] Update [Akka Guide samples](https://github.com/akka/akka-core-guide)
+- [ ] Update [akka-dependencies bom](https://github.com/lightbend/akka-dependencies) and version for [Akka module versions](https://doc.akka.io/libraries/akka-dependencies/current/) in [akka-dependencies repo](https://github.com/akka/akka-dependencies)
+- [ ] Update [Akka Guide samples](https://github.com/akka/akka-guide)
 - [ ] Update sbt new templates:
-  - [ ] [Akka Scala](https://github.com/akka/akka-core-quickstart-scala.g8/blob/main/src/main/g8/default.properties)
-  - [ ] [Akka HTTP Scala](https://github.com/akka/akka-core-http-quickstart-scala.g8/blob/main/src/main/g8/default.properties)
-  - [ ] [Akka gRPC Scala](https://github.com/akka/akka-core-grpc-quickstart-scala.g8/blob/main/src/main/g8/default.properties)
+  - [ ] [Akka Scala](https://github.com/akka/akka-quickstart-scala.g8/blob/main/src/main/g8/default.properties)
+  - [ ] [Akka HTTP Scala](https://github.com/akka/akka-http-quickstart-scala.g8/blob/main/src/main/g8/default.properties)
+  - [ ] [Akka gRPC Scala](https://github.com/akka/akka-grpc-quickstart-scala.g8/blob/main/src/main/g8/default.properties)
 - Close this issue

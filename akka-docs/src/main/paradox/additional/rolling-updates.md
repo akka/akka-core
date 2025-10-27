@@ -199,4 +199,4 @@ Rolling update is not supported when @ref:[changing the remoting transport](../r
 ### Migrating from Classic Sharding to Typed Sharding
 
 If you have been using classic sharding it is possible to do a rolling update to typed sharding using a 3 step procedure.
-The steps along with example commits are detailed in [this sample PR](https://github.com/akka/akka-core-samples/pull/110) 
+The steps along with example commits are detailed in [this sample PR](https://github.com/akka/akka-samples/pull/110) 
