@@ -5,7 +5,7 @@ val AkkaVersion = "2.10.9"
 val LogbackClassicVersion = "1.5.1"
 val AkkaDiagnosticsVersion = "2.1.0"
 
-scalaVersion := "2.13.12"
+scalaVersion := "2.13.17"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
