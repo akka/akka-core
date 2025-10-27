@@ -50,8 +50,6 @@ object Dependencies {
 
   object Compile {
     // Compile
-
-    val scalaLibrary = "org.scala-lang" % "scala-library" % scala213Version
     val config = "com.typesafe" % "config" % "1.4.5" // ApacheV2
     val `netty-transport` = "io.netty" % "netty-transport" % nettyVersion // ApacheV2
     val `netty-handler` = "io.netty" % "netty-handler" % nettyVersion // ApacheV2
@@ -175,7 +173,7 @@ object Dependencies {
   // TODO check if `l ++=` everywhere expensive?
   val l = libraryDependencies
 
-  val actor = l ++= Seq(config, scalaLibrary)
+  val actor = l ++= Seq(config)
 
   val actorTyped = l ++= Seq(slf4jApi)
 
