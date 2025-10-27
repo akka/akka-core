@@ -1,7 +1,7 @@
 import com.typesafe.sbt.SbtMultiJvm.multiJvmSettings
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
-val AkkaVersion = "2.10.9"
+val AkkaVersion = "2.10.10"
 val AkkaDiagnosticsVersion = "2.1.0"
 val LogbackClassicVersion = "1.2.11" 
 val ScalaTestVersion = "3.1.1"
