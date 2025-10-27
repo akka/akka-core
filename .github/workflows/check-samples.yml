@@ -80,7 +80,7 @@ jobs:
         run: |-
           cd samples/akka-quickstart-scala
           sbt test -Dakka.version=`cat ~/.version`
-          sbt 'clean; ++${SCALA3_VERSION}!; test' -Dakka.version=`cat ~/.version`
+          sbt "clean; ++${SCALA3_VERSION}!; test" -Dakka.version=`cat ~/.version`
 
       - name: Test akka-sample-cluster-java
         run: |-
@@ -91,7 +91,7 @@ jobs:
         run: |-
           cd samples/akka-sample-cluster-scala
           sbt test -Dakka.version=`cat ~/.version`
-          sbt 'clean; ++${SCALA3_VERSION}!; test' -Dakka.version=`cat ~/.version`
+          sbt "clean; ++${SCALA3_VERSION}!; test" -Dakka.version=`cat ~/.version`
 
       - name: Test akka-sample-distributed-data-java
         run: |-
@@ -103,7 +103,7 @@ jobs:
         run: |-
           cd samples/akka-sample-distributed-data-scala
           sbt test multi-jvm:test -Dakka.version=`cat ~/.version`
-          sbt 'clean; ++${SCALA3_VERSION}!; test; multi-jvm:test' -Dakka.version=`cat ~/.version`
+          sbt "clean; ++${SCALA3_VERSION}!; test; multi-jvm:test" -Dakka.version=`cat ~/.version`
 
       - name: Test akka-sample-fsm-java
         run: |-
@@ -114,7 +114,7 @@ jobs:
         run: |-
           cd samples/akka-sample-fsm-scala
           sbt test -Dakka.version=`cat ~/.version`
-          sbt 'clean; ++${SCALA3_VERSION}!; test' -Dakka.version=`cat ~/.version`
+          sbt "clean; ++${SCALA3_VERSION}!; test" -Dakka.version=`cat ~/.version`
 
       - name: Test akka-sample-sharding-java
         run: |-
@@ -125,13 +125,13 @@ jobs:
         run: |-
           cd samples/akka-sample-sharding-scala
           sbt test -Dakka.version=`cat ~/.version`
-          sbt 'clean; ++${SCALA3_VERSION}!; test' -Dakka.version=`cat ~/.version`
+          sbt "clean; ++${SCALA3_VERSION}!; test" -Dakka.version=`cat ~/.version`
 
       - name: Test akka-sample-kafka-to-sharding-scala
         run: |-
           cd samples/akka-sample-kafka-to-sharding-scala
           sbt test -Dakka.version=`cat ~/.version`
-          sbt 'clean; ++${SCALA3_VERSION}!; test' -Dakka.version=`cat ~/.version`
+          sbt "clean; ++${SCALA3_VERSION}!; test" -Dakka.version=`cat ~/.version`
 
       - name: Email on failure
         if: ${{ failure() }}
