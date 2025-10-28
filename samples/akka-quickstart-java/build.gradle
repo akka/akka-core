@@ -9,9 +9,9 @@ repositories {
 }
 
 dependencies {
-  implementation 'com.typesafe.akka:akka-actor-typed_2.13:2.10.10'
+  implementation 'com.typesafe.akka:akka-actor-typed_2.13:2.10.11'
   implementation 'ch.qos.logback:logback-classic:1.2.13'
-  testImplementation 'com.typesafe.akka:akka-actor-testkit-typed_2.13:2.10.10'
+  testImplementation 'com.typesafe.akka:akka-actor-testkit-typed_2.13:2.10.11'
   testImplementation 'junit:junit:4.13.1'
 }
 
