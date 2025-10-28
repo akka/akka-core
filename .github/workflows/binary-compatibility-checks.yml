@@ -50,17 +50,17 @@ jobs:
         # v6.4.5
         uses: coursier/cache-action@1ff273bff02a8787bc9f1877d347948af647956d
 
-      - name: Set up JDK 11
+      - name: Set up JDK 25
         # https://github.com/coursier/setup-action/releases
         # v1.3.5
         uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
         with:
-          jvm: temurin:1.11
+          jvm: temurin:1.25
 
-      - name: Test/compile
+      - name: compile
         run: |-
           cp .jvmopts-ci .jvmopts
-          sbt "+~ ${{ matrix.scalaVersion }} Test/compile"
+          sbt "+~ ${{ matrix.scalaVersion }} compile"
 
       - name: Report MiMa Binary Issues
         run: |-
