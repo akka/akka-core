@@ -501,12 +501,14 @@ private[akka] object Running {
 
       if (setup.internalLogger.isDebugEnabled())
         setup.internalLogger.debug(
-          "Processing event [{}] with version [{}]. Local version: {}. Updated version {}. Concurrent? {}",
+          "Processing replicated event [{}], origin [{}], origin seqNr [{}], concurrent [{}], with version [{}]. Local version: {}. Updated version {}.",
           Logging.simpleName(event.event.getClass),
+          event.originReplica,
+          event.originSequenceNr,
+          isConcurrent,
           event.originVersion,
           state.version,
-          updatedVersion,
-          isConcurrent)
+          updatedVersion)
 
       replication.setContext(recoveryRunning = false, event.originReplica, concurrent = isConcurrent)
 
