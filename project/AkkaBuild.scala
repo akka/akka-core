@@ -23,7 +23,6 @@ object AkkaBuild {
   object CliOptions {
     // CI is the env var defined by Github Actions and Travis:
     // - https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
-    // - https://docs.travis-ci.com/user/environment-variables/#default-environment-variables
     val runningOnCi: CliOption[Boolean] = CliOption("akka.ci-server", sys.env.contains("CI"))
   }
 
