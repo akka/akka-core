@@ -2,6 +2,7 @@
  * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
+import akka.AkkaBuild.CliOptions
 import akka.ProjectFileIgnoreSupport
 import com.lightbend.sbt.JavaFormatterPlugin
 import sbt.{ AutoPlugin, PluginTrigger, Plugins }
@@ -15,7 +16,7 @@ object JavaFormatter extends AutoPlugin {
   private val ignoreConfigFileName: String = ".sbt-java-formatter.conf"
   private val descriptor: String = "sbt-java-formatter"
 
-  private val formatOnCompile = !sys.props.contains("akka.no.discipline")
+  private val formatOnCompile = !CliOptions.runningOnCi.get && !sys.props.contains("akka.no.discipline")
 
   import JavaFormatterPlugin.autoImport._
   import sbt.Keys._

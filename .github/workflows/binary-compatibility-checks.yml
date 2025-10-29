@@ -60,11 +60,11 @@ jobs:
       - name: compile
         run: |-
           cp .jvmopts-ci .jvmopts
-          sbt "+~ ${{ matrix.scalaVersion }} compile" -Dakka.no.discipline=true
+          sbt "+~ ${{ matrix.scalaVersion }} compile"
 
       - name: Report MiMa Binary Issues
         run: |-
-          sbt "+~ ${{ matrix.scalaVersion }} mimaReportBinaryIssues" -Dakka.no.discipline=true
+          sbt "+~ ${{ matrix.scalaVersion }} mimaReportBinaryIssues"
 
       - name: Check correct MiMa filter directories
         run: |
