@@ -215,15 +215,15 @@ object DERPrivateKeyLoader {
               case "1.3.101.111"          => "x448"
               case "1.3.101.112"          => "ed25519"
               case "1.3.101.113"          => "ed448"
-              case unknown                => throw new IllegalArgumentException(s"Unknown algorithm idenfifier [$unknown]")
+              case unknown                => throw new IllegalArgumentException(s"Unknown algorithm identifier [$unknown]")
             }
           case unexpected =>
             throw new IllegalArgumentException(
-              s"Unexpected type of the algorithm, expected object idenfier, was: [${unexpected.getClass}]")
+              s"Unexpected type of the algorithm, expected object identifier, was: [${unexpected.getClass}]")
         }
       case unexpected =>
         throw new IllegalArgumentException(
-          s"Unexpected type of the privateKeyAlgorithm, expected object idenfier, was: [${unexpected.getClass}]")
+          s"Unexpected type of the privateKeyAlgorithm, expected object identifier, was: [${unexpected.getClass}]")
     }
 
     val keyFactory = KeyFactory.getInstance(javaPrivateKeyAlgorithmName)
