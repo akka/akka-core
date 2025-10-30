@@ -7,10 +7,12 @@ package akka.persistence.serialization
 import akka.persistence.CompositeMetadata
 import akka.persistence.FilteredPayload
 import akka.persistence.SerializedEvent
+import akka.persistence.serialization.{ MessageFormats => mf }
 import akka.serialization.SerializationExtension
 import akka.serialization.SerializerWithStringManifest
 import akka.serialization.Serializers
 import akka.testkit.AkkaSpec
+import akka.protobufv3.internal.{ ByteString => ProtoByteString }
 
 class PayloadSerializerSpec extends AkkaSpec {
 
@@ -61,6 +63,59 @@ class PayloadSerializerSpec extends AkkaSpec {
       deserialized.entries.size shouldBe 2
       deserialized.entries.head shouldBe "a"
       deserialized.entries(1) shouldBe 17L
+    }
+
+    "ignore some metadata unknown when deserializing rather than fail" in {
+      val stringSerializer = serialization.serializerFor(classOf[String])
+      val stringMeta = "suchMetaWow!"
+      val metadataWithUnknownEntry = mf.CompositeMetadata
+        .newBuilder()
+        .addPayloads(
+          mf.PersistentPayload
+            .newBuilder()
+            .setSerializerId(Int.MinValue)
+            .setPayloadManifest(ProtoByteString.copyFromUtf8("Q"))
+            .setPayload(ProtoByteString.empty())
+            .build())
+        .addPayloads(
+          mf.PersistentPayload
+            .newBuilder()
+            .setSerializerId(stringSerializer.identifier)
+            .setPayloadManifest(ProtoByteString.empty())
+            .setPayload(ProtoByteString.copyFrom(stringSerializer.toBinary(stringMeta))))
+        .build()
+      val bytes = metadataWithUnknownEntry.toByteArray
+
+      val someMeta = CompositeMetadata(List("dummy"))
+      val serializer = serialization.findSerializerFor(someMeta).asInstanceOf[SerializerWithStringManifest]
+      val manifest = serializer.manifest(someMeta)
+      val deserialized =
+        serialization.deserialize(bytes, serializer.identifier, manifest).get.asInstanceOf[CompositeMetadata]
+
+      deserialized.entries should have size (1)
+      deserialized.entries shouldEqual Seq(stringMeta)
+    }
+
+    "ignore all metadata unknown when deserializing rather than fail" in {
+      val metadataWithUnknownEntry = mf.CompositeMetadata
+        .newBuilder()
+        .addPayloads(
+          mf.PersistentPayload
+            .newBuilder()
+            .setSerializerId(Int.MinValue)
+            .setPayloadManifest(ProtoByteString.copyFromUtf8("Q"))
+            .setPayload(ProtoByteString.empty())
+            .build())
+        .build()
+      val bytes = metadataWithUnknownEntry.toByteArray
+
+      val someMeta = CompositeMetadata(List("dummy"))
+      val serializer = serialization.findSerializerFor(someMeta).asInstanceOf[SerializerWithStringManifest]
+      val manifest = serializer.manifest(someMeta)
+      val deserialized =
+        serialization.deserialize(bytes, serializer.identifier, manifest).get.asInstanceOf[CompositeMetadata]
+
+      deserialized shouldBe theSameInstanceAs(PayloadSerializer.NoDeserializableMetadataComposite)
     }
   }
 

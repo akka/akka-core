@@ -21,6 +21,15 @@ import akka.serialization.Serializers
  * INTERNAL API
  */
 @InternalApi
+object PayloadSerializer {
+  case object NoDeserializableMetadataMarker
+  val NoDeserializableMetadataComposite = CompositeMetadata(Seq(NoDeserializableMetadataMarker))
+}
+
+/**
+ * INTERNAL API
+ */
+@InternalApi
 final class PayloadSerializer(val system: ExtendedActorSystem)
     extends SerializerWithStringManifest
     with BaseSerializer {
@@ -94,18 +103,22 @@ final class PayloadSerializer(val system: ExtendedActorSystem)
     val protoCompositeMetadata = mf.CompositeMetadata.parseFrom(bytes)
 
     val metadataEntries =
-      protoCompositeMetadata.getPayloadsList.iterator.asScala.map { persistentPayload =>
+      protoCompositeMetadata.getPayloadsList.iterator.asScala.flatMap { persistentPayload =>
         val manifest =
           if (persistentPayload.hasPayloadManifest)
             persistentPayload.getPayloadManifest.toStringUtf8
           else ""
 
+        // if the metadata type is unknown to the deserializing service, we do not want to fail deserialization
+        // of the event as a whole, so such metadata payloads are ignored
         serialization
           .deserialize(persistentPayload.getPayload.toByteArray, persistentPayload.getSerializerId, manifest)
-          .get
+          .toOption
       }.toSeq
 
-    CompositeMetadata(metadataEntries)
+    if (metadataEntries.nonEmpty) CompositeMetadata(metadataEntries)
+    else
+      PayloadSerializer.NoDeserializableMetadataComposite // we always need to return a CompositeMetadata with at least one entry
   }
 
 }
