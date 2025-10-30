@@ -66,7 +66,7 @@ private[akka] final class BehaviorSetup[C, E, S](
     private var retentionInProgress: Boolean,
     val instrumentation: EventSourcedBehaviorInstrumentation,
     val replicationInterceptor: Option[ReplicationInterceptor[S, E]],
-    val replicatedEventTransformation: Option[(S, EventWithMetadata[E]) => EventWithMetadata[E]]) {
+    val replicatedEventTransformation: Option[(S, EventWithMetadata[E]) => Seq[EventWithMetadata[E]]]) {
 
   import BehaviorSetup._
   import InternalProtocol.RecoveryTickEvent
