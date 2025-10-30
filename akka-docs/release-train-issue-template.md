@@ -19,6 +19,7 @@ Key links:
 - [ ] Check that open PRs and issues assigned to the milestone are reasonable
 - [ ] If PRs related to clustering were merged after the previous multi-node test run, trigger the [multi-node tests](https://github.com/akka/akka-core/actions/workflows/multi-node.yml) and see that they are green.
 - [ ] If PRs were merged after EU midnight, trigger the [native-image tests](https://github.com/akka/akka-core/actions/workflows/native-image-tests.yml) and see that they are green.
+- [ ] If PRs were merged after the last nightly, trigger nightlies [nightly-builds](https://github.com/akka/akka-core/actions/workflows/nightly-builds.yml) and see that they are green.
 - [ ] Update the version and change date in the LICENSE file.
 - [ ] Update the Akka version in the samples to $VERSION$, otherwise the published zip files of the samples will have the old version.
 - [ ] Create a new milestone for the [next version](https://github.com/akka/akka-core/milestones)
