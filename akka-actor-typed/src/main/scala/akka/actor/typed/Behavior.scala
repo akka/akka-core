@@ -15,6 +15,7 @@ import akka.actor.typed.internal.BehaviorImpl.StoppedBehavior
 import akka.actor.typed.internal.BehaviorTags
 import akka.actor.typed.internal.CachedProps
 import akka.actor.typed.internal.InterceptorImpl
+import akka.actor.typed.internal.Supervisor
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
 import akka.util.OptionVal
@@ -113,6 +114,32 @@ abstract class ExtensibleBehavior[T] extends Behavior[T](BehaviorTags.Extensible
   def receiveSignal(ctx: TypedActorContext[T], msg: Signal): Behavior[T]
 }
 
+/**
+ * INTERNAL API
+ * A behavior type that could be supervised, Not for user extension.
+ */
+@InternalApi
+class SuperviseBehavior[T] private[akka] (val wrapped: Behavior[T])
+    extends Behavior[T](BehaviorTags.SuperviseBehavior) {
+  private final val ThrowableClassTag = ClassTag(classOf[Throwable])
+
+  /** Specify the [[SupervisorStrategy]] to be invoked when the wrapped behavior throws. */
+  def whenFailure[Thr <: Throwable](strategy: SupervisorStrategy)(implicit tag: ClassTag[Thr]): SuperviseBehavior[T] = {
+    val effectiveTag = if (tag == ClassTag.Nothing) ThrowableClassTag else tag
+    new SuperviseBehavior[T](Supervisor(Behavior.validateAsInitial(wrapped), strategy)(effectiveTag))
+  }
+
+  /**
+   * Specify the [[SupervisorStrategy]] to be invoked when the wrapped behavior throws.
+   *
+   * Only exceptions of the given type (and their subclasses) will be handled by this supervision behavior.
+   */
+  def whenFailure[Thr <: Throwable](clazz: Class[Thr], strategy: SupervisorStrategy): SuperviseBehavior[T] =
+    whenFailure(strategy)(ClassTag(clazz))
+
+  private[akka] def unwrap: Behavior[T] = wrapped
+}
+
 object Behavior {
 
   final implicit class BehaviorDecorators[Inner](val behavior: Behavior[Inner]) extends AnyVal {
@@ -179,7 +206,8 @@ object Behavior {
         val startedInner = start(wrapped.nestedBehavior, ctx.asInstanceOf[TypedActorContext[Any]])
         if (startedInner eq wrapped.nestedBehavior) wrapped
         else wrapped.replaceNested(startedInner)
-      case _ => behavior
+      case supervise: SuperviseBehavior[T] => start(supervise.unwrap, ctx)
+      case _                               => behavior
     }
   }
 
@@ -265,6 +293,8 @@ object Behavior {
         throw new IllegalArgumentException(s"cannot execute with [$behavior] as behavior")
       case BehaviorTags.DeferredBehavior =>
         throw new IllegalArgumentException(s"deferred [$behavior] should not be passed to interpreter")
+      case BehaviorTags.SuperviseBehavior =>
+        throw new IllegalArgumentException(s"supervise [$behavior] should not be passed to interpreter")
       case BehaviorTags.IgnoreBehavior =>
         BehaviorImpl.same[T]
       case BehaviorTags.StoppedBehavior =>
