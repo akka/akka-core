@@ -569,7 +569,7 @@ class SplitBrainResolverSpec
       assertDowningSide(side2, Set(memberA, memberB, memberC, memberD, memberE, memberF, memberG))
     }
 
-    "double DownIndirectlyConnected when indirectly connected happens before clean partition: {A, B, C} | {(D, E), (F, G)} => {}" in new Setup2(
+    "down all when indirectly connected happens (covering all of majority side) before clean partition: {A, B, C} | {(D, E), (F, G)} => {}" in new Setup2(
       role = None) {
       side1 = Set(memberA, memberB, memberC)
       side2 = Set(memberD, memberE, memberF, memberG)
@@ -578,19 +578,70 @@ class SplitBrainResolverSpec
 
       // from side1 of the partition, minority
       // D and G are observers and marked E and F as unreachable
-      // A has marked D and G as unreachable
+      // D, E, F, G unreachable due to the partition
+      //
       // The records D->E, G->F are not removed in the second decision because they are not detected via seenB
-      // due to clean partition. That means that the second decision will also be DownIndirectlyConnected. To bail
-      // out from this situation the strategy will throw IllegalStateException, which is caught and translated to
-      // DownAll.
-      intercept[IllegalStateException] {
-        assertDowningSide(side1, Set(memberA, memberB, memberC))
-      }
+      // due to clean partition.
+      // For the third decision, D->E and G->F are removed because E and F are known to be unreachable by A by
+      // the clean partition
+      assertDowningSide(side1, Set(memberA, memberB, memberC, memberD, memberG))
 
-      // from side2 of the partition, majority
+      // from side2 of the partition, "majority"
+      // A, B, C are on minority side
+      // E, F are also unreachable
       assertDowningSide(side2, Set(memberA, memberB, memberC, memberD, memberE, memberF, memberG))
     }
 
+    "retain majority when indirectly connected happens (minority side) before clean partition { (A, B), C } | { D, E, F, G } => { D, E, F, G}" in new Setup2(
+      role = None) {
+      side1 = Set(memberA, memberB, memberC)
+      side2 = Set(memberD, memberE, memberF, memberG)
+      indirectlyConnected = List(memberA -> memberB)
+
+      // from side 1 (minority)
+      // A observed B unreachable before partition
+      assertDowningSide(side1, Set(memberA, memberB, memberC))
+
+      // from side 2 (majority)
+      // A observed B unreachable before partition
+      // A, B, C unreachable due to partition
+      // A is indirectly connected (A observed and is observed unreachable)
+      //
+      // A->B not removed for second decision because B is not indirectly connected => A still indirectly connected
+      // Since B is observed unreachable from a directly connected node, decide as if we hadn't seen the A->B observation
+      // side2 is a reachable majority, so DownUnreachable
+      assertDowningSide(side2, Set(memberA, memberB, memberC))
+    }
+
+    "double DownIndirectlyConnected when indirectly connected happens (large majority side) before clean partition { A } | { (C, E, G), B, D, F, H } => {}" in new Setup2(
+      role = None) {
+      side1 = Set(memberA)
+      side2 = Set(memberB, memberC, memberD, memberE, memberF, memberG, memberH)
+      indirectlyConnected = List(memberE -> memberG, memberG -> memberC)
+
+      assertDowningSide(side1, Set(memberA, memberE, memberG))
+
+      // assertDowningSide assumes that all on the majority side have seen latest gossip, which removes the indirectly
+      // connnected when doing the additional decision
+      {
+        val strategy = {
+          val s = createStrategy()
+          (side1 ++ side2).foreach(s.add)
+          s
+        }
+        val unreachability = (indirectlyConnected ++ side1.map(o => side2.head -> o)).toSet.toList
+        val r = createReachability(unreachability)
+        strategy.setReachability(r)
+
+        unreachability.foreach { case (_, to) => strategy.addUnreachable(to) }
+        // let's say that neither C nor G is has seen gossip
+        strategy.setSeenBy(side2.filterNot(m => (m eq memberC) || (m eq memberG)).map(_.address))
+
+        an[IllegalStateException] shouldBe thrownBy {
+          strategy.nodesToDown() should be((side1 ++ side2).map(_.uniqueAddress))
+        }
+      }
+    }
   }
 
   "KeepOldest" must {
