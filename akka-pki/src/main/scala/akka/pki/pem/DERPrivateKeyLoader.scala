@@ -6,6 +6,7 @@ package akka.pki.pem
 
 import akka.annotation.ApiMayChange
 import akka.pki.pem.PEMDecoder.DERData
+import akka.util.ccompat.JavaConverters._
 import com.hierynomus.asn1.ASN1InputStream
 import com.hierynomus.asn1.encodingrules.der.DERDecoder
 import com.hierynomus.asn1.types.constructed.ASN1Sequence
@@ -24,7 +25,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.RSAMultiPrimePrivateCrtKeySpec
 import java.security.spec.RSAOtherPrimeInfo
 import java.security.spec.RSAPrivateCrtKeySpec
-import scala.jdk.CollectionConverters._
+import scala.collection.immutable
 
 final class PEMLoadingException(message: String, cause: Throwable) extends RuntimeException(message, cause) {
   def this(msg: String) = this(msg, null)
@@ -53,7 +54,7 @@ object DERPrivateKeyLoader {
    */
   @ApiMayChange
   @throws[PEMLoadingException]("when the `derData` is for an unsupported format")
-  def load(derData: Seq[DERData]): PrivateKey = {
+  def load(derData: immutable.Seq[DERData]): PrivateKey = {
     derData
       .find(entry =>
         entry.label == "RSA PRIVATE KEY" || entry.label == "PRIVATE KEY" || entry.label == "EC PRIVATE KEY")

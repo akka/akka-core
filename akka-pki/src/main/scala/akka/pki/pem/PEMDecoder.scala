@@ -6,8 +6,9 @@ package akka.pki.pem
 
 import java.util.Base64
 import akka.annotation.ApiMayChange
+import scala.collection.immutable
 
-import scala.jdk.CollectionConverters._
+import akka.util.ccompat.JavaConverters._
 
 /**
  * Decodes lax PEM encoded data, according to
@@ -68,7 +69,7 @@ object PEMDecoder {
    * Scala API: Decodes all entries in a PEM String.
    */
   @ApiMayChange
-  def decodeAll(pemData: String): Seq[DERData] =
+  def decodeAll(pemData: String): immutable.Seq[DERData] =
     PEMRegex
       .findAllMatchIn(pemData)
       .map { privateKeyRegexMatch =>

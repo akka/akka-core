@@ -14,6 +14,8 @@ import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import scala.collection.immutable
+
 class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValues {
 
   "The DER Private Key loader" should {
@@ -52,7 +54,7 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
   }
 
   private def load(resource: String): PrivateKey = {
-    val derData: Seq[PEMDecoder.DERData] = loadDerData(resource)
+    val derData: immutable.Seq[PEMDecoder.DERData] = loadDerData(resource)
     DERPrivateKeyLoader.load(derData)
   }
 
