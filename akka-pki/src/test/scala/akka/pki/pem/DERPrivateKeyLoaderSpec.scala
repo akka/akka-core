@@ -4,11 +4,12 @@
 
 package akka.pki.pem
 
+import akka.util.JavaVersion
+
 import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.security.PrivateKey
-
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -38,7 +39,7 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
     }
 
     "parse ed25519 keys" in {
-      assume(sys.props("java.specification.version").toInt >= 15, "Only available in JDK 15 and newer")
+      assume(JavaVersion.majorVersion >= 15, "Only available in JDK 15 and newer")
       load("ed25519.pem")
     }
 
