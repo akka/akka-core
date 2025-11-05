@@ -4,14 +4,17 @@
 
 package akka.pki.pem
 
+import akka.util.JavaVersion
+
 import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.security.PrivateKey
-
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
+import scala.collection.immutable
 
 class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValues {
 
@@ -28,6 +31,20 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
       // primes, and it fails to parse a multi-prime PKCS#8 key.
     }
 
+    "parse ECDSA keys" in {
+      val pkcs1 = load("ecdsa.pem")
+      val pkcs8 = load("pkcs8-ecdsa.pem")
+      pkcs1.getAlgorithm should ===("EC")
+      pkcs8.getAlgorithm should ===("EC")
+      // FIXME how can we compare, are they actually equal?
+
+    }
+
+    "parse ed25519 keys" in {
+      assume(JavaVersion.majorVersion >= 15, "Only available in JDK 15 and newer")
+      load("ed25519.pem")
+    }
+
     "fail on unsupported PEM contents (Certificates are not private keys)" in {
       assertThrows[PEMLoadingException] {
         load("certificate.pem")
@@ -37,7 +54,7 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
   }
 
   private def load(resource: String): PrivateKey = {
-    val derData: PEMDecoder.DERData = loadDerData(resource)
+    val derData: immutable.Seq[PEMDecoder.DERData] = loadDerData(resource)
     DERPrivateKeyLoader.load(derData)
   }
 
@@ -47,7 +64,7 @@ class DERPrivateKeyLoaderSpec extends AnyWordSpec with Matchers with EitherValue
     val path = new File(resourceUrl.toURI).toPath
     val bytes = Files.readAllBytes(path)
     val str = new String(bytes, Charset.forName("UTF-8"))
-    val derData = PEMDecoder.decode(str)
+    val derData = PEMDecoder.decodeAll(str)
     derData
   }
 
