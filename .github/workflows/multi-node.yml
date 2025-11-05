@@ -22,7 +22,7 @@ jobs:
   run-multi-node-tests:
     name: Multi Node Test
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     steps:
       - name: Checkout
         # https://github.com/actions/checkout/releases

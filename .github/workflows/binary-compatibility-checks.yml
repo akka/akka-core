@@ -16,7 +16,7 @@ jobs:
   check-binary-compatibility:
     name: Check / Binary Compatibility
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     strategy:
       fail-fast: false
       matrix:

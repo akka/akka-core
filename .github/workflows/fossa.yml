@@ -12,7 +12,7 @@ jobs:
   fossa:
     name: Fossa
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     steps:
       - name: Checkout
         # https://github.com/actions/checkout/releases
