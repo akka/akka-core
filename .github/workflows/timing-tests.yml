@@ -16,7 +16,7 @@ jobs:
   akka-timing-sensitive-tests:
     name: Akka Tests taggedAs TimingTest
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     steps:
 
       - name: Checkout
