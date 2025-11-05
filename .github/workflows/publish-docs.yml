@@ -16,22 +16,39 @@ permissions:
 jobs:
   documentation:
     name: Documentation
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.event.repository.fork == false
     steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v4
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
+
       - name: Checkout
-        uses: actions/checkout@v3.1.0
+        # https://github.com/actions/checkout/releases
+        # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           # we don't know what commit the last tag was it's safer to get entire repo so previousStableVersion resolves
           fetch-depth: 0
 
       - name: Set up JDK 11
-        uses: coursier/setup-action@v1.3.0
+        # https://github.com/coursier/setup-action/releases
+        # v1.3.5
+        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
         with:
           jvm: temurin:1.11
 
       - name: Publish
         run: |-
+          scripts/prepare-downloads.sh
           eval "$(ssh-agent -s)"
           echo $AKKA_RSYNC_GUSTAV | base64 -d > .github/id_rsa
           chmod 600 .github/id_rsa
@@ -47,11 +64,12 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 465
+          secure: true
           username: ${{secrets.MAIL_USERNAME}}
           password: ${{secrets.MAIL_PASSWORD}}
           subject: "Failed: ${{ github.workflow }} / ${{ github.job }}"
           to: ${{secrets.MAIL_SEND_TO}}
-          from: Akka CI (GHActions)
+          from: Akka CI
           body: |
             Job ${{ github.job }} in workflow ${{ github.workflow }} of ${{github.repository}} failed!
             https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
