@@ -22,7 +22,7 @@ jobs:
   run-multi-node-tests:
     name: Multi Node Test
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     steps:
       - name: Checkout
         uses: actions/checkout@v3.1.0
@@ -119,7 +119,7 @@ jobs:
   run-multi-node-aeron-tests:
     name: Multi Node Test with Artery Aeron UDP transport
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     steps:
       - name: Checkout
         uses: actions/checkout@v3.1.0

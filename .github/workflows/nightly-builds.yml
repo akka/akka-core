@@ -16,7 +16,7 @@ jobs:
   akka-cluster-metrics-sigar:
     name: Akka Cluster Metrics Test with Sigar
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     steps:
 
       - name: Checkout
@@ -80,7 +80,7 @@ jobs:
   jdk-nightly-build:
     name: JDK ${{ matrix.jdkVersion }} / Scala ${{ matrix.scalaVersion }}
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     strategy:
       fail-fast: false
       matrix:
@@ -183,7 +183,7 @@ jobs:
   akka-artery-aeron-tests:
     name: Akka Artery Aeron Tests
     runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    if: github.event.repository.fork == false
     strategy:
       fail-fast: false
       matrix:
