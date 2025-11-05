@@ -3,8 +3,8 @@ Business Source License 1.1
 Parameters
 
 Licensor:             Lightbend, Inc.
-Licensed Work:        Akka 2.8.8
-                      The Licensed Work is (c) 2024 Lightbend Inc.
+Licensed Work:        Akka 2.8.9
+                      The Licensed Work is (c) 2025 Lightbend Inc.
 Additional Use Grant:
     If you develop an application using a version of Play Framework that
     utilizes binary versions of akka-streams and its dependencies, you may
@@ -15,12 +15,12 @@ Additional Use Grant:
     Connecting to a Play Framework websocket and/or Play Framework
     request/response bodies for server and play-ws client.
 
-Change Date:          2027-10-28
+Change Date:          2028-11-05
 
 Change License:       Apache License, Version 2.0
 
 For information about alternative licensing arrangements for the Software,
-please visit: https://lightbend.com/
+please visit: https://akka.io
 
 -----------------------------------------------------------------------------
 

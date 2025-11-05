@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://akka.io>
  */
 
 package akka.actor.typed.scaladsl
