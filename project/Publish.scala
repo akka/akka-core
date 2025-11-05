@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2025 Lightbend Inc. <https://akka.io>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -7,8 +7,12 @@ package akka
 import sbt._
 import sbt.Keys._
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.lightbend.sbt.publishrsync.PublishRsyncPlugin.autoImport.publishRsyncHost
-import xerial.sbt.Sonatype.autoImport.sonatypeProfileName
+import sbt.Def
+import com.geirsson.CiReleasePlugin
+import com.jsuereth.sbtpgp.PgpKeys.publishSigned
 
 object Publish extends AutoPlugin {
 
@@ -16,38 +20,57 @@ object Publish extends AutoPlugin {
 
   override def trigger = allRequirements
 
-  override lazy val projectSettings = Seq(
-    publishTo := Some(akkaPublishTo.value),
-    publishRsyncHost := "akkarepo@gustav.akka.io",
-    credentials ++= akkaCredentials,
-    organizationName := "Lightbend Inc.",
-    organizationHomepage := Some(url("https://www.lightbend.com")),
-    sonatypeProfileName := "com.typesafe",
-    startYear := Some(2009),
-    developers := List(
-        Developer(
-          "akka-contributors",
-          "Akka Contributors",
-          "akka.official@gmail.com",
-          url("https://github.com/akka/akka/graphs/contributors"))),
-    publishMavenStyle := true,
-    pomIncludeRepository := { x =>
-      false
-    },
-    defaultPublishTo := target.value / "repository")
+  lazy val beforePublishTask = taskKey[Unit]("setup before publish")
 
-  private def akkaPublishTo = Def.setting {
-    val key = new java.io.File(
-      Option(System.getProperty("akka.gustav.key"))
-        .getOrElse(System.getProperty("user.home") + "/.ssh/id_rsa_gustav.pem"))
-    if (isSnapshot.value)
-      Resolver.sftp("Akka snapshots", "gustav.akka.io", "/home/akkarepo/www/snapshots").as("akkarepo", key)
-    else
-      Opts.resolver.sonatypeStaging
+  lazy val beforePublishDone = new AtomicBoolean(false)
+
+  def beforePublish(snapshot: Boolean) = {
+    if (beforePublishDone.compareAndSet(false, true)) {
+      CiReleasePlugin.setupGpg()
+      if (!snapshot)
+        cloudsmithCredentials(validate = true)
+    }
   }
 
-  private def akkaCredentials: Seq[Credentials] =
-    Option(System.getProperty("akka.publish.credentials")).map(f => Credentials(new File(f))).toSeq
+  override lazy val projectSettings = Seq(
+      publishRsyncHost := "akkarepo@gustav.akka.io",
+      organizationName := "Lightbend Inc.",
+      organizationHomepage := Some(url("https://akka.io")),
+      startYear := Some(2009),
+      developers := List(
+          Developer(
+            "akka-contributors",
+            "Akka Contributors",
+            "akka.official@gmail.com",
+            url("https://github.com/akka/akka-core/graphs/contributors"))),
+      publishMavenStyle := true,
+      pomIncludeRepository := { x =>
+        false
+      },
+      defaultPublishTo := target.value / "repository") ++ publishingSettings
+
+  private lazy val publishingSettings: Seq[Def.Setting[_]] = {
+    Def.settings(
+      beforePublishTask := beforePublish(isSnapshot.value),
+      publishSigned := publishSigned.dependsOn(beforePublishTask).value,
+      publishTo := (if (isSnapshot.value)
+                      Some("Cloudsmith API".at("https://maven.cloudsmith.io/lightbend/akka-snapshots/"))
+                    else
+                      Some("Cloudsmith API".at("https://maven.cloudsmith.io/lightbend/akka/"))),
+      credentials ++= cloudsmithCredentials(validate = false))
+  }
+
+  def cloudsmithCredentials(validate: Boolean): Seq[Credentials] = {
+    (sys.env.get("PUBLISH_USER"), sys.env.get("PUBLISH_PASSWORD")) match {
+      case (Some(user), Some(password)) =>
+        Seq(Credentials("Cloudsmith API", "maven.cloudsmith.io", user, password))
+      case _ =>
+        if (validate)
+          throw new Exception("Publishing credentials expected in `PUBLISH_USER` and `PUBLISH_PASSWORD`.")
+        else
+          Nil
+    }
+  }
 }
 
 /**
