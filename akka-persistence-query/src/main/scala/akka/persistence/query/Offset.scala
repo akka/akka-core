@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://akka.io>
  */
 
 package akka.persistence.query
