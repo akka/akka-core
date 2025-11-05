@@ -32,7 +32,7 @@ Key links:
 
 - [ ] Check [API](https://doc.akka.io/api/akka-core/$VERSION$/) documentation
 - [ ] Check [reference](https://doc.akka.io/libraries/akka-core/$VERSION$/) documentation. Check that the reference docs were deployed and show a version warning (see section below on how to fix the version warning).
-- [ ] Check the release `coursier resolve com.typesafe.akka:akka-actor_2.13:$VERSION$ -r $(grep -oE 'https://[^"]+' ~/.sbt/1.0/credentials.sbt | head -1)` 
+- [ ] Check the release `mvn dependency:get -Dartifact=com.typesafe.akka:akka-actor_2.13:$VERSION$` 
 
 ### When everything is on https://repo.akka.io/TOKEN/secure
   - [ ] Log into `gustav.akka.io` as `akkarepo` 
