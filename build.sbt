@@ -7,7 +7,7 @@ import scala.sys.process._
 scalaVersion := allScalaVersions.head
 
 enablePlugins(UnidocRoot, UnidocWithPrValidation, NoPublish, CopyrightHeader, CopyrightHeaderInPr, JavaFormatterPlugin)
-disablePlugins(MimaPlugin)
+disablePlugins(MimaPlugin, CiReleasePlugin)
 
 addCommandAlias("verifyCodeStyle", "scalafmtCheckAll; scalafmtSbtCheck; headerCheckAll")
 addCommandAlias("applyCodeStyle", "headerCreateAll; scalafmtAll; scalafmtSbt")
@@ -508,7 +508,7 @@ lazy val coordination = akkaModule("akka-coordination")
 
 lazy val billOfMaterials = Project("akka-bill-of-materials", file("akka-bill-of-materials"))
   .enablePlugins(BillOfMaterialsPlugin)
-  .disablePlugins(MimaPlugin, AkkaDisciplinePlugin)
+  .disablePlugins(MimaPlugin, AkkaDisciplinePlugin, CiReleasePlugin)
   // buildSettings and defaultSettings configure organization name, licenses, etc...
   .settings(AkkaBuild.buildSettings)
   .settings(AkkaBuild.defaultSettings)
@@ -541,6 +541,7 @@ def akkaModule(name: String): Project =
     .settings(akka.AkkaBuild.defaultSettings)
     .settings(fortifySettings(name))
     .enablePlugins(BootstrapGenjavadoc)
+    .disablePlugins(CiReleasePlugin)
 
 /* Command aliases one can run locally against a module
   - where three or more tasks should be checked for faster turnaround
