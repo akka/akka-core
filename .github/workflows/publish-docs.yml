@@ -48,7 +48,6 @@ jobs:
 
       - name: Publish
         run: |-
-          scripts/prepare-downloads.sh
           eval "$(ssh-agent -s)"
           echo $AKKA_RSYNC_GUSTAV | base64 -d > .github/id_rsa
           chmod 600 .github/id_rsa
