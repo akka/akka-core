@@ -774,14 +774,14 @@ class ReplicatedEventSourcingSpec
       val addTransformation: (
           EventSourcedBehavior[Command, String, State],
           ActorContext[Command]) => EventSourcedBehavior[Command, String, State] = { (behv, context) =>
-        behv.withReplicatedEventTransformation { (_, eventWithMeta) =>
+        behv.withReplicatedEventsTransformation { (_, eventWithMeta) =>
           val resMeta1 = EventSourcedBehavior.currentMetadata[ReplicatedEventMetadata](context)
           val resMeta2 = eventWithMeta.metadata[ReplicatedEventMetadata]
           if (resMeta1 != resMeta2)
             throw new IllegalStateException(s"Expected RES metadata to be the same, $resMeta1 != $resMeta2")
 
           val newMeta = eventWithMeta.metadata[Meta].map(m => m.copy(m.value.toUpperCase)).toList
-          EventWithMetadata(eventWithMeta.event.toUpperCase, newMeta)
+          EventWithMetadata(eventWithMeta.event.toUpperCase, newMeta) :: Nil
         }
       }
       val r1 = spawn(
@@ -829,6 +829,140 @@ class ReplicatedEventSourcingSpec
 
       r2 ! GetState(stateProbe.ref)
       stateProbe.expectMessage(State(Vector("FROM R1", "from r2")))
+    }
+
+    "transform replicated events and emit additional events" in {
+      val entityId = nextEntityId
+      val probe = createTestProbe[Done]()
+      val eventProbe1 = createTestProbe[EventAndContext]()
+      val eventProbe2 = createTestProbe[EventAndContext]()
+      val addTransformation: (
+          EventSourcedBehavior[Command, String, State],
+          ActorContext[Command]) => EventSourcedBehavior[Command, String, State] = { (behv, context) =>
+        behv.withReplicatedEventsTransformation { (_, eventWithMeta) =>
+          val resMeta1 = EventSourcedBehavior.currentMetadata[ReplicatedEventMetadata](context)
+          val resMeta2 = eventWithMeta.metadata[ReplicatedEventMetadata]
+          if (resMeta1 != resMeta2)
+            throw new IllegalStateException(s"Expected RES metadata to be the same, $resMeta1 != $resMeta2")
+
+          if (eventWithMeta.event.startsWith("transformed")) {
+            // break the loop
+            eventWithMeta :: Nil
+          } else {
+            EventWithMetadata("transformed-1: " + eventWithMeta.event.toUpperCase, Meta("meta-1")) ::
+            EventWithMetadata("transformed-2: " + eventWithMeta.event.toUpperCase, Meta("meta-2")) ::
+            EventWithMetadata("transformed-3: " + eventWithMeta.event.toUpperCase, Meta("meta-3")) ::
+            Nil
+          }
+        }
+      }
+      val r1 = spawn(
+        testBehaviorWithContext(entityId, "R1", probe = Some(eventProbe1.ref), modifyBehavior = addTransformation))
+      val r2 = spawn(
+        testBehaviorWithContext(entityId, "R2", probe = Some(eventProbe2.ref), modifyBehavior = addTransformation))
+
+      r1 ! StoreMeWithMeta("from r1", probe.ref, Meta("meta from r1"))
+      eventProbe1.expectMessage(
+        EventAndContext(
+          "from r1",
+          ReplicaId("R1"),
+          recoveryRunning = false,
+          concurrent = false,
+          Some(Meta("meta from r1"))))
+      // replicated to r2, and transformed
+      eventProbe2.expectMessage(
+        EventAndContext(
+          "transformed-1: FROM R1",
+          ReplicaId("R1"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-1"))))
+      eventProbe2.expectMessage(
+        EventAndContext(
+          "transformed-2: FROM R1",
+          ReplicaId("R2"), // this is R2 because it was R2 that emitted it
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-2"))))
+      eventProbe2.expectMessage(
+        EventAndContext(
+          "transformed-3: FROM R1",
+          ReplicaId("R2"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-3"))))
+
+      // R2 emitted two additional events, and those are replicated back to R1
+      eventProbe1.expectMessage(
+        EventAndContext(
+          "transformed-2: FROM R1",
+          ReplicaId("R2"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-2"))))
+
+      eventProbe1.expectMessage(
+        EventAndContext(
+          "transformed-3: FROM R1",
+          ReplicaId("R2"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-3"))))
+
+      eventProbe1.expectNoMessage()
+      eventProbe2.expectNoMessage()
+
+      r2 ! StoreMeWithMeta("from r2", probe.ref, Meta("meta from r2"))
+      eventProbe2.expectMessage(
+        EventAndContext(
+          "from r2",
+          ReplicaId("R2"),
+          recoveryRunning = false,
+          concurrent = false,
+          Some(Meta("meta from r2"))))
+      // replicated to r1, and transformed
+      eventProbe1.expectMessage(
+        EventAndContext(
+          "transformed-1: FROM R2",
+          ReplicaId("R2"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-1"))))
+      eventProbe1.expectMessage(
+        EventAndContext(
+          "transformed-2: FROM R2",
+          ReplicaId("R1"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-2"))))
+      eventProbe1.expectMessage(
+        EventAndContext(
+          "transformed-3: FROM R2",
+          ReplicaId("R1"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-3"))))
+
+      // R1 emitted two additional events, and those are replicated back to R2
+      eventProbe2.expectMessage(
+        EventAndContext(
+          "transformed-2: FROM R2",
+          ReplicaId("R1"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-2"))))
+
+      eventProbe2.expectMessage(
+        EventAndContext(
+          "transformed-3: FROM R2",
+          ReplicaId("R1"),
+          recoveryRunning = false,
+          concurrent = false,
+          meta = Some(Meta("meta-3"))))
+
+      eventProbe1.expectNoMessage()
+      eventProbe2.expectNoMessage()
+
     }
   }
 

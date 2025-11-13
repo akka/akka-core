@@ -497,7 +497,7 @@ private[akka] object Running {
       setup.currentSequenceNumber = state.seqNr + 1
       setup.currentMetadata = event.metadata
       val isConcurrent: Boolean = event.originVersion <> state.version
-      val updatedVersion = event.originVersion.merge(state.version)
+      var updatedVersion = event.originVersion.merge(state.version)
 
       if (setup.internalLogger.isDebugEnabled())
         setup.internalLogger.debug(
@@ -579,9 +579,9 @@ private[akka] object Running {
         replication.setContext(recoveryRunning = false, replication.replicaId, concurrent = false) // local events are never concurrent
         val replicatedEventMetadataTemplate = ReplicatedEventMetadata(
           replication.replicaId,
-          0L,
-          state.version,
-          concurrent = false) // we replace it with actual seqnr later
+          0L, // we replace it with actual seqnr later
+          updatedVersion,
+          concurrent = false)
 
         var currentState = stateAfterApply
         var eventsToPersist
@@ -595,9 +595,8 @@ private[akka] object Running {
           setup.currentMetadata = CompositeMetadata.construct(evtWithMeta.metadataEntries)
           val evtManifest = setup.eventAdapter.manifest(event)
           val metadataEntries = {
-            val updatedVersion =
-              currentState.version
-                .updated(replicatedEventMetadataTemplate.originReplica.id, setup.currentSequenceNumber)
+            updatedVersion =
+              updatedVersion.updated(replicatedEventMetadataTemplate.originReplica.id, setup.currentSequenceNumber)
             if (setup.internalLogger.isTraceEnabled)
               setup.internalLogger.trace(
                 "Additional event [{}] from replicated event , version vector [{}]",
@@ -625,7 +624,7 @@ private[akka] object Running {
           internalPersistAll(OptionVal.none, currentState, eventsToPersist.reverse)
 
         persistingEvents(
-          newState2.copy(seenPerReplica = updatedSeen),
+          newState2.copy(seenPerReplica = updatedSeen, version = updatedVersion),
           state,
           command = OptionVal.none[C],
           eventsToPersist.size,

@@ -343,7 +343,8 @@ object EventSourcedBehavior {
    */
   @ApiMayChange
   @InternalStableApi
-  def withReplicatedEventTransformation( // FIXME deprecate this one, and only have withReplicatedEventsTransformation
+  @deprecated("Use withReplicatedEventsTransformation", "2.10.12")
+  def withReplicatedEventTransformation(
       f: (State, EventWithMetadata[Event]) => EventWithMetadata[Event]): EventSourcedBehavior[Command, Event, State]
 
   /**
