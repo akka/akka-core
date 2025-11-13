@@ -598,7 +598,7 @@ private[akka] object Running {
             val updatedVersion =
               currentState.version
                 .updated(replicatedEventMetadataTemplate.originReplica.id, setup.currentSequenceNumber)
-            if (setup.internalLogger.isDebugEnabled)
+            if (setup.internalLogger.isTraceEnabled)
               setup.internalLogger.trace(
                 "Additional event [{}] from replicated event , version vector [{}]",
                 Logging.simpleName(event.getClass),
@@ -728,7 +728,7 @@ private[akka] object Running {
               case Some(template) =>
                 val updatedVersion =
                   currentState.version.updated(template.originReplica.id, setup.currentSequenceNumber)
-                if (setup.internalLogger.isDebugEnabled)
+                if (setup.internalLogger.isTraceEnabled)
                   setup.internalLogger.trace(
                     "Processing event [{}] with version vector [{}]",
                     Logging.simpleName(event.getClass),
