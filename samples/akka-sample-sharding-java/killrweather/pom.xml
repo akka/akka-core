@@ -18,7 +18,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <akka.version>2.10.11</akka.version>
+        <akka.version>2.10.12</akka.version>
         <akka-http.version>10.7.0</akka-http.version>
         <akka-diagnostics.version>2.1.0</akka-diagnostics.version>
     </properties>

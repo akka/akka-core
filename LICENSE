@@ -3,7 +3,7 @@ Business Source License 1.1
 Parameters
 
 Licensor:             Lightbend, Inc.
-Licensed Work:        Akka 2.10.11
+Licensed Work:        Akka 2.10.12
                       This license applies to all sub directories and files
                       UNLESS another license file is present in a sub
                       directory, then that other license applies to all files
@@ -19,7 +19,7 @@ Additional Use Grant:
     Connecting to a Play Framework websocket and/or Play Framework
     request/response bodies for server and play-ws client.
 
-Change Date:          2028-10-28
+Change Date:          2028-11-18
 
 Change License:       Apache License, Version 2.0
 
