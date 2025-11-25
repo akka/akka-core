@@ -11,6 +11,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.annotation.InternalApi
 import akka.cluster.ddata.Key
 import akka.cluster.ddata.ReplicatedData
+import akka.cluster.ddata.Replicator.ReadConsistency
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.ddata.typed.scaladsl.Replicator
 import akka.cluster.sharding.typed.ShardedDaemonProcessContext
@@ -68,6 +69,7 @@ private[akka] object ShardedDaemonProcessState {
       started = Instant.now())
 
   def verifyRevisionBeforeStarting[T](
+      stateReadConsistency: ReadConsistency,
       behaviorFactory: ShardedDaemonProcessContext => Behavior[T]): ShardedDaemonProcessContext => Behavior[T] = {
     sdpContext =>
       Behaviors.setup { context =>
@@ -88,7 +90,7 @@ private[akka] object ShardedDaemonProcessState {
 
           // we can't anyway turn reply into T so no need for the usual adapter
           val distributedData = DistributedData(context.system)
-          distributedData.replicator ! Replicator.Get(key, Replicator.ReadLocal, context.self.unsafeUpcast)
+          distributedData.replicator ! Replicator.Get(key, stateReadConsistency, context.self.unsafeUpcast)
           Behaviors.receiveMessagePartial {
             case reply @ Replicator.GetSuccess(`key`) =>
               val state = reply.get(key)
@@ -101,7 +103,7 @@ private[akka] object ShardedDaemonProcessState {
                   revision)
                 behaviorFactory(sdpContext).unsafeCast
               } else {
-                context.log.warn(
+                context.log.info(
                   "{}: Tried to start an old revision of worker ([{}] but latest revision is [{}], started at {})",
                   sdpContext.name,
                   sdpContext.revision,
@@ -126,6 +128,16 @@ private[akka] object ShardedDaemonProcessState {
                   sdpContext.revision)
                 Behaviors.stopped
               }
+            case Replicator.GetFailure(_) =>
+              context.log.info(
+                "{}: Tried to start Sharded Daemon Process [{}] out of a total [{}], but current revision couldn't " +
+                "be retrieved. Retrying. (revision [{}])",
+                sdpContext.name,
+                sdpContext.processNumber,
+                sdpContext.totalProcesses,
+                revision)
+              distributedData.replicator ! Replicator.Get(key, stateReadConsistency, context.self.unsafeUpcast)
+              Behaviors.same
           }
         }
 

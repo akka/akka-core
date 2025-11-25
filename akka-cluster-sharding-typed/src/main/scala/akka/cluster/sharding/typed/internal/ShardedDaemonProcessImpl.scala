@@ -15,6 +15,9 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.Behavior
 import akka.annotation.InternalApi
+import akka.cluster.ddata.Replicator.ReadAll
+import akka.cluster.ddata.Replicator.ReadConsistency
+import akka.cluster.ddata.Replicator.ReadMajorityPlus
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
 import akka.cluster.sharding.ShardRegion.EntityId
@@ -166,13 +169,21 @@ private[akka] final class ShardedDaemonProcessImpl(system: ActorSystem[_])
         shardingBaseSettings.leaseSettings)
     }
 
+    val stateReadConsistency: ReadConsistency =
+      shardingSettings.tuningParameters.coordinatorStateReadMajorityPlus match {
+        case Int.MaxValue => ReadAll(shardingSettings.tuningParameters.waitingForStateTimeout)
+        case additional =>
+          val majorityMinCap =
+            system.settings.config.getInt("akka.cluster.sharding.distributed-data.majority-min-cap")
+          ReadMajorityPlus(shardingSettings.tuningParameters.waitingForStateTimeout, additional, majorityMinCap)
+      }
+
     val entity = Entity(entityTypeKey) { ctx =>
       val decodedId = decodeEntityId(ctx.entityId, initialNumberOfProcesses = numberOfInstances)
       val sdContext =
         ShardedDaemonProcessContextImpl(decodedId.processNumber, decodedId.totalCount, name, decodedId.revision)
-      if (supportsRescale) verifyRevisionBeforeStarting(behaviorFactory)(sdContext)
-      else
-        behaviorFactory(sdContext)
+      if (supportsRescale) verifyRevisionBeforeStarting(stateReadConsistency, behaviorFactory)(sdContext)
+      else behaviorFactory(sdContext)
     }.withSettings(shardingSettings).withMessageExtractor(new MessageExtractor())
 
     val entityWithStop = stopMessage match {

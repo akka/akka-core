@@ -29,6 +29,10 @@ object ShardedDaemonProcessRescaleSpec extends MultiNodeConfig {
   val first = role("first")
   val second = role("second")
   val third = role("third")
+  val fourth = role("fourth")
+  val fifth = role("fifth")
+  val sixth = role("sixth")
+  val seventh = role("seventh")
 
   val SnitchServiceKey = ServiceKey[AnyRef]("snitch")
 
@@ -39,26 +43,36 @@ object ShardedDaemonProcessRescaleSpec extends MultiNodeConfig {
     case object Stop extends Command
 
     def apply(id: Int): Behavior[Command] = Behaviors.setup { ctx =>
+      ctx.log.info("Started [{}]", id)
       val snitchRouter = ctx.spawn(Routers.group(SnitchServiceKey), "router")
       snitchRouter ! ProcessActorEvent(id, "Started")
 
       Behaviors.receiveMessagePartial {
         case Stop =>
+          ctx.log.info("Stopped [{}]", id)
           snitchRouter ! ProcessActorEvent(id, "Stopped")
           Behaviors.stopped
       }
     }
   }
 
-  commonConfig(ConfigFactory.parseString("""
+  commonConfig(
+    ConfigFactory.parseString("""
         akka.loglevel = DEBUG
         akka.cluster.sharded-daemon-process {
           sharding {
             # First is likely to be ignored as shard coordinator not ready
             retry-interval = 0.2s
           }
-          # quick ping to make test swift
-          keep-alive-interval = 1s
+          # quick ping to make test swift, stress the start/stop guarantees during rescaling
+          keep-alive-interval = 20 ms
+          # disable throttle to stress the start/stop guarantees during rescaling
+          keep-alive-throttle-interval = 0 s
+        }
+        akka.cluster.sharding {
+          distributed-data.majority-min-cap = 4
+          coordinator-state.write-majority-plus = 0
+          coordinator-state.read-majority-plus = 0
         }
       """).withFallback(MultiNodeClusterSpec.clusterConfig))
 
@@ -67,6 +81,10 @@ object ShardedDaemonProcessRescaleSpec extends MultiNodeConfig {
 class ShardedDaemonProcessRescaleMultiJvmNode1 extends ShardedDaemonProcessRescaleSpec
 class ShardedDaemonProcessRescaleMultiJvmNode2 extends ShardedDaemonProcessRescaleSpec
 class ShardedDaemonProcessRescaleMultiJvmNode3 extends ShardedDaemonProcessRescaleSpec
+class ShardedDaemonProcessRescaleMultiJvmNode4 extends ShardedDaemonProcessRescaleSpec
+class ShardedDaemonProcessRescaleMultiJvmNode5 extends ShardedDaemonProcessRescaleSpec
+class ShardedDaemonProcessRescaleMultiJvmNode6 extends ShardedDaemonProcessRescaleSpec
+class ShardedDaemonProcessRescaleMultiJvmNode7 extends ShardedDaemonProcessRescaleSpec
 
 abstract class ShardedDaemonProcessRescaleSpec
     extends MultiNodeSpec(ShardedDaemonProcessRescaleSpec)
@@ -78,9 +96,18 @@ abstract class ShardedDaemonProcessRescaleSpec
   val topicProbe: TestProbe[AnyRef] = TestProbe[AnyRef]()
   private var sdp: ActorRef[ShardedDaemonProcessCommand] = _
 
+  private def assertNumberOfProcesses(n: Int, revision: Int): Unit = {
+    val probe = TestProbe[NumberOfProcesses]()
+    sdp ! GetNumberOfProcesses(probe.ref)
+    val reply = probe.receiveMessage()
+    reply.numberOfProcesses should ===(n)
+    reply.revision should ===(revision)
+    reply.rescaleInProgress === (false)
+  }
+
   "Cluster sharding in multi dc cluster" must {
     "form cluster" in {
-      formCluster(first, second, third)
+      formCluster(first, second, third, fourth, fifth, sixth, seventh)
       runOn(first) {
         typedSystem.receptionist ! Receptionist.Register(SnitchServiceKey, topicProbe.ref, topicProbe.ref)
         topicProbe.expectMessageType[Receptionist.Registered]
@@ -109,6 +136,11 @@ abstract class ShardedDaemonProcessRescaleSpec
           event.id
         }.toSet
         startedIds.size should ===(4)
+        topicProbe.expectNoMessage()
+      }
+      enterBarrier("sharded-daemon-process-started-acked")
+      runOn(third) {
+        assertNumberOfProcesses(n = 4, revision = 0)
       }
       enterBarrier("sharded-daemon-process-started")
     }
@@ -118,6 +150,16 @@ abstract class ShardedDaemonProcessRescaleSpec
         val probe = TestProbe[AnyRef]()
         sdp ! ChangeNumberOfProcesses(8, probe.ref)
         probe.expectMessage(30.seconds, StatusReply.Ack)
+// FIXME snitch router is dropping messages
+//        val events = topicProbe.receiveMessages(4 + 8, 10.seconds).map(_.asInstanceOf[ProcessActorEvent])
+//        events.collect { case evt if evt.event == "Stopped" => evt.id }.toSet.size should ===(4)
+//        events.collect { case evt if evt.event == "Started" => evt.id }.toSet.size should ===(8)
+//        topicProbe.expectNoMessage()
+      }
+
+      enterBarrier("sharded-daemon-process-rescaled-to-8-acked")
+      runOn(third) {
+        assertNumberOfProcesses(n = 8, revision = 1)
       }
       enterBarrier("sharded-daemon-process-rescaled-to-8")
     }
@@ -128,17 +170,23 @@ abstract class ShardedDaemonProcessRescaleSpec
         sdp ! ChangeNumberOfProcesses(2, probe.ref)
         probe.expectMessage(30.seconds, StatusReply.Ack)
       }
+      enterBarrier("sharded-daemon-process-rescaled-to-2-acked")
+      runOn(first) {
+// FIXME snitch router is dropping messages
+//        val events = topicProbe.receiveMessages(8 + 2, 10.seconds).map(_.asInstanceOf[ProcessActorEvent])
+//        events.collect { case evt if evt.event == "Stopped" => evt.id }.toSet.size should ===(8)
+//        events.collect { case evt if evt.event == "Started" => evt.id }.toSet.size should ===(2)
+//        topicProbe.expectNoMessage()
+      }
+      runOn(third) {
+        assertNumberOfProcesses(n = 2, revision = 2)
+      }
       enterBarrier("sharded-daemon-process-rescaled-to-2")
     }
 
     "query the state" in {
       runOn(third) {
-        val probe = TestProbe[NumberOfProcesses]()
-        sdp ! GetNumberOfProcesses(probe.ref)
-        val reply = probe.receiveMessage()
-        reply.numberOfProcesses should ===(2)
-        reply.revision should ===(2)
-        reply.rescaleInProgress === (false)
+        assertNumberOfProcesses(n = 2, revision = 2)
       }
       enterBarrier("sharded-daemon-process-query")
     }

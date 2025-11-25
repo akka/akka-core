@@ -306,11 +306,16 @@ private final class ShardedDaemonProcessCoordinator private (
       case ShardStopped(shard) =>
         val newShardsStillRunning = shardsStillRunning - shard
         if (newShardsStillRunning.isEmpty) {
+          context.log.info(
+            "{}: All shards stopped. Continue rescaling of Sharded Daemon Process to [{}] processes, rev [{}]",
+            daemonProcessName,
+            state.numberOfProcesses,
+            state.revision)
           timers.cancel(ShardStopTimeout)
           rescalingComplete(state, request)
         } else waitForShardsStopping(state, request, previousNumberOfProcesses, newShardsStillRunning)
       case ShardStopTimeout =>
-        context.log.debug("{}: Stopping shards timed out after [{}] retrying", daemonProcessName, stopShardsTimeout)
+        context.log.info("{}: Stopping shards timed out after [{}] retrying", daemonProcessName, stopShardsTimeout)
         stopAllShards(state, request, previousNumberOfProcesses)
     }
   }
