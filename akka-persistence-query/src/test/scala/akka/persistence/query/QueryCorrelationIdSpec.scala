@@ -29,6 +29,26 @@ class QueryCorrelationIdSpec extends AnyWordSpecLike with Matchers {
       QueryCorrelationId.get() shouldBe None
     }
 
+    "pass along and clear correlation id if present" in {
+      val uuid = UUID.randomUUID().toString
+      val observed =
+        QueryCorrelationId.withCorrelationId(Some(uuid)) { () =>
+          pretendQueryMethod()
+        }
+      observed shouldEqual Some(uuid)
+
+      // cleared after returning
+      QueryCorrelationId.get() shouldBe None
+    }
+
+    "just invoke the block if correlation id not present" in {
+      val observed =
+        QueryCorrelationId.withCorrelationId(None) { () =>
+          pretendQueryMethod()
+        }
+      observed shouldEqual None
+    }
+
     "clear correlation id when call fails" in {
       val uuid = UUID.randomUUID().toString
       intercept[TestException] {

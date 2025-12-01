@@ -16,8 +16,6 @@ object QueryCorrelationId {
   /**
    * Expected to be used "around" calls to plugin query method, will clear the correlation id from thread local
    * to make sure there is no leak between logic executed on shared threads.
-   *
-   * @param correlationId
    */
   def withCorrelationId[T](correlationId: String)(block: () => T): T = {
     threadLocal.set(correlationId)
@@ -25,6 +23,17 @@ object QueryCorrelationId {
       block()
     } finally {
       threadLocal.remove()
+    }
+  }
+
+  /**
+   * Expected to be used "around" calls to plugin query method to pass along a prevously extracted optional correlation id,
+   * will clear the correlation id from thread local to make sure there is no leak between logic executed on shared threads.
+   */
+  def withCorrelationId[T](correlationId: Option[String])(block: () => T): T = {
+    correlationId match {
+      case None           => block()
+      case Some(actualId) => withCorrelationId(actualId)(block)
     }
   }
 
