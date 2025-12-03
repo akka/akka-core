@@ -5,7 +5,6 @@
 package akka.stream.scaladsl
 
 import java.util.concurrent.CompletionStage
-
 import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.annotation.unchecked.uncheckedVariance
@@ -13,9 +12,7 @@ import scala.collection.immutable
 import scala.jdk.FutureConverters._
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration.FiniteDuration
-
 import org.reactivestreams.{ Publisher, Subscriber }
-
 import akka.{ Done, NotUsed }
 import akka.actor.{ ActorRef, Cancellable }
 import akka.annotation.InternalApi
@@ -26,6 +23,9 @@ import akka.stream.impl.fusing.GraphStages
 import akka.stream.impl.fusing.GraphStages._
 import akka.stream.stage.GraphStageWithMaterializedValue
 import akka.util.ConstantFun
+
+import scala.util.Failure
+import scala.util.Success
 
 /**
  * A `Source` is a set of stream processing steps that has one open output. It can comprise
@@ -505,7 +505,11 @@ object Source {
    * The stream fails if the `Future` is completed with a failure.
    */
   def future[T](futureElement: Future[T]): Source[T, NotUsed] =
-    fromGraph(new FutureSource[T](futureElement))
+    futureElement.value match {
+      case Some(Success(value)) => single(value)
+      case Some(Failure(cause)) => failed(cause)
+      case None                 => fromGraph(new FutureSource[T](futureElement))
+    }
 
   /**
    * Never emits any elements, never completes and never fails.
@@ -527,8 +531,12 @@ object Source {
    * Turn a `Future[Source]` into a source that will emit the values of the source when the future completes successfully.
    * If the `Future` is completed with a failure the stream is failed.
    */
-  def futureSource[T, M](futureSource: Future[Source[T, M]]): Source[T, Future[M]] =
-    fromGraph(new FutureFlattenSource(futureSource))
+  def futureSource[T, M](futureSource: Future[Source[T, M]]): Source[T, Future[M]] = {
+    futureSource.value match {
+      case Some(Success(source)) => source.mapMaterializedValue(Future.successful)
+      case _                     => fromGraph(new FutureFlattenSource(futureSource))
+    }
+  }
 
   /**
    * Defers invoking the `create` function to create a single element until there is downstream demand.
