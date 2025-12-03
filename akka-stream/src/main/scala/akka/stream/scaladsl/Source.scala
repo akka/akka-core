@@ -352,8 +352,17 @@ object Source {
    * stream will see an individual flow of elements (always starting from the
    * beginning) regardless of when they subscribed.
    */
-  def apply[T](iterable: immutable.Iterable[T]): Source[T, NotUsed] =
-    fromGraph(new IterableSource[T](iterable))
+  def apply[T](iterable: immutable.Iterable[T]): Source[T, NotUsed] = {
+    iterable match {
+      case s: Seq[T] =>
+        s.knownSize match {
+          case 0 => empty
+          case 1 => single(s.head)
+          case _ => fromGraph(new IterableSource[T](iterable))
+        }
+      case _ => fromGraph(new IterableSource[T](iterable))
+    }
+  }
 
   /**
    * Starts a new `Source` from the given `Future`. The stream will consist of
