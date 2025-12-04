@@ -534,6 +534,7 @@ object Source {
   def futureSource[T, M](futureSource: Future[Source[T, M]]): Source[T, Future[M]] = {
     futureSource.value match {
       case Some(Success(source)) => source.mapMaterializedValue(Future.successful)
+      case Some(Failure(exc))    => failed(exc).mapMaterializedValue(_ => Future.failed(exc))
       case _                     => fromGraph(new FutureFlattenSource(futureSource))
     }
   }

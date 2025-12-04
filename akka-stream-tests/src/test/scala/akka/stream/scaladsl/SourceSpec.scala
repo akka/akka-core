@@ -13,6 +13,7 @@ import org.scalatest.time.Span
 import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.Future
+import scala.concurrent.Promise
 //#imports
 import akka.stream._
 
@@ -488,7 +489,63 @@ class SourceSpec extends StreamSpec with DefaultTimeout {
     }
   }
 
+  "Source.future" must {
+    "optimize already completed future" in {
+      val future = Future.successful("done")
+      val source = Source.future(future)
+      source.getAttributes.nameLifted should ===(Some("singleSource"))
+      source.runWith(Sink.head).futureValue should ===("done")
+    }
+
+    "optimize already failed future" in {
+      val future = Future.failed(TE("boom"))
+      val source = Source.future(future)
+      source.getAttributes.nameLifted should ===(Some("failedSource"))
+      source.runWith(Sink.head).failed.futureValue shouldBe a[TE]
+    }
+
+    "handle regular future" in {
+      val promise = Promise[String]()
+      val source = Source.future(promise.future)
+      source.getAttributes.nameLifted should ===(Some("futureSource"))
+      promise.success("done")
+      source.runWith(Sink.head).futureValue should ===("done")
+    }
+  }
+
   "Source.futureSource" must {
+    "optimize already completed future" in {
+      val future = Future.successful(Source.single("done"))
+      val source = Source.futureSource(future)
+      source.getAttributes.nameLifted should ===(Some("singleSource"))
+      source.runWith(Sink.head).futureValue should ===("done")
+    }
+
+    "pass along materialized value for already completed future" in {
+      val future = Future.successful(Source.single("done").mapMaterializedValue(_ => "materializedValue"))
+      val source = Source.futureSource(future)
+      source.toMat(Sink.ignore)(Keep.left).run().futureValue should ===("materializedValue")
+    }
+
+    "handle already failed future" in {
+      val future = Future.failed[Source[String, NotUsed]](TE("boom"))
+      val source = Source.futureSource(future)
+      val (futureMat, streamResult) = source.toMat(Sink.head)(Keep.both).run()
+
+      streamResult.failed.futureValue should ===(TE("boom"))
+      futureMat.failed.futureValue should ===(TE("boom"))
+    }
+
+    "handle later failed future" in {
+      val promise = Promise[Source[String, NotUsed]]()
+      val source = Source.futureSource(promise.future)
+      promise.failure(TE("boom"))
+
+      val (futureMat, streamResult) = source.toMat(Sink.head)(Keep.both).run()
+
+      streamResult.failed.futureValue should ===(TE("boom"))
+      futureMat.failed.futureValue should ===(TE("boom"))
+    }
 
     "not cancel substream twice" in {
       val result = Source
