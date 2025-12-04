@@ -354,6 +354,8 @@ object Source {
    */
   def apply[T](iterable: immutable.Iterable[T]): Source[T, NotUsed] = {
     iterable match {
+      case Nil         => empty
+      case head :: Nil => single(head)
       case s: Seq[T] =>
         s.knownSize match {
           case 0 => empty

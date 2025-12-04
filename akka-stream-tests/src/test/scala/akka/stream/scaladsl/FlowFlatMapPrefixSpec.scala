@@ -20,6 +20,7 @@ import akka.stream.Attributes.Attribute
 import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
 import akka.stream.testkit.{ StreamSpec, TestPublisher, TestSubscriber }
 import akka.stream.testkit.Utils.TE
+import akka.stream.testkit.scaladsl.TestSource
 
 // Debug loglevel to diagnose https://github.com/akka/akka-core/issues/30469
 class FlowFlatMapPrefixSpec extends StreamSpec("akka.loglevel = debug") {
@@ -654,13 +655,14 @@ class FlowFlatMapPrefixSpec extends StreamSpec("akka.loglevel = debug") {
       }
 
       "complete when downstream cancels before pulling and upstream does not produce" in {
-        val fSeq = Source(List.empty[Int])
+        val (probe, fSeq) = TestSource[Int]()
           .flatMapPrefixMat(1) { prefix =>
             Flow[Int].mapMaterializedValue(_ => prefix)
-          }(Keep.right)
-          .to(Sink.cancelled)
+          }(Keep.both)
+          .toMat(Sink.cancelled)(Keep.left)
           .withAttributes(attributes)
           .run()
+        probe.sendComplete()
 
         if (att.propagateToNestedMaterialization) {
           fSeq.futureValue should equal(Nil)
@@ -670,7 +672,7 @@ class FlowFlatMapPrefixSpec extends StreamSpec("akka.loglevel = debug") {
       }
 
       "complete when downstream cancels before pulling and upstream does not produce, prefix=0" in {
-        val fSeq = Source(List.empty[Int])
+        val fSeq = TestSource[Int]()
           .flatMapPrefixMat(0) { prefix =>
             Flow[Int].mapMaterializedValue(_ => prefix)
           }(Keep.right)

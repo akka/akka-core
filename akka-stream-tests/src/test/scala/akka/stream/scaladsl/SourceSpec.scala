@@ -84,6 +84,35 @@ class SourceSpec extends StreamSpec with DefaultTimeout {
     }
   }
 
+  "Source from iterable" must {
+    "produce optimized source for no elements" in {
+      val source = Source(Nil)
+      source should ===(Source.empty)
+      val result = source.runWith(Sink.seq)
+      result.futureValue should ===(Seq.empty)
+    }
+
+    "produce optimized source for one element Vector" in {
+      val source = Source(Vector(1))
+      val result = source.runWith(Sink.seq)
+      result.futureValue should ===(immutable.Seq(1))
+      source.getAttributes.nameLifted should ===(Some("singleSource"))
+    }
+
+    "produce optimized source for one element List" in {
+      val source = Source(List(1))
+      val result = source.runWith(Sink.seq)
+      result.futureValue should ===(immutable.Seq(1))
+      source.getAttributes.nameLifted should ===(Some("singleSource"))
+    }
+
+    "produce all elements fed to it" in {
+      val source = Source(List(1, 2, 3))
+      val result = source.runWith(Sink.seq)
+      result.futureValue should ===(immutable.Seq(1, 2, 3))
+    }
+  }
+
   "Composite Source" must {
     "merge from many inputs" in {
       val probes = immutable.Seq.fill(5)(TestPublisher.manualProbe[Int]())
