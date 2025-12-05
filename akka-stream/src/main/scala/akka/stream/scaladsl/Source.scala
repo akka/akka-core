@@ -506,6 +506,7 @@ object Source {
    */
   def future[T](futureElement: Future[T]): Source[T, NotUsed] =
     futureElement.value match {
+      case Some(Success(null))  => empty
       case Some(Success(value)) => single(value)
       case Some(Failure(cause)) => failed(cause)
       case None                 => fromGraph(new FutureSource[T](futureElement))
