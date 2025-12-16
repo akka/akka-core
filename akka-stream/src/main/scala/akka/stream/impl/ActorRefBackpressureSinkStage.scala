@@ -84,7 +84,7 @@ import akka.stream.stage._
       }
 
       override def onUpstreamFinish(): Unit = {
-        if (buffer.isEmpty) finish()
+        if (buffer.isEmpty && acknowledgementReceived) finish()
         else completeReceived = true
       }
 
