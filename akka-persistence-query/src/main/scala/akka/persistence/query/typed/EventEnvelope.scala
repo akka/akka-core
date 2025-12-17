@@ -357,7 +357,7 @@ final class EventEnvelope[Event](
     case other: EventEnvelope[_] =>
       offset == other.offset && persistenceId == other.persistenceId && sequenceNr == other.sequenceNr &&
       eventOption == other.eventOption && timestamp == other.timestamp && _eventMetadata == other.internalEventMetadata &&
-      entityType == other.entityType && slice == other.slice && filtered == other.filtered &&
+      entityType == other.entityType && slice == other.slice && filtered == other.filtered && source == other.source &&
       tags == other.tags
     case _ => false
   }
