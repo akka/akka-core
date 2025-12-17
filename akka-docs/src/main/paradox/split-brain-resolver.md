@@ -392,6 +392,17 @@ If there is a combination of indirectly connected nodes and a clean network part
 above decision with the ordinary decision, e.g. keep majority, after excluding suspicious failure detection
 observations.
 
+### Down all when indirectly connected
+
+Addition precaution can be enabled for the uncertainty that may follow from indirectly connected nodes
+by enabling downing of all nodes if indirectly connected nodes are detected:
+
+```
+akka.cluster.split-brain-resolver {
+  down-all-when-indirectly-connected = on
+}
+```
+
 ## Down all when unstable
 
 When reachability observations by the failure detector are changed the SBR decisions

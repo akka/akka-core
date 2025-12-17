@@ -590,7 +590,6 @@ class SplitBrainResolverSpec
       // from side2 of the partition, majority
       assertDowningSide(side2, Set(memberA, memberB, memberC, memberD, memberE, memberF, memberG))
     }
-
   }
 
   "KeepOldest" must {

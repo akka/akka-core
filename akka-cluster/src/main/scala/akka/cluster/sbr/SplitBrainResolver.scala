@@ -435,12 +435,16 @@ import akka.remote.artery.ThisActorSystemQuarantinedEvent
    */
   def actOnDecision(decision: Decision): Set[UniqueAddress] = {
     val nodesToDown =
-      try {
-        strategy.nodesToDown(decision)
-      } catch {
-        case e: IllegalStateException =>
-          log.warning(e.getMessage)
-          strategy.nodesToDown(DownAll)
+      if (settings.DownAllWhenIndirectlyConnected && decision.isIndirectlyConnected) {
+        strategy.nodesToDown(DownAll)
+      } else {
+        try {
+          strategy.nodesToDown(decision)
+        } catch {
+          case e: IllegalStateException =>
+            log.warning(e.getMessage)
+            strategy.nodesToDown(DownAll)
+        }
       }
 
     observeDecision(decision, nodesToDown, unreachableDataCenters)

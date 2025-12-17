@@ -67,6 +67,9 @@ import akka.util.Helpers.Requiring
     }
   }
 
+  val DownAllWhenIndirectlyConnected: Boolean =
+    cc.getBoolean("down-all-when-indirectly-connected")
+
   // the individual sub-configs below should only be called when the strategy has been selected
 
   def keepMajorityRole: Option[String] = role(strategyConfig(KeepMajorityName))
