@@ -98,6 +98,9 @@ private[akka] object EventSourcedBehaviorImpl {
     def metadata[M: ClassTag]: Option[M]
   }
 
+  // Don't use it directly, but instead call internalLogger() (see below)
+  private val loggerForInternal = LoggerFactory.getLogger(classOf[EventSourcedBehaviorImpl[_, _, _]])
+
 }
 
 @InternalApi
@@ -142,9 +145,6 @@ private[akka] final case class EventSourcedBehaviorImpl[Command, Event, State](
         "snapshotWhen with deleteEventsOnSnapshot must not be used together with replication.")
   }
 
-  // Don't use it directly, but instead call internalLogger() (see below)
-  private val loggerForInternal = LoggerFactory.getLogger(this.getClass)
-
   override def apply(context: typed.TypedActorContext[Command]): Behavior[Command] = {
     val ctx = context.asScala
     val hasCustomLoggerName = ctx match {
@@ -168,7 +168,7 @@ private[akka] final case class EventSourcedBehaviorImpl[Command, Event, State](
         // MDC is cleared (if used) from aroundReceive in ActorAdapter after processing each message,
         // but important to call `context.log` to mark MDC as used
         ctx.log
-        loggerForInternal
+        EventSourcedBehaviorImpl.loggerForInternal
       }
     }
 
