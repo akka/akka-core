@@ -29,6 +29,7 @@ private[akka] object BehaviorTags {
   final val SameBehavior = 6
   final val FailedBehavior = 7
   final val StoppedBehavior = 8
+  final val SuperviseBehavior = 9
 
 }
 
