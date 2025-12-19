@@ -247,7 +247,7 @@ import akka.coordination.lease.scaladsl.Lease
   }
 
   private def indirectlyConnectedFromSeenCurrentGossip: Set[UniqueAddress] = {
-    reachability.records.flatMap { r =>
+    reachability.records.iterator.flatMap { r =>
       if (seenBy(r.subject.address)) r.observer :: r.subject :: Nil
       else Nil
     }.toSet
@@ -295,6 +295,7 @@ import akka.coordination.lease.scaladsl.Lease
       try {
         val intersectionOfObserversAndSubjects = indirectlyConnectedFromIntersectionOfObserversAndSubjects
         val haveSeenCurrentGossip = indirectlyConnectedFromSeenCurrentGossip
+
         // remove records between the indirectly connected
         _reachability = reachability.filterRecords { r =>
           // we only retain records for addresses that are still downable
@@ -306,13 +307,34 @@ import akka.coordination.lease.scaladsl.Lease
         _unreachable = reachability.allUnreachableOrTerminated
 
         val additionalDecision = decide()
-        if (additionalDecision.isIndirectlyConnected)
-          throw new IllegalStateException(
-            s"SBR double $additionalDecision decision, downing all instead. " +
-            s"originalReachability: [$originalReachability], filtered reachability [$reachability], " +
-            s"still indirectlyConnected: [$indirectlyConnected], seenBy: [$seenBy]")
+        if (additionalDecision.isIndirectlyConnected) {
+          val directlyConnectedObservers =
+            reachability.allObservers.diff(intersectionOfObserversAndSubjects).diff(haveSeenCurrentGossip)
+          val unreachableByDirectlyConnectedObservers =
+            reachability.records.iterator.flatMap { r =>
+              if (directlyConnectedObservers(r.observer)) Some(r.subject) else None
+            }.toSet
 
-        nodesToDown(additionalDecision)
+          // does not change the set of unreachable nodes, we're just ignoring some observations
+          _reachability = reachability.filterRecords { r =>
+            // keep observations by the directly connected
+            directlyConnectedObservers(r.observer) ||
+            // and also keep observations that no directly-connected observed
+            !(unreachableByDirectlyConnectedObservers(r.subject))
+          }
+          _unreachable = reachability.allUnreachableOrTerminated
+
+          val secondOpinion = decide() // or is that third opinion?
+          if (secondOpinion.isIndirectlyConnected)
+            throw new IllegalStateException(
+              s"SBR double $additionalDecision decision, downing all instead. " +
+              s"originalReachability: [$originalReachability], filtered reachability [$reachability], " +
+              s"still indirectlyConnected: [$indirectlyConnected], seenBy: [$seenBy]")
+
+          // nodesToDown(additionalDecision) is a subset of the already-known indirectly connected,
+          // so will be union'd in by caller
+          nodesToDown(secondOpinion)
+        } else nodesToDown(additionalDecision)
 
       } finally {
         _unreachable = originalUnreachable

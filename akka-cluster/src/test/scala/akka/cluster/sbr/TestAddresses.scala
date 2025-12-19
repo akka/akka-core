@@ -46,6 +46,8 @@ object TestAddresses {
     new Member(UniqueAddress(addressA.copy(host = Some("f")), 0L), 5, Up, Set(defaultDcRole), Version.Zero)
   val memberG =
     new Member(UniqueAddress(addressA.copy(host = Some("g")), 0L), 6, Up, Set(defaultDcRole), Version.Zero)
+  val memberH =
+    new Member(UniqueAddress(addressA.copy(host = Some("h")), 0L), 7, Up, Set(defaultDcRole), Version.Zero)
 
   val memberAWeaklyUp = new Member(memberA.uniqueAddress, Int.MaxValue, WeaklyUp, memberA.roles, Version.Zero)
   val memberBWeaklyUp = new Member(memberB.uniqueAddress, Int.MaxValue, WeaklyUp, memberB.roles, Version.Zero)
