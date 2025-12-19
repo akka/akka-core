@@ -394,7 +394,7 @@ observations.
 
 ### Down all when indirectly connected
 
-Addition precaution can be enabled for the uncertainty that may follow from indirectly connected nodes
+Additional precaution can be enabled for the uncertainty that may follow from indirectly connected nodes
 by enabling downing of all nodes if indirectly connected nodes are detected:
 
 ```
