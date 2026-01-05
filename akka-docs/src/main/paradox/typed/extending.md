@@ -68,13 +68,13 @@ Scala
 :  @@snip [ExtensionDocSpec.scala](/akka-actor-typed-tests/src/test/scala/docs/akka/typed/extensions/ExtensionDocSpec.scala) { #config }
 
 Java
-:  @@@ vars
-   ```ruby
-   akka.actor.typed {
-     extensions = ["jdocs.akka.extensions.ExtensionDocTest$DatabaseConnectionPool$Id"]
-   }
-   ```
-   @@@
+:  @@@vars
+```ruby
+akka.actor.typed {
+  extensions = ["jdocs.akka.extensions.ExtensionDocTest$DatabaseConnectionPool$Id"]
+}
+```
+@@@
      
 
 
