@@ -588,7 +588,7 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
       case _: AbruptTerminationException => // ActorSystem shutdown
       case cause =>
         if (restartCounter.restart()) {
-          log.warning("{} failed. Restarting it. {}: {}", streamName, cause.getClass.getName, cause.getMessage)
+          log.warning(cause, s"$streamName failed. Restarting it.")
           flightRecorder.transportRestartInbound(localAddress, streamName)
           restart()
         } else {
