@@ -6,7 +6,7 @@
     <version>1.0</version>
 
     <properties>
-      <akka.version>2.10.14</akka.version>
+      <akka.version>2.10.15</akka.version>
     </properties>
 
     <dependencies>
