@@ -55,10 +55,10 @@ import akka.util.Helpers.Requiring
   val DownAllWhenUnstable: FiniteDuration = {
     val key = "down-all-when-unstable"
     Helpers.toRootLowerCase(cc.getString("down-all-when-unstable")) match {
-      case "on" =>
+      case "on" | "true" =>
         // based on stable-after
         4.seconds.max(DowningStableAfter * 3 / 4)
-      case "off" =>
+      case "off" | "false" =>
         // disabled
         Duration.Zero
       case _ =>
@@ -67,8 +67,20 @@ import akka.util.Helpers.Requiring
     }
   }
 
-  val DownAllWhenIndirectlyConnected: Boolean =
-    cc.getBoolean("down-all-when-indirectly-connected")
+  val DownAllWhenIndirectlyConnectedThreshold: Double = {
+    val key = "down-all-when-indirectly-connected"
+    Helpers.toRootLowerCase(cc.getString(key)) match {
+      case "on" | "true" =>
+        0.0
+      case "off" | "false" =>
+        1.0
+      case _ =>
+        val value = cc.getDouble(key)
+        if (value < 0.0 || value > 1.0)
+          throw new ConfigurationException(s"$key must be 'on', 'off', or a double between 0.0 and 1.0, was [$value]")
+        value
+    }
+  }
 
   // the individual sub-configs below should only be called when the strategy has been selected
 

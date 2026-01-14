@@ -100,6 +100,7 @@ class SplitBrainResolverSpec
   |  actor.provider = cluster
   |  cluster.downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
   |  cluster.split-brain-resolver.active-strategy=keep-majority
+  |  cluster.split-brain-resolver.down-all-when-indirectly-connected=off
   |  remote.artery.canonical {
   |    hostname = "127.0.0.1"
   |    port = 0
@@ -589,6 +590,136 @@ class SplitBrainResolverSpec
 
       // from side2 of the partition, majority
       assertDowningSide(side2, Set(memberA, memberB, memberC, memberD, memberE, memberF, memberG))
+    }
+
+    /**
+     * This test reproduces a real-world asymmetric partition scenario where stale gossip
+     * causes one node to survive as a single-node cluster while the majority side also survives.
+     *
+     * Scenario (5 nodes: A, B, C, D, E):
+     * - Group A (A, C, E) and Group B (B, D) are partitioned
+     * - D acts as a "bridge" - it receives gossip from Group A until the partition fully forms
+     * - B only communicates with D
+     * - Critical timing: Group A marks D as unreachable, but the gossip about this doesn't
+     *   reach D before the bridge burns. D forwards stale gossip to B.
+     *
+     * From B's perspective (the minority side, with D):
+     * - B sees: A→B, C→B, E→B as unreachable (Group A sees B as unreachable)
+     * - B sees: B→A, B→C, B→E as unreachable (B can't reach Group A)
+     * - B sees: D→A, D→C, D→E as unreachable (D also can't reach Group A)
+     * - B does NOT see: A→D, C→D, E→D as unreachable (stale gossip - this info never arrived)
+     *
+     * Result: B's SBR detects indirect connection (B gets gossip about A,C,E via D but can't
+     * reach them directly). B downs itself and A,C,E but NOT D, because B believes D is healthy.
+     * D survives as a single-node cluster. Meanwhile, Group A also survives as a 3-node cluster.
+     *
+     * This test documents the problematic behavior, and it is solved by enabling
+     * down-all-when-indirectly-connected threshold.
+     */
+    "down indirectly connected but spare bridge node due to stale gossip in asymmetric partition: {A, C, E} | {B, D} with stale gossip" in {
+      // From B's perspective (minority side with D)
+      // B is self, D is reachable, A/C/E are unreachable
+      val strategy = new KeepMajority(selfDc, role = None, memberB.uniqueAddress)
+
+      // Add all members
+      Set(memberA, memberB, memberC, memberD, memberE).foreach(strategy.add)
+
+      // Create reachability as B sees it at the critical moment (based on real logs)
+      // This is the exact reachability state from Node 2's log at 14:18:10.624
+      val reachabilityRecords = Seq(
+        // Group A sees B as unreachable (this gossip reached B via D)
+        Reachability.Record(memberA.uniqueAddress, memberB.uniqueAddress, Reachability.Unreachable, 1),
+        Reachability.Record(memberC.uniqueAddress, memberB.uniqueAddress, Reachability.Unreachable, 1),
+        Reachability.Record(memberE.uniqueAddress, memberB.uniqueAddress, Reachability.Unreachable, 1),
+        // B sees Group A as unreachable (B's own failure detector)
+        Reachability.Record(memberB.uniqueAddress, memberA.uniqueAddress, Reachability.Unreachable, 1),
+        Reachability.Record(memberB.uniqueAddress, memberC.uniqueAddress, Reachability.Unreachable, 2),
+        Reachability.Record(memberB.uniqueAddress, memberE.uniqueAddress, Reachability.Unreachable, 3),
+        // D sees Group A as unreachable (D's failure detector, propagated to B)
+        Reachability.Record(memberD.uniqueAddress, memberA.uniqueAddress, Reachability.Unreachable, 1),
+        Reachability.Record(memberD.uniqueAddress, memberC.uniqueAddress, Reachability.Unreachable, 2),
+        Reachability.Record(memberD.uniqueAddress, memberE.uniqueAddress, Reachability.Unreachable, 3)
+        // CRITICALLY MISSING: A→D, C→D, E→D (Group A sees D as unreachable)
+        // This information never reached B because the "bridge" (D) stopped receiving gossip
+        // from Group A before Group A's failure detector marked D as unreachable.
+      )
+
+      val versions = Map(
+        memberA.uniqueAddress -> 1L,
+        memberB.uniqueAddress -> 3L,
+        memberC.uniqueAddress -> 1L,
+        memberD.uniqueAddress -> 3L,
+        memberE.uniqueAddress -> 1L)
+      val reachability = Reachability(reachabilityRecords.toIndexedSeq, versions)
+      strategy.setReachability(reachability)
+
+      // Mark A, C, E as unreachable from B's perspective
+      strategy.addUnreachable(memberA)
+      strategy.addUnreachable(memberC)
+      strategy.addUnreachable(memberE)
+
+      // B only received gossip from D (the bridge), not from Group A directly
+      // This is the key: seenBy only includes B and D
+      strategy.setSeenBy(Set(memberB.address, memberD.address))
+
+      // B's SBR decision
+      val decision = strategy.decide()
+
+      // Current behavior: B detects indirect connection and decides to down indirectly connected nodes
+      // B sees itself as indirectly connected to Group A (gets gossip about them via D, but can't reach directly)
+      decision should ===(DownIndirectlyConnected)
+
+      // The nodes to down include B (self), A, C, E (indirectly connected)
+      // But NOT D - because B has no evidence that Group A sees D as unreachable
+      val nodesToDown = strategy.nodesToDown(decision)
+      nodesToDown should ===(Set(memberA, memberB, memberC, memberE).map(_.uniqueAddress))
+
+      // This is the problematic outcome: D is NOT downed
+      // D will survive as a single-node cluster while Group A also survives as a 3-node cluster
+      nodesToDown should not contain memberD.uniqueAddress
+    }
+
+    /**
+     * Same scenario as above, but from Group A's perspective (the majority side).
+     * Group A sees both B and D as unreachable and downs them.
+     */
+    "down unreachable nodes from majority side perspective in asymmetric partition: {A, C, E} | {B, D}" in {
+      // From A's perspective (majority side)
+      // A is self, C and E are reachable, B and D are unreachable
+      val strategy = new KeepMajority(selfDc, role = None, memberA.uniqueAddress)
+
+      // Add all members
+      Set(memberA, memberB, memberC, memberD, memberE).foreach(strategy.add)
+
+      // Create reachability as A sees it (based on real logs at 14:18:10.590)
+      val reachabilityRecords = Seq(
+        // A sees B and D as unreachable
+        Reachability.Record(memberA.uniqueAddress, memberB.uniqueAddress, Reachability.Unreachable, 1),
+        Reachability.Record(memberA.uniqueAddress, memberD.uniqueAddress, Reachability.Unreachable, 2),
+        // C sees B and D as unreachable
+        Reachability.Record(memberC.uniqueAddress, memberB.uniqueAddress, Reachability.Unreachable, 1),
+        Reachability.Record(memberC.uniqueAddress, memberD.uniqueAddress, Reachability.Unreachable, 2),
+        // E sees B and D as unreachable
+        Reachability.Record(memberE.uniqueAddress, memberB.uniqueAddress, Reachability.Unreachable, 1),
+        Reachability.Record(memberE.uniqueAddress, memberD.uniqueAddress, Reachability.Unreachable, 2))
+
+      val versions = Map(memberA.uniqueAddress -> 2L, memberC.uniqueAddress -> 2L, memberE.uniqueAddress -> 2L)
+      val reachability = Reachability(reachabilityRecords.toIndexedSeq, versions)
+      strategy.setReachability(reachability)
+
+      // Mark B and D as unreachable
+      strategy.addUnreachable(memberB)
+      strategy.addUnreachable(memberD)
+
+      // Group A gossips among themselves
+      strategy.setSeenBy(Set(memberA.address, memberC.address, memberE.address))
+
+      // A's SBR decision
+      val decision = strategy.decide()
+
+      // Group A (3 nodes) is majority, so down the unreachable minority (B and D)
+      decision should ===(DownUnreachable)
+      strategy.nodesToDown(decision) should ===(Set(memberB, memberD).map(_.uniqueAddress))
     }
   }
 

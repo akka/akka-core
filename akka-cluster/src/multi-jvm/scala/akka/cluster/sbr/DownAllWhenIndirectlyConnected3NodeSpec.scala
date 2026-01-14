@@ -14,7 +14,7 @@ import akka.cluster.MultiNodeClusterSpec
 import akka.remote.testkit.Direction
 import akka.remote.testkit.MultiNodeConfig
 
-object DownAllIndirectlyConnected3NodeSpec extends MultiNodeConfig {
+object DownAllWhenIndirectlyConnected3NodeSpec extends MultiNodeConfig {
   val node1 = role("node1")
   val node2 = role("node2")
   val node3 = role("node3")
@@ -40,12 +40,12 @@ object DownAllIndirectlyConnected3NodeSpec extends MultiNodeConfig {
   testTransport(on = true)
 }
 
-class DownAllIndirectlyConnected3NodeSpecMultiJvmNode1 extends DownAllIndirectlyConnected3NodeSpec
-class DownAllIndirectlyConnected3NodeSpecMultiJvmNode2 extends DownAllIndirectlyConnected3NodeSpec
-class DownAllIndirectlyConnected3NodeSpecMultiJvmNode3 extends DownAllIndirectlyConnected3NodeSpec
+class DownAllWhenIndirectlyConnected3NodeSpecMultiJvmNode1 extends DownAllWhenIndirectlyConnected3NodeSpec
+class DownAllWhenIndirectlyConnected3NodeSpecMultiJvmNode2 extends DownAllWhenIndirectlyConnected3NodeSpec
+class DownAllWhenIndirectlyConnected3NodeSpecMultiJvmNode3 extends DownAllWhenIndirectlyConnected3NodeSpec
 
-class DownAllIndirectlyConnected3NodeSpec extends MultiNodeClusterSpec(DownAllIndirectlyConnected3NodeSpec) {
-  import DownAllIndirectlyConnected3NodeSpec._
+class DownAllWhenIndirectlyConnected3NodeSpec extends MultiNodeClusterSpec(DownAllWhenIndirectlyConnected3NodeSpec) {
+  import DownAllWhenIndirectlyConnected3NodeSpec._
 
   "A 3-node cluster with down-all-when-indirectly-connected=on" should {
     "down all when two unreachable but can talk via third" in {

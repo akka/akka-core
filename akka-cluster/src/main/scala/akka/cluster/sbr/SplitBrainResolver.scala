@@ -435,16 +435,33 @@ import akka.remote.artery.ThisActorSystemQuarantinedEvent
    */
   def actOnDecision(decision: Decision): Set[UniqueAddress] = {
     val nodesToDown =
-      if (settings.DownAllWhenIndirectlyConnected && decision.isIndirectlyConnected) {
-        strategy.nodesToDown(DownAll)
-      } else {
-        try {
-          strategy.nodesToDown(decision)
-        } catch {
-          case e: IllegalStateException =>
-            log.warning(e.getMessage)
+      try {
+        val nodes = strategy.nodesToDown(decision)
+        // Safeguard for indirectly connected decisions:
+        // If the decision would down more than a threshold fraction of members,
+        // convert to DownAll to prevent split brain from stale gossip in asymmetric partitions.
+        if (decision.isIndirectlyConnected) {
+          val threshold = settings.DownAllWhenIndirectlyConnectedThreshold
+          val memberCount = strategy.members.size
+          if (memberCount > 0 && threshold < 1.0 && nodes.size.toDouble / memberCount >= threshold) {
+            log.warning(
+              ClusterLogMarker.sbrDowning(decision),
+              "SBR indirectly connected decision would down [{}] of [{}] members which is more than " +
+              "the configured down-all-when-indirectly-connected threshold of [{}], downing all instead",
+              nodes.size,
+              memberCount,
+              settings.DownAllWhenIndirectlyConnectedThreshold)
             strategy.nodesToDown(DownAll)
+          } else {
+            nodes
+          }
+        } else {
+          nodes
         }
+      } catch {
+        case e: IllegalStateException =>
+          log.warning(e.getMessage)
+          strategy.nodesToDown(DownAll)
       }
 
     observeDecision(decision, nodesToDown, unreachableDataCenters)

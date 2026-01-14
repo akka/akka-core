@@ -26,6 +26,7 @@ object IndirectlyConnected3NodeSpec extends MultiNodeConfig {
         downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
         split-brain-resolver.active-strategy = keep-majority
         split-brain-resolver.stable-after = 6s
+        split-brain-resolver.down-all-when-indirectly-connected = off
 
         run-coordinated-shutdown-when-down = off
       }
