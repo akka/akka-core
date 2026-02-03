@@ -275,7 +275,7 @@ object EventsourcedInstrumentationProvider
  */
 @InternalStableApi
 class EventsourcedInstrumentationProvider(system: ExtendedActorSystem) extends Extension {
-  private val fqcnConfigPath = "akka.persistence.telemetry.eventsourced.instrumentations"
+  private val fqcnConfigPath = "akka.persistence.telemetry.eventsourced.instrumentatiffons"
 
   val instrumentation: EventsourcedInstrumentation = {
     if (!system.settings.config.hasPath(fqcnConfigPath)) {
