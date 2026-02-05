@@ -225,6 +225,14 @@ object ShardRegion {
    */
   final case class ShardInitialized(shardId: ShardId)
 
+  /**
+   * Sent this message to the `ShardRegion` actor to request that the `ShardRegion` attempt to resolve
+   * this shard without sending a message to any entity within the shard.  If the `ShardRegion` does not
+   * know the location of the shard, it will request the shard's location from the `ShardCoordinator`; if
+   * the `ShardCoordinator` has not allocated the shard, the `ShardCoordinator` will allocate the shard.
+   */
+  case class ResolveShard(shard: ShardId) extends ShardRegionCommand
+
   sealed trait ShardRegionQuery
 
   /**
@@ -438,7 +446,7 @@ object ShardRegion {
    *
    * Discover if the shard region is registered with the coordinator.
    * Not serializable as only to be sent to the local shard region
-   * Response is [[ShardRegionState]]
+   * Response is [[ShardRegionStatus]]
    */
   @InternalApi
   private[akka] object GetShardRegionStatus extends ShardRegionQuery
@@ -1021,6 +1029,19 @@ private[akka] class ShardRegion(
         shards.keysIterator.mkString(","),
         shardBuffers.totalSize)
       context.stop(self)
+
+    case ResolveShard(shardId) =>
+      if (shardId == null || shardId == "") {
+        log.warning("{}: Shard must not be empty, not resolving", typeName)
+      } else
+        regionByShard.get(shardId) match {
+          case Some(_) => () // already resolved
+          case None =>
+            if (!shardBuffers.contains(shardId)) {
+              log.debug("{}: Request shard [{}] home. Coordinator [{}]", typeName, shardId, coordinator)
+              coordinator.foreach(_ ! GetShardHome(shardId))
+            }
+        }
 
     case _ => unhandled(cmd)
   }
