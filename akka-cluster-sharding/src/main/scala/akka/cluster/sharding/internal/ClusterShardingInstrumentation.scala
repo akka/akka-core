@@ -43,16 +43,16 @@ object ClusterShardingInstrumentationProvider
 class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extends Extension {
   private val fqcnConfigPath = "akka.cluster.sharding.telemetry.instrumentations"
 
-  def instrumentation(scope: String, typeName: String): ClusterShardingInstrumentation = {
+  def instrumentation(): ClusterShardingInstrumentation = {
     if (!system.settings.config.hasPath(fqcnConfigPath)) {
       EmptyClusterShardingInstrumentation
     } else {
       val fqcns = system.settings.config.getStringList(fqcnConfigPath).asScala.toVector
       fqcns.size match {
         case 0 => EmptyClusterShardingInstrumentation
-        case 1 => create(scope, typeName, fqcns.head)
+        case 1 => create(fqcns.head)
         case _ =>
-          val instrumentationsByFqcn = fqcns.iterator.map(fqcn => fqcn -> create(scope, typeName, fqcn)).toMap
+          val instrumentationsByFqcn = fqcns.iterator.map(fqcn => fqcn -> create(fqcn)).toMap
           val sortedNames = topologicalSort[String](fqcns, fqcn => instrumentationsByFqcn(fqcn).dependencies.toSet)
           val instrumentations = sortedNames.map(instrumentationsByFqcn).toVector
           new ClusterShardingTelemetryEnsemble(instrumentations)
@@ -60,12 +60,10 @@ class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extend
     }
   }
 
-  private def create(scope: String, typeName: String, fqcn: String): ClusterShardingInstrumentation = {
+  private def create(fqcn: String): ClusterShardingInstrumentation = {
     try {
       system.dynamicAccess
-        .createInstanceFor[ClusterShardingInstrumentation](
-          fqcn,
-          immutable.Seq(classOf[String] -> scope, classOf[String] -> typeName, classOf[ExtendedActorSystem] -> system))
+        .createInstanceFor[ClusterShardingInstrumentation](fqcn, immutable.Seq(classOf[ExtendedActorSystem] -> system))
         .get
     } catch {
       case t: Throwable => // Throwable, because instrumentation failure should not cause fatal shutdown
@@ -83,9 +81,11 @@ class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extend
 class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterShardingInstrumentation])
     extends ClusterShardingInstrumentation {
 
-  override def shardBufferSize(size: Int): Unit = instrumentations.foreach(_.shardBufferSize(size))
+  override def shardBufferSize(scope: String, typeName: String, size: Int): Unit =
+    instrumentations.foreach(_.shardBufferSize(scope, typeName, size))
 
-  override def incrementShardBufferSize(): Unit = instrumentations.foreach(_.incrementShardBufferSize())
+  override def incrementShardBufferSize(scope: String, typeName: String): Unit =
+    instrumentations.foreach(_.incrementShardBufferSize(scope, typeName))
 
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
@@ -103,9 +103,9 @@ object EmptyClusterShardingInstrumentation extends EmptyClusterShardingInstrumen
 @InternalStableApi
 class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation {
 
-  override def shardBufferSize(size: Int): Unit = ()
+  override def shardBufferSize(scope: String, typeName: String, size: Int): Unit = ()
 
-  override def incrementShardBufferSize(): Unit = ()
+  override def incrementShardBufferSize(scope: String, typeName: String): Unit = ()
 
   override def dependencies: immutable.Seq[String] = Nil
 }
@@ -119,12 +119,12 @@ trait ClusterShardingInstrumentation {
   /**
    * @param size set current size of the buffer.
    */
-  def shardBufferSize(size: Int): Unit
+  def shardBufferSize(scope: String, typeName: String, size: Int): Unit
 
   /**
    * Increase the current size of the buffer by one.
    */
-  def incrementShardBufferSize(): Unit
+  def incrementShardBufferSize(scope: String, typeName: String): Unit
 
   /**
    * Optional dependencies for this instrumentation.

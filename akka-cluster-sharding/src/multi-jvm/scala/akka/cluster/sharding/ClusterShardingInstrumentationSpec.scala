@@ -37,24 +37,21 @@ object ClusterShardInstrumentatioSpecConfig
   val second = role("second")
   testTransport(on = true)
 
-  val counter = new AtomicInteger(-1)
+  val counter = new AtomicInteger(0)
 }
 
 class ClusterShardInstrumentatioSpecMultiJvmNode1 extends ClusterShardInstrumentatioSpec
 
 class ClusterShardInstrumentatioSpecMultiJvmNode2 extends ClusterShardInstrumentatioSpec
 
-class SpecClusterShardingTelemetry(
-    @nowarn("msg=never used") scope: String,
-    @nowarn("msg=never used") typeName: String,
-    @nowarn("msg=never used") system: ExtendedActorSystem)
+class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedActorSystem)
     extends ClusterShardingInstrumentation {
 
-  override def shardBufferSize(size: Int): Unit = {
+  override def shardBufferSize(scope: String, typeName: String, size: Int): Unit = {
     ClusterShardInstrumentatioSpecConfig.counter.set(size)
   }
 
-  override def incrementShardBufferSize(): Unit = {
+  override def incrementShardBufferSize(scope: String, typeName: String): Unit = {
     ClusterShardInstrumentatioSpecConfig.counter.incrementAndGet()
   }
 
@@ -175,6 +172,8 @@ abstract class ClusterShardInstrumentatioSpec
           shardRegion.tell(Get(s"id-$n"), probe.ref)
         }
         eventually {
+          // we have 100 in the buffer, and our cap is 120 (per config in this test)
+          // 10 are dropped. Should we have a metric on this? Or custom events?
           ClusterShardInstrumentatioSpecConfig.counter.get() shouldBe 120
         }
       }
