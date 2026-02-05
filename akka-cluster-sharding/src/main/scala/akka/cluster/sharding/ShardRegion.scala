@@ -953,6 +953,7 @@ private[akka] class ShardRegion(
             typeName,
             dropped,
             shard)
+          // better to decrease by "dropped" to avoid calculating the size?
           instrumentation.shardBufferSize(shardBuffers.size)
         }
         loggedFullBufferWarning = false
@@ -1297,7 +1298,7 @@ private[akka] class ShardRegion(
       context.system.deadLetters ! msg
     } else {
       shardBuffers.append(shardId, msg, snd)
-      instrumentation.shardBufferSize(totBufSize + 1)
+      instrumentation.incrementShardBufferSize()
       // log some insight to how buffers are filled up every 10% of the buffer capacity
       val tot = totBufSize + 1
       if (tot % (bufferSize / 10) == 0) {
@@ -1373,7 +1374,7 @@ private[akka] class ShardRegion(
               shardId,
               buf.size + 1)
             shardBuffers.append(shardId, msg, snd)
-            instrumentation.shardBufferSize(buf.size + 1)
+            instrumentation.incrementShardBufferSize()
         }
 
       case _ =>

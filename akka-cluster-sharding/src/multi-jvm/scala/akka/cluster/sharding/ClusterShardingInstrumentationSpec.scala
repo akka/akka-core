@@ -5,15 +5,12 @@
 package akka.cluster.sharding
 
 import java.util.concurrent.atomic.AtomicInteger
-
 import scala.annotation.nowarn
-
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.Span
+import org.scalatest.time.{ Seconds, Span }
+
 import scala.concurrent.duration._
-
 import org.scalatest.concurrent.Eventually.eventually
-
 import akka.actor.ExtendedActorSystem
 import akka.actor.{ Actor, ActorLogging, Address, Props }
 import akka.cluster.Cluster
@@ -32,6 +29,7 @@ object ClusterShardInstrumentatioSpecConfig
       akka.cluster.sharding {
         rebalance-interval = 120 s
         telemetry.instrumentations += akka.cluster.sharding.SpecClusterShardingTelemetry
+        buffer-size = 120
       }
      """) {
 
@@ -39,7 +37,7 @@ object ClusterShardInstrumentatioSpecConfig
   val second = role("second")
   testTransport(on = true)
 
-  val counter = new AtomicInteger()
+  val counter = new AtomicInteger(-1)
 }
 
 class ClusterShardInstrumentatioSpecMultiJvmNode1 extends ClusterShardInstrumentatioSpec
@@ -53,11 +51,10 @@ class SpecClusterShardingTelemetry(
     extends ClusterShardingInstrumentation {
 
   override def shardBufferSize(size: Int): Unit = {
-
     ClusterShardInstrumentatioSpecConfig.counter.set(size)
   }
 
-  override def increaseShardBufferSize(): Unit = {
+  override def incrementShardBufferSize(): Unit = {
     ClusterShardInstrumentatioSpecConfig.counter.incrementAndGet()
   }
 
@@ -110,7 +107,6 @@ abstract class ClusterShardInstrumentatioSpec
   }
 
   val typeName = "GiveMeYourHome"
-  val initiallyOnForth = "on-fourth"
 
   def shardRegion =
     startSharding(
@@ -140,11 +136,11 @@ abstract class ClusterShardInstrumentatioSpec
     "default to allocating a shard to the local shard region" in {
       runOn(first, second) {
 
-        shardRegion ! Get("id1")
+        shardRegion ! Get("a")
         val address1 = expectMsgType[GiveMeYourHome.Home].address
-        shardRegion ! Get("id2")
+        shardRegion ! Get("b")
         val address2 = expectMsgType[GiveMeYourHome.Home].address
-        shardRegion ! Get("id3")
+        shardRegion ! Get("c")
         val address3 = expectMsgType[GiveMeYourHome.Home].address
 
         log.info(s"<<<<< ${List(address1, address2, address3)}")
@@ -156,6 +152,7 @@ abstract class ClusterShardInstrumentatioSpec
       runOn(first) {
         testConductor.blackhole(first, second, Direction.Both).await
       }
+      enterBarrier("blackhole-created")
     }
 
     "start shards to trigger buffering" in {
@@ -168,6 +165,37 @@ abstract class ClusterShardInstrumentatioSpec
           ClusterShardInstrumentatioSpecConfig.counter.get() shouldBe 100
         }
       }
+      enterBarrier("messages-buffered")
     }
+
+    "let the buffer overflow" in {
+      runOn(second) {
+        val probe = TestProbe()
+        (1 to 30).foreach { n =>
+          shardRegion.tell(Get(s"id-$n"), probe.ref)
+        }
+        eventually {
+          ClusterShardInstrumentatioSpecConfig.counter.get() shouldBe 120
+        }
+      }
+      enterBarrier("buffer-overflow")
+    }
+
+    "resume traffic to coordinator" in {
+      runOn(first) {
+        testConductor.passThrough(first, second, Direction.Both).await
+      }
+      enterBarrier("blackhole-removed")
+    }
+
+    "clear buffered messages" in {
+      runOn(second) {
+        eventually(timeout(Span(5, Seconds))) {
+          ClusterShardInstrumentatioSpecConfig.counter.get() shouldBe 0
+        }
+      }
+      enterBarrier("messages-buffered-cleared")
+    }
+
   }
 }

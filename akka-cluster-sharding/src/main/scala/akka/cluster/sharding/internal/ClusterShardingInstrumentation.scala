@@ -85,7 +85,7 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
 
   override def shardBufferSize(size: Int): Unit = instrumentations.foreach(_.shardBufferSize(size))
 
-  override def increaseShardBufferSize(): Unit = instrumentations.foreach(_.increaseShardBufferSize())
+  override def incrementShardBufferSize(): Unit = instrumentations.foreach(_.incrementShardBufferSize())
 
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
@@ -105,7 +105,7 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 
   override def shardBufferSize(size: Int): Unit = ()
 
-  override def increaseShardBufferSize(): Unit = ()
+  override def incrementShardBufferSize(): Unit = ()
 
   override def dependencies: immutable.Seq[String] = Nil
 }
@@ -124,7 +124,7 @@ trait ClusterShardingInstrumentation {
   /**
    * Increase the current size of the buffer by one.
    */
-  def increaseShardBufferSize(): Unit
+  def incrementShardBufferSize(): Unit
 
   /**
    * Optional dependencies for this instrumentation.
