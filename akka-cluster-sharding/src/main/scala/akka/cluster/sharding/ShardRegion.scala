@@ -640,9 +640,9 @@ private[akka] class ShardRegion(
 
   private val verboseDebug = context.system.settings.config.getBoolean("akka.cluster.sharding.verbose-debug-logging")
 
+  val scope = "shard_region"
   private val instrumentation =
-    ClusterShardingInstrumentationProvider.get(context.system).instrumentation("shard_region", typeName)
-  instrumentation.shardBufferSize(0)
+    ClusterShardingInstrumentationProvider.get(context.system).instrumentation()
 
   // sort by age, oldest first
   val ageOrdering = Member.ageOrdering
@@ -954,7 +954,7 @@ private[akka] class ShardRegion(
             dropped,
             shard)
           // better to decrease by "dropped" to avoid calculating the size?
-          instrumentation.shardBufferSize(shardBuffers.size)
+          instrumentation.shardBufferSize(scope, typeName, shardBuffers.size)
         }
         loggedFullBufferWarning = false
       }
@@ -1298,7 +1298,7 @@ private[akka] class ShardRegion(
       context.system.deadLetters ! msg
     } else {
       shardBuffers.append(shardId, msg, snd)
-      instrumentation.incrementShardBufferSize()
+      instrumentation.incrementShardBufferSize(scope, typeName)
       // log some insight to how buffers are filled up every 10% of the buffer capacity
       val tot = totBufSize + 1
       if (tot % (bufferSize / 10) == 0) {
@@ -1331,7 +1331,7 @@ private[akka] class ShardRegion(
       }
 
       shardBuffers.remove(shardId)
-      instrumentation.shardBufferSize(shardBuffers.totalSize)
+      instrumentation.shardBufferSize(scope, typeName, shardBuffers.totalSize)
     }
     loggedFullBufferWarning = false
     retryCount = 0
@@ -1374,7 +1374,7 @@ private[akka] class ShardRegion(
               shardId,
               buf.size + 1)
             shardBuffers.append(shardId, msg, snd)
-            instrumentation.incrementShardBufferSize()
+            instrumentation.incrementShardBufferSize(scope, typeName)
         }
 
       case _ =>
