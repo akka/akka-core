@@ -43,7 +43,7 @@ object ClusterShardingInstrumentationProvider
 class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extends Extension {
   private val fqcnConfigPath = "akka.cluster.sharding.telemetry.instrumentations"
 
-  def instrumentation(): ClusterShardingInstrumentation = {
+  lazy val instrumentation: ClusterShardingInstrumentation = {
     if (!system.settings.config.hasPath(fqcnConfigPath)) {
       EmptyClusterShardingInstrumentation
     } else {

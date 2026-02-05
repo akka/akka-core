@@ -641,8 +641,7 @@ private[akka] class ShardRegion(
   private val verboseDebug = context.system.settings.config.getBoolean("akka.cluster.sharding.verbose-debug-logging")
 
   val scope = "shard_region"
-  private val instrumentation =
-    ClusterShardingInstrumentationProvider.get(context.system).instrumentation()
+  private val instrumentation = ClusterShardingInstrumentationProvider.get(context.system).instrumentation
 
   // sort by age, oldest first
   val ageOrdering = Member.ageOrdering
