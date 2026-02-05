@@ -32,7 +32,7 @@ object TlsSpec {
 
   val rnd = new Random
 
-  val TLS12Ciphers: Set[String] = Set("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_128_CBC_SHA")
+  val TLS12Ciphers: Set[String] = Set("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")
   val TLS13Ciphers: Set[String] = Set("TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384")
 
   def initWithTrust(trustPath: String, protocol: String): SSLContext = {
@@ -368,14 +368,16 @@ class TlsSpec extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing 
 
       object SessionRenegotiationFirstOne extends PayloadScenario {
         override def flow = logCipherSuite
-        def inputs = NegotiateNewSession.withCipherSuites("TLS_RSA_WITH_AES_128_CBC_SHA") :: send("hello") :: Nil
-        def output = ByteString("TLS_RSA_WITH_AES_128_CBC_SHAhello")
+        def inputs =
+          NegotiateNewSession.withCipherSuites("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256") :: send("hello") :: Nil
+        def output = ByteString("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256hello")
       }
 
       object SessionRenegotiationFirstTwo extends PayloadScenario {
         override def flow = logCipherSuite
-        def inputs = NegotiateNewSession.withCipherSuites("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA") :: send("hello") :: Nil
-        def output = ByteString("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHAhello")
+        def inputs =
+          NegotiateNewSession.withCipherSuites("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384") :: send("hello") :: Nil
+        def output = ByteString("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384hello")
       }
 
       val scenarios =
@@ -392,9 +394,11 @@ class TlsSpec extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing 
           LHSIgnoresBoth,
           BothSidesIgnoreBoth) ++
         (if (protocol == "TLSv1.2")
-           Seq(SessionRenegotiationBySender, SessionRenegotiationByReceiver, SessionRenegotiationFirstTwo) ++
-           // RSA cipher suites disabled by default in JDK 24 and later
-           (if (JavaVersion.majorVersion < 24) Seq(SessionRenegotiationFirstOne) else Nil)
+           Seq(
+             SessionRenegotiationBySender,
+             SessionRenegotiationByReceiver,
+             SessionRenegotiationFirstTwo,
+             SessionRenegotiationFirstOne)
          else // TLSv1.3 doesn't support renegotiation
            Nil)
 
