@@ -16,7 +16,7 @@ import akka.actor.{ Actor, ActorLogging, Address, Props }
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus
 import akka.cluster.sharding.ClusterShardInstrumentatioSpec.GiveMeYourHome.{ Get, Home }
-import akka.cluster.sharding.internal.ClusterShardingInstrumentation
+import akka.cluster.sharding.internal.{ ClusterShardingInstrumentation, ClusterShardingInstrumentationProvider }
 import akka.remote.testkit.Direction
 import akka.testkit.TestProbe
 import akka.serialization.jackson.CborSerializable
@@ -37,7 +37,6 @@ object ClusterShardInstrumentatioSpecConfig
   val second = role("second")
   testTransport(on = true)
 
-  val counter = new AtomicInteger(0)
 }
 
 class ClusterShardInstrumentatioSpecMultiJvmNode1 extends ClusterShardInstrumentatioSpec
@@ -47,12 +46,14 @@ class ClusterShardInstrumentatioSpecMultiJvmNode2 extends ClusterShardInstrument
 class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedActorSystem)
     extends ClusterShardingInstrumentation {
 
+  val counter = new AtomicInteger(0)
+
   override def shardBufferSize(scope: String, typeName: String, size: Int): Unit = {
-    ClusterShardInstrumentatioSpecConfig.counter.set(size)
+    counter.set(size)
   }
 
   override def incrementShardBufferSize(scope: String, typeName: String): Unit = {
-    ClusterShardInstrumentatioSpecConfig.counter.incrementAndGet()
+    counter.incrementAndGet()
   }
 
   override def dependencies: Seq[String] = Nil
@@ -97,6 +98,10 @@ abstract class ClusterShardInstrumentatioSpec
   import ClusterShardInstrumentatioSpec._
   import ClusterShardInstrumentatioSpec.GiveMeYourHome._
   import ClusterShardInstrumentatioSpecConfig._
+
+  private val counter = ClusterShardingInstrumentationProvider(system).instrumentation
+    .asInstanceOf[SpecClusterShardingTelemetry]
+    .counter
 
   override implicit val patienceConfig: PatienceConfig = {
     import akka.testkit.TestDuration
@@ -159,7 +164,7 @@ abstract class ClusterShardInstrumentatioSpec
           shardRegion.tell(Get(s"id-$n"), probe.ref)
         }
         eventually {
-          ClusterShardInstrumentatioSpecConfig.counter.get() shouldBe 100
+          counter.get() shouldBe 100
         }
       }
       enterBarrier("messages-buffered")
@@ -174,7 +179,7 @@ abstract class ClusterShardInstrumentatioSpec
         eventually {
           // we have 100 in the buffer, and our cap is 120 (per config in this test)
           // 10 are dropped. Should we have a metric on this? Or custom events?
-          ClusterShardInstrumentatioSpecConfig.counter.get() shouldBe 120
+          counter.get() shouldBe 120
         }
       }
       enterBarrier("buffer-overflow")
@@ -190,7 +195,7 @@ abstract class ClusterShardInstrumentatioSpec
     "clear buffered messages" in {
       runOn(second) {
         eventually(timeout(Span(5, Seconds))) {
-          ClusterShardInstrumentatioSpecConfig.counter.get() shouldBe 0
+          counter.get() shouldBe 0
         }
       }
       enterBarrier("messages-buffered-cleared")
