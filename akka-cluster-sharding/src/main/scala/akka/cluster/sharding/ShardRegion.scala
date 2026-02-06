@@ -699,7 +699,7 @@ private[akka] class ShardRegion(
     coordinator.foreach(_ ! RegionStopped(context.self))
     cluster.unsubscribe(self)
     gracefulShutdownProgress.trySuccess(Done)
-    instrumentation.shardRegionBufferSize(typeName, shardBuffers.totalSize)
+    instrumentation.shardRegionBufferSize(typeName, 0)
   }
 
   private def logPassivationStrategy(): Unit = {
