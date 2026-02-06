@@ -81,11 +81,11 @@ class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extend
 class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterShardingInstrumentation])
     extends ClusterShardingInstrumentation {
 
-  override def shardBufferSize(scope: String, typeName: String, size: Int): Unit =
-    instrumentations.foreach(_.shardBufferSize(scope, typeName, size))
+  override def shardRegionBufferSize(typeName: String, size: Int): Unit =
+    instrumentations.foreach(_.shardRegionBufferSize(typeName, size))
 
-  override def incrementShardBufferSize(scope: String, typeName: String): Unit =
-    instrumentations.foreach(_.incrementShardBufferSize(scope, typeName))
+  override def incrementShardRegionBufferSize(typeName: String): Unit =
+    instrumentations.foreach(_.incrementShardRegionBufferSize(typeName))
 
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
@@ -103,9 +103,9 @@ object EmptyClusterShardingInstrumentation extends EmptyClusterShardingInstrumen
 @InternalStableApi
 class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation {
 
-  override def shardBufferSize(scope: String, typeName: String, size: Int): Unit = ()
+  override def shardRegionBufferSize(typeName: String, size: Int): Unit = ()
 
-  override def incrementShardBufferSize(scope: String, typeName: String): Unit = ()
+  override def incrementShardRegionBufferSize(typeName: String): Unit = ()
 
   override def dependencies: immutable.Seq[String] = Nil
 }
@@ -119,12 +119,12 @@ trait ClusterShardingInstrumentation {
   /**
    * @param size set current size of the buffer.
    */
-  def shardBufferSize(scope: String, typeName: String, size: Int): Unit
+  def shardRegionBufferSize(typeName: String, size: Int): Unit
 
   /**
    * Increase the current size of the buffer by one.
    */
-  def incrementShardBufferSize(scope: String, typeName: String): Unit
+  def incrementShardRegionBufferSize(typeName: String): Unit
 
   /**
    * Optional dependencies for this instrumentation.

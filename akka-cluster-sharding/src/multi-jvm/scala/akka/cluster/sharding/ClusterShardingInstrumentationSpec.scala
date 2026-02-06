@@ -48,11 +48,11 @@ class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedAct
 
   val counter = new AtomicInteger(0)
 
-  override def shardBufferSize(scope: String, typeName: String, size: Int): Unit = {
+  override def shardRegionBufferSize(typeName: String, size: Int): Unit = {
     counter.set(size)
   }
 
-  override def incrementShardBufferSize(scope: String, typeName: String): Unit = {
+  override def incrementShardRegionBufferSize(typeName: String): Unit = {
     counter.incrementAndGet()
   }
 
