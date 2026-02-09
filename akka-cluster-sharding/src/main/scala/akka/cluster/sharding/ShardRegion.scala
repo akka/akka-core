@@ -690,7 +690,7 @@ private[akka] class ShardRegion(
     timers.startTimerWithFixedDelay(Retry, Retry, retryInterval)
     startRegistration()
     logPassivationStrategy()
-    instrumentation.shardRegionBufferSize(typeName, 0)
+    instrumentation.shardRegionBufferSize(cluster.selfAddress, typeName, 0)
   }
 
   override def postStop(): Unit = {
@@ -699,7 +699,7 @@ private[akka] class ShardRegion(
     coordinator.foreach(_ ! RegionStopped(context.self))
     cluster.unsubscribe(self)
     gracefulShutdownProgress.trySuccess(Done)
-    instrumentation.shardRegionBufferSize(typeName, 0)
+    instrumentation.shardRegionBufferSize(cluster.selfAddress, typeName, 0)
   }
 
   private def logPassivationStrategy(): Unit = {
@@ -754,7 +754,7 @@ private[akka] class ShardRegion(
     coordinator.map { coordRef =>
       val a = coordRef.path.address
 
-      if (a.hasLocalScope) cluster.selfMember.address
+      if (a.hasLocalScope) cluster.selfAddress
       else a
     }
 
@@ -954,7 +954,7 @@ private[akka] class ShardRegion(
             dropped,
             shard)
           // better to decrease by "dropped" to avoid calculating the size?
-          instrumentation.shardRegionBufferSize(typeName, shardBuffers.totalSize)
+          instrumentation.shardRegionBufferSize(cluster.selfAddress, typeName, shardBuffers.totalSize)
         }
         loggedFullBufferWarning = false
       }
@@ -1298,7 +1298,7 @@ private[akka] class ShardRegion(
       context.system.deadLetters ! msg
     } else {
       shardBuffers.append(shardId, msg, snd)
-      instrumentation.incrementShardRegionBufferSize(typeName)
+      instrumentation.incrementShardRegionBufferSize(cluster.selfAddress, typeName)
       // log some insight to how buffers are filled up every 10% of the buffer capacity
       val tot = totBufSize + 1
       if (tot % (bufferSize / 10) == 0) {
@@ -1331,7 +1331,7 @@ private[akka] class ShardRegion(
       }
 
       shardBuffers.remove(shardId)
-      instrumentation.shardRegionBufferSize(typeName, shardBuffers.totalSize)
+      instrumentation.shardRegionBufferSize(cluster.selfAddress, typeName, shardBuffers.totalSize)
     }
     loggedFullBufferWarning = false
     retryCount = 0
@@ -1374,7 +1374,7 @@ private[akka] class ShardRegion(
               shardId,
               buf.size + 1)
             shardBuffers.append(shardId, msg, snd)
-            instrumentation.incrementShardRegionBufferSize(typeName)
+            instrumentation.incrementShardRegionBufferSize(cluster.selfAddress, typeName)
         }
 
       case _ =>

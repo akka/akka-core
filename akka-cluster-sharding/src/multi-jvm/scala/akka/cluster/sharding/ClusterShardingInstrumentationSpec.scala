@@ -15,14 +15,14 @@ import akka.actor.ExtendedActorSystem
 import akka.actor.{ Actor, ActorLogging, Address, Props }
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus
-import akka.cluster.sharding.ClusterShardInstrumentatioSpec.GiveMeYourHome.{ Get, Home }
+import akka.cluster.sharding.ClusterShardingInstrumentationSpec.GiveMeYourHome.{ Get, Home }
 import akka.cluster.sharding.internal.{ ClusterShardingInstrumentation, ClusterShardingInstrumentationProvider }
 import akka.remote.testkit.Direction
 import akka.testkit.TestProbe
 import akka.serialization.jackson.CborSerializable
 import akka.testkit.ImplicitSender
 
-object ClusterShardInstrumentatioSpecConfig
+object ClusterShardingInstrumentationSpecConfig
     extends MultiNodeClusterShardingConfig(
       //loglevel = "DEBUG",
       additionalConfig = """
@@ -39,27 +39,27 @@ object ClusterShardInstrumentatioSpecConfig
 
 }
 
-class ClusterShardInstrumentatioSpecMultiJvmNode1 extends ClusterShardInstrumentatioSpec
+class ClusterShardingInstrumentationSpecMultiJvmNode1 extends ClusterShardingInstrumentationSpec
 
-class ClusterShardInstrumentatioSpecMultiJvmNode2 extends ClusterShardInstrumentatioSpec
+class ClusterShardingInstrumentationSpecMultiJvmNode2 extends ClusterShardingInstrumentationSpec
 
 class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedActorSystem)
     extends ClusterShardingInstrumentation {
 
   val counter = new AtomicInteger(0)
 
-  override def shardRegionBufferSize(typeName: String, size: Int): Unit = {
+  override def shardRegionBufferSize(selfAddress: Address, typeName: String, size: Int): Unit = {
     counter.set(size)
   }
 
-  override def incrementShardRegionBufferSize(typeName: String): Unit = {
+  override def incrementShardRegionBufferSize(selfAddress: Address, typeName: String): Unit = {
     counter.incrementAndGet()
   }
 
   override def dependencies: Seq[String] = Nil
 }
 
-object ClusterShardInstrumentatioSpec {
+object ClusterShardingInstrumentationSpec {
 
   object GiveMeYourHome {
     case class Get(id: String) extends CborSerializable
@@ -90,14 +90,14 @@ object ClusterShardInstrumentatioSpec {
   }
 }
 
-abstract class ClusterShardInstrumentatioSpec
-    extends MultiNodeClusterShardingSpec(ClusterShardInstrumentatioSpecConfig)
+abstract class ClusterShardingInstrumentationSpec
+    extends MultiNodeClusterShardingSpec(ClusterShardingInstrumentationSpecConfig)
     with ImplicitSender
     with ScalaFutures {
 
-  import ClusterShardInstrumentatioSpec._
-  import ClusterShardInstrumentatioSpec.GiveMeYourHome._
-  import ClusterShardInstrumentatioSpecConfig._
+  import ClusterShardingInstrumentationSpec._
+  import ClusterShardingInstrumentationSpec.GiveMeYourHome._
+  import ClusterShardingInstrumentationSpecConfig._
 
   private val counter = ClusterShardingInstrumentationProvider(system).instrumentation
     .asInstanceOf[SpecClusterShardingTelemetry]
