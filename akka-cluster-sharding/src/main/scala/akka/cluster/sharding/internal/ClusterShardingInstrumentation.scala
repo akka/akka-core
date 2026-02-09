@@ -9,6 +9,7 @@ import akka.annotation.InternalStableApi
 import scala.collection.immutable
 import scala.jdk.CollectionConverters._
 
+import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Address
 import akka.actor.ClassicActorSystemProvider
@@ -80,11 +81,18 @@ class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extend
 class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterShardingInstrumentation])
     extends ClusterShardingInstrumentation {
 
-  override def shardRegionBufferSize(selfAddress: Address, typeName: String, size: Int): Unit =
-    instrumentations.foreach(_.shardRegionBufferSize(selfAddress, typeName, size))
+  override def shardRegionBufferSize(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      size: Int): Unit =
+    instrumentations.foreach(_.shardRegionBufferSize(selfAddress, shardRegionActor, typeName, size))
 
-  override def incrementShardRegionBufferSize(selfAddress: Address, typeName: String): Unit =
-    instrumentations.foreach(_.incrementShardRegionBufferSize(selfAddress, typeName))
+  override def incrementShardRegionBufferSize(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String): Unit =
+    instrumentations.foreach(_.incrementShardRegionBufferSize(selfAddress, shardRegionActor, typeName))
 
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
@@ -102,9 +110,16 @@ object EmptyClusterShardingInstrumentation extends EmptyClusterShardingInstrumen
 @InternalStableApi
 class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation {
 
-  override def shardRegionBufferSize(selfAddress: Address, typeName: String, size: Int): Unit = ()
+  override def shardRegionBufferSize(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      size: Int): Unit = ()
 
-  override def incrementShardRegionBufferSize(selfAddress: Address, typeName: String): Unit = ()
+  override def incrementShardRegionBufferSize(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String): Unit = ()
 
   override def dependencies: immutable.Seq[String] = Nil
 }
@@ -118,12 +133,12 @@ trait ClusterShardingInstrumentation {
   /**
    * @param size set current size of the buffer.
    */
-  def shardRegionBufferSize(selfAddress: Address, typeName: String, size: Int): Unit
+  def shardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, size: Int): Unit
 
   /**
    * Increase the current size of the buffer by one.
    */
-  def incrementShardRegionBufferSize(selfAddress: Address, typeName: String): Unit
+  def incrementShardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
 
   /**
    * Optional dependencies for this instrumentation.

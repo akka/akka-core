@@ -5,12 +5,16 @@
 package akka.cluster.sharding
 
 import java.util.concurrent.atomic.AtomicInteger
+
 import scala.annotation.nowarn
+
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
-
 import scala.concurrent.duration._
+
 import org.scalatest.concurrent.Eventually.eventually
+
+import akka.actor.ActorRef
 import akka.actor.ExtendedActorSystem
 import akka.actor.{ Actor, ActorLogging, Address, Props }
 import akka.cluster.Cluster
@@ -48,11 +52,18 @@ class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedAct
 
   val counter = new AtomicInteger(0)
 
-  override def shardRegionBufferSize(selfAddress: Address, typeName: String, size: Int): Unit = {
+  override def shardRegionBufferSize(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      size: Int): Unit = {
     counter.set(size)
   }
 
-  override def incrementShardRegionBufferSize(selfAddress: Address, typeName: String): Unit = {
+  override def incrementShardRegionBufferSize(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String): Unit = {
     counter.incrementAndGet()
   }
 
