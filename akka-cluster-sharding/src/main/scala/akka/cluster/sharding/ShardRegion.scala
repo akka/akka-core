@@ -907,6 +907,7 @@ private[akka] class ShardRegion(
       }
 
     case ShardHome(shard, shardRegionRef) =>
+      instrumentation.responseShardHome()
       receiveShardHome(shard, shardRegionRef)
 
     case ShardHomes(homes) =>
@@ -1266,7 +1267,7 @@ private[akka] class ShardRegion(
             shard,
             coord,
             buf.size)
-          coord ! GetShardHome(shard)
+          requestShardHome(Some(coord), shard)
       }
 
       if (retryCount >= 5 && retryCount % 5 == 0 && log.isWarningEnabled) {
@@ -1365,7 +1366,7 @@ private[akka] class ShardRegion(
           case None =>
             if (!shardBuffers.contains(shardId)) {
               log.debug("{}: Request shard [{}] home. Coordinator [{}]", typeName, shardId, coordinator)
-              coordinator.foreach(_ ! GetShardHome(shardId))
+              requestShardHome(coordinator, shardId)
             }
             val buf = shardBuffers.getOrEmpty(shardId)
             log.debug(
@@ -1400,7 +1401,7 @@ private[akka] class ShardRegion(
           case None =>
             if (!shardBuffers.contains(shardId)) {
               log.debug("{}: Request shard [{}] home. Coordinator [{}]", typeName, shardId, coordinator)
-              coordinator.foreach(_ ! GetShardHome(shardId))
+              requestShardHome(coordinator, shardId)
             }
             bufferMessage(shardId, msg, snd)
         }
@@ -1452,5 +1453,10 @@ private[akka] class ShardRegion(
       log.debug("{}: Sending graceful shutdown to {}", typeName, actorSelections)
       actorSelections.foreach(_ ! GracefulShutdownReq(self))
     }
+  }
+
+  private def requestShardHome(coordinator: Option[ActorRef], shard: ShardId): Unit = {
+    instrumentation.requestGetShardHome()
+    coordinator.foreach(_ ! GetShardHome(shard))
   }
 }

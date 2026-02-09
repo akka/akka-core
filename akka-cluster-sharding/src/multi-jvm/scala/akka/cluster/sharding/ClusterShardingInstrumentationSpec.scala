@@ -7,10 +7,11 @@ package akka.cluster.sharding
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.nowarn
+import scala.concurrent.duration._
+import scala.collection.mutable
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
-import scala.concurrent.duration._
 
 import org.scalatest.concurrent.Eventually.eventually
 
@@ -52,6 +53,9 @@ class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedAct
 
   val counter = new AtomicInteger(0)
 
+  private val requestTimes = mutable.Stack[Long]()
+  val durations = mutable.Stack[Long]()
+
   override def shardRegionBufferSize(
       selfAddress: Address,
       shardRegionActor: ActorRef,
@@ -68,6 +72,11 @@ class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedAct
   }
 
   override def dependencies: Seq[String] = Nil
+
+  override def requestGetShardHome(): Unit = requestTimes.push(System.currentTimeMillis())
+
+  override def responseShardHome(): Unit = durations.push(System.currentTimeMillis() - requestTimes.pop())
+
 }
 
 object ClusterShardingInstrumentationSpec {
@@ -113,6 +122,9 @@ abstract class ClusterShardingInstrumentationSpec
   private val counter = ClusterShardingInstrumentationProvider(system).instrumentation
     .asInstanceOf[SpecClusterShardingTelemetry]
     .counter
+
+  private def requestDurations =
+    ClusterShardingInstrumentationProvider(system).instrumentation.asInstanceOf[SpecClusterShardingTelemetry].durations
 
   override implicit val patienceConfig: PatienceConfig = {
     import akka.testkit.TestDuration
@@ -201,6 +213,17 @@ abstract class ClusterShardingInstrumentationSpec
         testConductor.passThrough(first, second, Direction.Both).await
       }
       enterBarrier("blackhole-removed")
+    }
+
+    "record latency of requesting ShardHome" in {
+      runOn(second) {
+        requestDurations.nonEmpty shouldBe true
+        requestDurations.foreach { duration =>
+          duration > 0 shouldBe true
+          duration < 20 shouldBe true
+        }
+      }
+      enterBarrier("measure-shard-home-latency")
     }
 
     "clear buffered messages" in {
