@@ -1,4 +1,4 @@
-import akka.Dependencies.{ allScalaVersions, fortifySCAVersion, scalaFortifyVersion }
+import akka.Dependencies.allScalaVersions
 import akka.{ AutomaticModuleName, CopyrightHeaderForBuild, Paradox }
 import com.geirsson.CiReleasePlugin
 
@@ -546,29 +546,11 @@ lazy val billOfMaterials = Project("akka-bill-of-materials", file("akka-bill-of-
     bomIncludeProjects := userProjects,
     description := s"${description.value} (depending on Scala ${CrossVersion.binaryScalaVersion(scalaVersion.value)})")
 
-lazy val doesFortifyLicenseExist: Boolean = {
-  import java.nio.file.Files
-  val home = System.getProperty("user.home")
-  val fortifyLicense = new File(s"$home/.lightbend/fortify.license")
-  Files.exists(fortifyLicense.toPath)
-}
-
-def fortifySettings(name: String) = {
-  if (doesFortifyLicenseExist) {
-    Seq(
-      addCompilerPlugin(("com.lightbend" %% "scala-fortify" % scalaFortifyVersion).cross(CrossVersion.patch)),
-      scalacOptions ++= Seq(s"-P:fortify:scaversion=$fortifySCAVersion", s"-P:fortify:build=$name"))
-  } else {
-    Seq()
-  }
-}
-
 def akkaModule(name: String): Project =
   Project(id = name, base = file(name))
     .enablePlugins(ReproducibleBuildsPlugin)
     .settings(akka.AkkaBuild.buildSettings)
     .settings(akka.AkkaBuild.defaultSettings)
-    .settings(fortifySettings(name))
     .enablePlugins(BootstrapGenjavadoc)
     .disablePlugins(CiReleasePlugin) // we use publishSigned, but use a pgp utility from CiReleasePlugin
 
@@ -605,19 +587,3 @@ addCommandAlias(
     commandValue(clusterShardingTyped),
     commandValue(persistenceTyped),
     commandValue(streamTyped)).mkString)
-
-// Convenience task allowing all Fortify steps to be done in the sbt shell
-lazy val analyzeSource = taskKey[Unit]("Analyzing NST files emitted by Fortify  SCA")
-analyzeSource := {
-  val s = streams.value
-  val shell = Seq("bash", "-c")
-  val scan = shell :+ s"./scripts/runSourceAnalyzer.sh $fortifySCAVersion"
-  if (doesFortifyLicenseExist) {
-    s.log.info("Analyzing NST files emitted by Fortify SCA.")
-    scan !
-  } else {
-    s.log.info("Fortify license not found so NST files creation was skipped.")
-  }
-}
-
-addCommandAlias("runSourceAnalyzer", "; clean; compile; analyzeSource")
