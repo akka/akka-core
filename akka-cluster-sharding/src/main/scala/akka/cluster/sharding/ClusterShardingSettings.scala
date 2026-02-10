@@ -105,6 +105,8 @@ object ClusterShardingSettings {
           ))
     }
 
+    val selfHealingSettings = SelfHealingSettings(config.getConfig("self-healing"))
+
     new ClusterShardingSettings(
       role = roleOption(config.getString("role")),
       rememberEntities = config.getBoolean("remember-entities"),
@@ -117,7 +119,8 @@ object ClusterShardingSettings {
       tuningParameters,
       config.getBoolean("coordinator-singleton-role-override"),
       coordinatorSingletonSettings,
-      lease)
+      lease,
+      selfHealingSettings)
   }
 
   /**
@@ -909,6 +912,95 @@ object ClusterShardingSettings {
     }
   }
 
+  /**
+   * Settings for the self-healing mechanism that automatically removes stale shard state
+   * when cluster coordination is impaired.
+   */
+  object SelfHealingSettings {
+
+    /**
+     * Create settings from a configuration with the same layout as
+     * the default configuration `akka.cluster.sharding.self-healing`.
+     */
+    def apply(config: Config): SelfHealingSettings = {
+      new SelfHealingSettings(
+        enabled = config.getBoolean("enabled"),
+        staleRegionTimeout = config.getDuration("stale-region-timeout", MILLISECONDS).millis,
+        checkInterval = config.getDuration("check-interval", MILLISECONDS).millis,
+        startupGracePeriod = config.getDuration("startup-grace-period", MILLISECONDS).millis,
+        dryRun = config.getBoolean("dry-run"))
+    }
+
+    /**
+     * Default settings with self-healing disabled.
+     */
+    val disabled: SelfHealingSettings = new SelfHealingSettings(
+      enabled = false,
+      staleRegionTimeout = 30.seconds,
+      checkInterval = 5.seconds,
+      startupGracePeriod = 60.seconds,
+      dryRun = false)
+  }
+
+  /**
+   * Settings for the self-healing mechanism that automatically removes stale shard state
+   * when cluster coordination is impaired.
+   *
+   * @param enabled Whether self-healing is enabled
+   * @param staleRegionTimeout Time threshold after which an unreachable region's shards are considered stale
+   * @param checkInterval How often to check for stale regions
+   * @param startupGracePeriod Grace period after coordinator startup before self-healing activates
+   * @param dryRun If true, only log warnings without actually deallocating shards
+   */
+  final class SelfHealingSettings(
+      val enabled: Boolean,
+      val staleRegionTimeout: FiniteDuration,
+      val checkInterval: FiniteDuration,
+      val startupGracePeriod: FiniteDuration,
+      val dryRun: Boolean) {
+
+    require(staleRegionTimeout > Duration.Zero, "stale-region-timeout must be > 0")
+    require(checkInterval > Duration.Zero, "check-interval must be > 0")
+    require(startupGracePeriod >= Duration.Zero, "startup-grace-period must be >= 0")
+
+    def withEnabled(enabled: Boolean): SelfHealingSettings =
+      copy(enabled = enabled)
+
+    def withStaleRegionTimeout(timeout: FiniteDuration): SelfHealingSettings =
+      copy(staleRegionTimeout = timeout)
+
+    def withStaleRegionTimeout(timeout: java.time.Duration): SelfHealingSettings =
+      copy(staleRegionTimeout = timeout.toScala)
+
+    def withCheckInterval(interval: FiniteDuration): SelfHealingSettings =
+      copy(checkInterval = interval)
+
+    def withCheckInterval(interval: java.time.Duration): SelfHealingSettings =
+      copy(checkInterval = interval.toScala)
+
+    def withStartupGracePeriod(period: FiniteDuration): SelfHealingSettings =
+      copy(startupGracePeriod = period)
+
+    def withStartupGracePeriod(period: java.time.Duration): SelfHealingSettings =
+      copy(startupGracePeriod = period.toScala)
+
+    def withDryRun(dryRun: Boolean): SelfHealingSettings =
+      copy(dryRun = dryRun)
+
+    private def copy(
+        enabled: Boolean = enabled,
+        staleRegionTimeout: FiniteDuration = staleRegionTimeout,
+        checkInterval: FiniteDuration = checkInterval,
+        startupGracePeriod: FiniteDuration = startupGracePeriod,
+        dryRun: Boolean = dryRun): SelfHealingSettings =
+      new SelfHealingSettings(enabled, staleRegionTimeout, checkInterval, startupGracePeriod, dryRun)
+
+    override def toString: String =
+      s"SelfHealingSettings(enabled=$enabled, staleRegionTimeout=$staleRegionTimeout, " +
+      s"checkInterval=$checkInterval, startupGracePeriod=$startupGracePeriod, " +
+      s"dryRun=$dryRun)"
+  }
+
   class TuningParameters(
       val coordinatorFailureBackoff: FiniteDuration,
       val retryInterval: FiniteDuration,
@@ -1176,6 +1268,8 @@ object ClusterShardingSettings {
  *   Note that if you define a custom lease name and have several sharding entity types each one must have a unique
  *   lease name. If the lease name is undefined it will be derived from ActorSystem name and shard name,
  *   but that may result in too long lease names.
+ * @param selfHealingSettings Settings for the self-healing mechanism that automatically removes stale shard state
+ *   when cluster coordination is impaired.
  */
 final class ClusterShardingSettings(
     val role: Option[String],
@@ -1189,8 +1283,40 @@ final class ClusterShardingSettings(
     val tuningParameters: ClusterShardingSettings.TuningParameters,
     val coordinatorSingletonOverrideRole: Boolean,
     val coordinatorSingletonSettings: ClusterSingletonManagerSettings,
-    val leaseSettings: Option[LeaseUsageSettings])
+    val leaseSettings: Option[LeaseUsageSettings],
+    val selfHealingSettings: ClusterShardingSettings.SelfHealingSettings)
     extends NoSerializationVerificationNeeded {
+  @deprecated(
+    "Use the ClusterShardingSettings factory methods or the constructor including selfHealingSettings instead",
+    "2.10.0")
+  def this(
+      role: Option[String],
+      rememberEntities: Boolean,
+      journalPluginId: String,
+      snapshotPluginId: String,
+      stateStoreMode: String,
+      rememberEntitiesStore: String,
+      passivationStrategySettings: ClusterShardingSettings.PassivationStrategySettings,
+      shardRegionQueryTimeout: FiniteDuration,
+      tuningParameters: ClusterShardingSettings.TuningParameters,
+      coordinatorSingletonOverrideRole: Boolean,
+      coordinatorSingletonSettings: ClusterSingletonManagerSettings,
+      leaseSettings: Option[LeaseUsageSettings]) =
+    this(
+      role,
+      rememberEntities,
+      journalPluginId,
+      snapshotPluginId,
+      stateStoreMode,
+      rememberEntitiesStore,
+      passivationStrategySettings,
+      shardRegionQueryTimeout,
+      tuningParameters,
+      coordinatorSingletonOverrideRole,
+      coordinatorSingletonSettings,
+      leaseSettings,
+      ClusterShardingSettings.SelfHealingSettings.disabled)
+
   @deprecated(
     "Use the ClusterShardingSettings factory methods or the constructor including coordinatorSingletonOverrideRole instead",
     "2.6.20")
@@ -1218,7 +1344,8 @@ final class ClusterShardingSettings(
       tuningParameters,
       coordinatorSingletonOverrideRole = true,
       coordinatorSingletonSettings,
-      leaseSettings)
+      leaseSettings,
+      ClusterShardingSettings.SelfHealingSettings.disabled)
 
   @deprecated(
     "Use the ClusterShardingSettings factory methods or the constructor including passivationStrategySettings instead",
@@ -1390,6 +1517,13 @@ final class ClusterShardingSettings(
       coordinatorSingletonSettings: ClusterSingletonManagerSettings): ClusterShardingSettings =
     copy(coordinatorSingletonSettings = coordinatorSingletonSettings)
 
+  /**
+   * Configure the self-healing mechanism for automatic shard state cleanup.
+   */
+  def withSelfHealingSettings(
+      selfHealingSettings: ClusterShardingSettings.SelfHealingSettings): ClusterShardingSettings =
+    copy(selfHealingSettings = selfHealingSettings)
+
   private def copy(
       role: Option[String] = role,
       rememberEntities: Boolean = rememberEntities,
@@ -1401,7 +1535,8 @@ final class ClusterShardingSettings(
       tuningParameters: ClusterShardingSettings.TuningParameters = tuningParameters,
       coordinatorSingletonOverrideRole: Boolean = coordinatorSingletonOverrideRole,
       coordinatorSingletonSettings: ClusterSingletonManagerSettings = coordinatorSingletonSettings,
-      leaseSettings: Option[LeaseUsageSettings] = leaseSettings): ClusterShardingSettings =
+      leaseSettings: Option[LeaseUsageSettings] = leaseSettings,
+      selfHealingSettings: ClusterShardingSettings.SelfHealingSettings = selfHealingSettings): ClusterShardingSettings =
     new ClusterShardingSettings(
       role,
       rememberEntities,
@@ -1414,5 +1549,6 @@ final class ClusterShardingSettings(
       tuningParameters,
       coordinatorSingletonOverrideRole,
       coordinatorSingletonSettings,
-      leaseSettings)
+      leaseSettings,
+      selfHealingSettings)
 }

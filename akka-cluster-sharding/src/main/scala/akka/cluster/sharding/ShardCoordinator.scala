@@ -21,6 +21,7 @@ import akka.annotation.DoNotInherit
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent
 import akka.cluster.ClusterEvent._
+import akka.cluster.Member
 import akka.cluster.ddata.LWWRegister
 import akka.cluster.ddata.LWWRegisterKey
 import akka.cluster.ddata.Replicator._
@@ -593,6 +594,11 @@ object ShardCoordinator {
   private case object RebalanceTick
 
   /**
+   * Periodic message to trigger self-healing check for stale regions
+   */
+  private case object SelfHealingTick
+
+  /**
    * End of rebalance process performed by [[RebalanceWorker]]
    */
   private final case class RebalanceDone(shard: ShardId, ok: Boolean)
@@ -823,6 +829,13 @@ abstract class ShardCoordinator(
   // each waiting actor together with a request identifier to clear out all waiting for one request on timeout
   var waitingForShardsToStop: Map[ShardId, Set[(ActorRef, UUID)]] = Map.empty
 
+  // Self-healing state tracking
+  // Track when each region became unreachable (for timeout calculation)
+  // Key: region ActorRef, Value: timestamp (System.nanoTime) when unreachability was first detected
+  var regionUnreachableSince: Map[ActorRef, Long] = Map.empty
+  // Timestamp when coordinator started (for grace period calculation)
+  val coordinatorStartTime: Long = System.nanoTime()
+
   import context.dispatcher
 
   cluster.subscribe(
@@ -830,12 +843,26 @@ abstract class ShardCoordinator(
     initialStateMode = InitialStateAsEvents,
     ClusterShuttingDown.getClass,
     classOf[MemberReadyForShutdown],
-    classOf[MemberPreparingForShutdown])
+    classOf[MemberPreparingForShutdown],
+    classOf[UnreachableMember],
+    classOf[ReachableMember])
 
   protected def typeName: String
 
   override def preStart(): Unit = {
     timers.startTimerWithFixedDelay(RebalanceTick, RebalanceTick, rebalanceInterval)
+
+    // Start self-healing timer if enabled
+    if (settings.selfHealingSettings.enabled) {
+      timers.startTimerWithFixedDelay(SelfHealingTick, SelfHealingTick, settings.selfHealingSettings.checkInterval)
+      log.info(
+        "{}: Self-healing enabled with stale-region-timeout={}, check-interval={}, startup-grace-period={}",
+        typeName,
+        settings.selfHealingSettings.staleRegionTimeout,
+        settings.selfHealingSettings.checkInterval,
+        settings.selfHealingSettings.startupGracePeriod)
+    }
+
     allocationStrategy match {
       case strategy: StartableAllocationStrategy =>
         strategy.start()
@@ -862,6 +889,7 @@ abstract class ShardCoordinator(
         if (isMember(region)) {
           log.debug("{}: ShardRegion registered: [{}]", typeName, region)
           aliveRegions += region
+          regionUnreachableSince -= region // Clear self-healing tracking on registration
           if (state.regions.contains(region)) {
             region ! RegisterAck(self)
             informAboutCurrentShards(region)
@@ -1116,6 +1144,15 @@ abstract class ShardCoordinator(
           preparingForShutdown = true
         }
 
+      case UnreachableMember(member) =>
+        onMemberUnreachable(member)
+
+      case ReachableMember(member) =>
+        onMemberReachable(member)
+
+      case SelfHealingTick =>
+        performSelfHealingCheck()
+
       case ShardRegion.GetCurrentRegions =>
         val reply = ShardRegion.CurrentRegions(state.regions.keySet.map { ref =>
           if (ref.path.address.host.isEmpty) cluster.selfAddress
@@ -1355,6 +1392,7 @@ abstract class ShardCoordinator(
         gracefulShutdownInProgress -= ref
         regionTerminationInProgress -= ref
         aliveRegions -= ref
+        regionUnreachableSince -= ref // Clean up self-healing tracking
         allocateShardHomesForRememberEntities()
         if (ref.path.address.hasLocalScope && waitingForLocalRegionToTerminate) {
           // handoff optimization: singleton told coordinator to stop but we deferred stop until the local region
@@ -1374,6 +1412,146 @@ abstract class ShardCoordinator(
         state = state.updated(evt)
       }
     }
+  }
+
+  /**
+   * Called when a cluster member becomes unreachable.
+   * Tracks the timestamp when regions on that member became unreachable.
+   */
+  private def onMemberUnreachable(member: Member): Unit = {
+    val now = System.nanoTime()
+    state.regions.keys.foreach { region =>
+      if (region.path.address == member.address && !regionUnreachableSince.contains(region)) {
+        log.info("{}: Region [{}] on member [{}] is now unreachable", typeName, region, member.address)
+        regionUnreachableSince += (region -> now)
+      }
+    }
+  }
+
+  /**
+   * Called when a cluster member becomes reachable again.
+   * Clears the unreachable tracking for regions on that member.
+   */
+  private def onMemberReachable(member: Member): Unit = {
+    state.regions.keys.foreach { region =>
+      if (region.path.address == member.address) {
+        if (regionUnreachableSince.contains(region)) {
+          log.info("{}: Region [{}] on member [{}] is reachable again", typeName, region, member.address)
+        }
+        regionUnreachableSince -= region
+      }
+    }
+  }
+
+  /**
+   * Periodic check for stale regions whose shards should be deallocated.
+   * Called on SelfHealingTick when self-healing is enabled.
+   */
+  private def performSelfHealingCheck(): Unit = {
+    import akka.util.PrettyDuration._
+
+    val selfHealingSettings = settings.selfHealingSettings
+    if (!selfHealingSettings.enabled) return
+
+    val now = System.nanoTime()
+
+    // Check grace period - don't run self-healing during startup
+    val timeSinceStartup = Duration.fromNanos(now - coordinatorStartTime)
+    if (timeSinceStartup < selfHealingSettings.startupGracePeriod) {
+      log.debug(
+        "{}: Self-healing skipped - within startup grace period ({} < {})",
+        typeName,
+        timeSinceStartup.pretty,
+        selfHealingSettings.startupGracePeriod.pretty)
+      return
+    }
+
+    // Find stale regions that have exceeded the timeout
+    val staleThresholdNanos = selfHealingSettings.staleRegionTimeout.toNanos
+    val staleRegions = regionUnreachableSince.filter {
+      case (region, unreachableSince) =>
+        val unreachableDuration = now - unreachableSince
+        unreachableDuration > staleThresholdNanos && state.regions.contains(region)
+    }
+
+    if (staleRegions.nonEmpty) {
+      staleRegions.foreach {
+        case (region, unreachableSince) =>
+          val duration = Duration.fromNanos(now - unreachableSince)
+          val shards = state.regions.getOrElse(region, Vector.empty).toSet
+
+          if (shards.nonEmpty) {
+            if (selfHealingSettings.dryRun) {
+              log.warning(
+                "{}: [DRY-RUN] Would deallocate {} shards from stale region [{}] " +
+                "(unreachable for {}): [{}]",
+                Array[Any](typeName, shards.size, region, duration.pretty, shards.mkString(", ")))
+            } else {
+              log.warning(
+                "{}: Self-healing: deallocating {} shards from stale region [{}] " +
+                "(unreachable for {}): [{}]",
+                Array[Any](typeName, shards.size, region, duration.pretty, shards.mkString(", ")))
+              deallocateShardsFromStaleRegion(region, shards)
+            }
+          } else {
+            // Region has no shards, just clean up tracking
+            regionUnreachableSince -= region
+          }
+      }
+    }
+  }
+
+  /**
+   * Deallocates shards from a stale region to allow them to be reallocated to healthy regions.
+   */
+  private def deallocateShardsFromStaleRegion(region: ActorRef, shards: Set[ShardId]): Unit = {
+    // Skip regions already in graceful shutdown to avoid racing with handoff
+    if (gracefulShutdownInProgress(region)) {
+      log.debug("{}: Skipping self-healing for region [{}] - graceful shutdown in progress", typeName, region)
+      regionUnreachableSince -= region
+      return
+    }
+
+    // Filter out shards already being rebalanced
+    val shardsToRemove = shards.filterNot(rebalanceInProgress.contains)
+
+    if (shardsToRemove.isEmpty) {
+      log.debug(
+        "{}: All shards from stale region [{}] already being rebalanced, will re-check next tick",
+        typeName,
+        region)
+      return // Keep regionUnreachableSince entry so next tick re-evaluates
+    }
+
+    // Deallocate each shard individually using the existing state update mechanism
+    shardsToRemove.foreach { shard =>
+      if (state.shards.contains(shard)) {
+        update(ShardHomeDeallocated(shard)) { evt =>
+          log.debug("{}: Self-healing: shard [{}] deallocated from stale region [{}]", typeName, shard, region)
+          state = state.updated(evt)
+        }
+      }
+    }
+
+    // Clean up tracking state
+    regionUnreachableSince -= region
+    aliveRegions -= region
+
+    // Trigger reallocation for remember-entities
+    if (settings.rememberEntities) {
+      allocateShardHomesForRememberEntities()
+    }
+
+    // Request new homes for the deallocated shards
+    shardsToRemove.foreach { shard =>
+      self.tell(GetShardHome(shard), ignoreRef)
+    }
+
+    log.info(
+      "{}: Self-healing completed: {} shards deallocated from stale region [{}]",
+      typeName,
+      shardsToRemove.size,
+      region)
   }
 
   def shuttingDown: Receive = {
