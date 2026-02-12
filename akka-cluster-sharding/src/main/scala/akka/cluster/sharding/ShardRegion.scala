@@ -907,7 +907,7 @@ private[akka] class ShardRegion(
       }
 
     case ShardHome(shard, shardRegionRef) =>
-      instrumentation.responseShardHome(typeName, shard)
+      instrumentation.shardRegionReceiveShardHome(typeName, shard)
       receiveShardHome(shard, shardRegionRef)
 
     case ShardHomes(homes) =>
@@ -1456,7 +1456,7 @@ private[akka] class ShardRegion(
   }
 
   private def requestShardHome(coordinator: Option[ActorRef], shard: ShardId): Unit = {
-    instrumentation.requestGetShardHome(typeName, shard)
+    instrumentation.shardRegionRequestShardHome(typeName, shard)
     coordinator.foreach(_ ! GetShardHome(shard))
   }
 }
