@@ -97,9 +97,11 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
 
-  override def requestGetShardHome(): Unit = instrumentations.foreach(_.requestGetShardHome())
+  override def requestGetShardHome(typeName: String, shardId: String): Unit =
+    instrumentations.foreach(_.requestGetShardHome(typeName, shardId))
 
-  override def responseShardHome(): Unit = instrumentations.foreach(_.responseShardHome())
+  override def responseShardHome(typeName: String, shardId: String): Unit =
+    instrumentations.foreach(_.responseShardHome(typeName, shardId))
 }
 
 /**
@@ -127,9 +129,9 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 
   override def dependencies: immutable.Seq[String] = Nil
 
-  override def requestGetShardHome(): Unit = ()
+  override def requestGetShardHome(typeName: String, shardId: String): Unit = ()
 
-  override def responseShardHome(): Unit = ()
+  override def responseShardHome(typeName: String, shardId: String): Unit = ()
 }
 
 /**
@@ -160,10 +162,10 @@ trait ClusterShardingInstrumentation {
   /**
    * Triggered when the shard coordinator requests the home of a shard
    */
-  def requestGetShardHome(): Unit
+  def requestGetShardHome(typeName: String, shardId: String): Unit
 
   /**
    * Triggered when the shard coordinator responds with the home of a shard
    */
-  def responseShardHome(): Unit
+  def responseShardHome(typeName: String, shardId: String): Unit
 }
