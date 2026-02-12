@@ -9,9 +9,7 @@ import scala.concurrent.{ Await, Future }
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
-
 import com.typesafe.config._
-
 import akka.{ Done, NotUsed }
 import akka.actor.{ Actor, ActorIdentity, ActorLogging, ActorRef, ActorSystem, ActorSystemImpl, Identify, Props }
 import akka.actor.Status.Failure
@@ -23,6 +21,7 @@ import akka.stream.testkit.Utils.TE
 import akka.stream.testkit.scaladsl._
 import akka.testkit.{ AkkaSpec, TestKit, TestProbe }
 import akka.util.ByteString
+import org.scalatest.concurrent.Eventually
 
 object StreamRefsSpec {
 
@@ -179,6 +178,7 @@ object StreamRefsSpec {
       }
       remote {
         artery.canonical.port = 0
+        artery.canonical.hostname = localhost
         use-unsafe-remote-features-outside-cluster = on
       }
     }
@@ -195,7 +195,7 @@ object StreamRefsSpec {
   }
 }
 
-class StreamRefsSpec extends AkkaSpec(StreamRefsSpec.config()) {
+class StreamRefsSpec extends AkkaSpec(StreamRefsSpec.config()) with Eventually {
   import StreamRefsSpec._
 
   val remoteSystem = ActorSystem("RemoteSystem", StreamRefsSpec.config())
