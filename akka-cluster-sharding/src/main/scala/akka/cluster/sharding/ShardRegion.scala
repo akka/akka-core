@@ -907,7 +907,7 @@ private[akka] class ShardRegion(
       }
 
     case ShardHome(shard, shardRegionRef) =>
-      instrumentation.shardRegionReceiveShardHome(typeName, shard)
+      instrumentation.shardRegionReceiveShardHome(cluster.selfAddress, self, typeName, shard)
       receiveShardHome(shard, shardRegionRef)
 
     case ShardHomes(homes) =>
@@ -1267,7 +1267,7 @@ private[akka] class ShardRegion(
             shard,
             coord,
             buf.size)
-          requestShardHome(Some(coord), shard)
+          requestShardHome(shard)
       }
 
       if (retryCount >= 5 && retryCount % 5 == 0 && log.isWarningEnabled) {
@@ -1366,7 +1366,7 @@ private[akka] class ShardRegion(
           case None =>
             if (!shardBuffers.contains(shardId)) {
               log.debug("{}: Request shard [{}] home. Coordinator [{}]", typeName, shardId, coordinator)
-              requestShardHome(coordinator, shardId)
+              requestShardHome(shardId)
             }
             val buf = shardBuffers.getOrEmpty(shardId)
             log.debug(
@@ -1401,7 +1401,7 @@ private[akka] class ShardRegion(
           case None =>
             if (!shardBuffers.contains(shardId)) {
               log.debug("{}: Request shard [{}] home. Coordinator [{}]", typeName, shardId, coordinator)
-              requestShardHome(coordinator, shardId)
+              requestShardHome(shardId)
             }
             bufferMessage(shardId, msg, snd)
         }
@@ -1455,8 +1455,8 @@ private[akka] class ShardRegion(
     }
   }
 
-  private def requestShardHome(coordinator: Option[ActorRef], shard: ShardId): Unit = {
-    instrumentation.shardRegionRequestShardHome(typeName, shard)
+  private def requestShardHome(shard: ShardId): Unit = {
+    instrumentation.shardRegionRequestShardHome(cluster.selfAddress, self, typeName, shard)
     coordinator.foreach(_ ! GetShardHome(shard))
   }
 }

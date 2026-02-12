@@ -97,11 +97,19 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
 
-  override def shardRegionRequestShardHome(typeName: String, shardId: String): Unit =
-    instrumentations.foreach(_.shardRegionRequestShardHome(typeName, shardId))
+  override def shardRegionRequestShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit =
+    instrumentations.foreach(_.shardRegionRequestShardHome(selfAddress, shardRegionActor, typeName, shardId))
 
-  override def shardRegionReceiveShardHome(typeName: String, shardId: String): Unit =
-    instrumentations.foreach(_.shardRegionReceiveShardHome(typeName, shardId))
+  override def shardRegionReceiveShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit =
+    instrumentations.foreach(_.shardRegionReceiveShardHome(selfAddress, shardRegionActor, typeName, shardId))
 }
 
 /**
@@ -129,9 +137,17 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 
   override def dependencies: immutable.Seq[String] = Nil
 
-  override def shardRegionRequestShardHome(typeName: String, shardId: String): Unit = ()
+  override def shardRegionRequestShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit = ()
 
-  override def shardRegionReceiveShardHome(typeName: String, shardId: String): Unit = ()
+  override def shardRegionReceiveShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit = ()
 }
 
 /**
@@ -162,10 +178,18 @@ trait ClusterShardingInstrumentation {
   /**
    * Triggered when a region requests the home of a shard.
    */
-  def shardRegionRequestShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
+  def shardRegionRequestShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit
 
   /**
    * Triggered when a region receives the home of a shard.
    */
-  def shardRegionReceiveShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
+  def shardRegionReceiveShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit
 }

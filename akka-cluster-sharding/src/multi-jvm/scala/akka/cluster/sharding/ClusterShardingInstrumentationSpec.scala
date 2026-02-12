@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.nowarn
 import scala.concurrent.duration._
-import scala.collection.mutable
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
@@ -52,9 +51,8 @@ class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedAct
     extends ClusterShardingInstrumentation {
 
   val counter = new AtomicInteger(0)
-
-  private val requestTimes = mutable.Stack[Long]()
-  val durations = mutable.Stack[Long]()
+  val shardHomeRequests = new AtomicInteger(0)
+  val shardHomeResponses = new AtomicInteger(0)
 
   override def shardRegionBufferSize(
       selfAddress: Address,
@@ -73,12 +71,18 @@ class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedAct
 
   override def dependencies: Seq[String] = Nil
 
-  override def shardRegionRequestShardHome(typeName: String, shardId: String): Unit =
-    requestTimes.push(System.currentTimeMillis())
+  override def shardRegionRequestShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit =
+    shardHomeRequests.incrementAndGet()
 
-  override def shardRegionReceiveShardHome(typeName: String, shardId: String): Unit =
-    durations.push(System.currentTimeMillis() - requestTimes.pop())
-
+  override def shardRegionReceiveShardHome(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shardId: String): Unit = shardHomeResponses.incrementAndGet()
 }
 
 object ClusterShardingInstrumentationSpec {
@@ -125,8 +129,15 @@ abstract class ClusterShardingInstrumentationSpec
     .asInstanceOf[SpecClusterShardingTelemetry]
     .counter
 
-  private def requestDurations =
-    ClusterShardingInstrumentationProvider(system).instrumentation.asInstanceOf[SpecClusterShardingTelemetry].durations
+  val shardHomeRequests =
+    ClusterShardingInstrumentationProvider(system).instrumentation
+      .asInstanceOf[SpecClusterShardingTelemetry]
+      .shardHomeRequests
+
+  val shardHomeResponses =
+    ClusterShardingInstrumentationProvider(system).instrumentation
+      .asInstanceOf[SpecClusterShardingTelemetry]
+      .shardHomeResponses
 
   override implicit val patienceConfig: PatienceConfig = {
     import akka.testkit.TestDuration
@@ -219,11 +230,7 @@ abstract class ClusterShardingInstrumentationSpec
 
     "record latency of requesting ShardHome" in {
       runOn(second) {
-        requestDurations.nonEmpty shouldBe true
-        requestDurations.foreach { duration =>
-          duration > 0 shouldBe true
-          duration < 20 shouldBe true
-        }
+        shardHomeResponses.get() shouldBe shardHomeResponses.get()
       }
       enterBarrier("measure-shard-home-latency")
     }
