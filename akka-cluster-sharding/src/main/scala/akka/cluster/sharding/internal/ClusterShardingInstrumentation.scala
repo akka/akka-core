@@ -166,17 +166,9 @@ trait ClusterShardingInstrumentation {
    */
   def incrementShardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
 
-  def requestedShardHome(
-                          selfAddress: Address,
-                          shardRegionActor: ActorRef,
-                          typeName: String,
-                          shardId: String): Unit
+  def requestedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
 
-  def receivedShardHome(
-                          selfAddress: Address,
-                          shardRegionActor: ActorRef,
-                          typeName: String,
-                          shardId: String): Unit
+  def receivedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
 
   /**
    * Optional dependencies for this instrumentation.
