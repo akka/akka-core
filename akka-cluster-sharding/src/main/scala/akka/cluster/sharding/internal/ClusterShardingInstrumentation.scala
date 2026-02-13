@@ -97,19 +97,19 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
 
-  override def shardRegionRequestShardHome(
+  override def onRequestShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit =
-    instrumentations.foreach(_.shardRegionRequestShardHome(selfAddress, shardRegionActor, typeName, shardId))
+    instrumentations.foreach(_.onRequestShardHome(selfAddress, shardRegionActor, typeName, shardId))
 
-  override def shardRegionReceiveShardHome(
+  override def onReceiveShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit =
-    instrumentations.foreach(_.shardRegionReceiveShardHome(selfAddress, shardRegionActor, typeName, shardId))
+    instrumentations.foreach(_.onReceiveShardHome(selfAddress, shardRegionActor, typeName, shardId))
 }
 
 /**
@@ -137,13 +137,13 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 
   override def dependencies: immutable.Seq[String] = Nil
 
-  override def shardRegionRequestShardHome(
+  override def onRequestShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit = ()
 
-  override def shardRegionReceiveShardHome(
+  override def onReceiveShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
@@ -166,6 +166,18 @@ trait ClusterShardingInstrumentation {
    */
   def incrementShardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
 
+  def onRequestShardHome(
+                          selfAddress: Address,
+                          shardRegionActor: ActorRef,
+                          typeName: String,
+                          shardId: String): Unit
+
+  def onReceiveShardHome(
+                          selfAddress: Address,
+                          shardRegionActor: ActorRef,
+                          typeName: String,
+                          shardId: String): Unit
+
   /**
    * Optional dependencies for this instrumentation.
    *
@@ -174,22 +186,4 @@ trait ClusterShardingInstrumentation {
    * @return list of class names for optional instrumentation dependencies
    */
   def dependencies: immutable.Seq[String]
-
-  /**
-   * Triggered when a region requests the home of a shard.
-   */
-  def shardRegionRequestShardHome(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shardId: String): Unit
-
-  /**
-   * Triggered when a region receives the home of a shard.
-   */
-  def shardRegionReceiveShardHome(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shardId: String): Unit
 }
