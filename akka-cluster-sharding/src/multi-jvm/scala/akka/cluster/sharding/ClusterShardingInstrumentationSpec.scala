@@ -230,7 +230,7 @@ abstract class ClusterShardingInstrumentationSpec
 
     "record latency of requesting ShardHome" in {
       runOn(second) {
-        shardHomeResponses.get() shouldBe shardHomeResponses.get()
+        shardHomeRequests.get() shouldBe shardHomeResponses.get()
       }
       enterBarrier("measure-shard-home-latency")
     }
