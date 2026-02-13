@@ -907,7 +907,7 @@ private[akka] class ShardRegion(
       }
 
     case ShardHome(shard, shardRegionRef) =>
-      instrumentation.onReceiveShardHome(cluster.selfAddress, self, typeName, shard)
+      instrumentation.receivedShardHome(cluster.selfAddress, self, typeName, shard)
       receiveShardHome(shard, shardRegionRef)
 
     case ShardHomes(homes) =>
@@ -1456,7 +1456,7 @@ private[akka] class ShardRegion(
   }
 
   private def requestShardHome(shard: ShardId): Unit = {
-    instrumentation.onRequestShardHome(cluster.selfAddress, self, typeName, shard)
+    instrumentation.requestedShardHome(cluster.selfAddress, self, typeName, shard)
     coordinator.foreach(_ ! GetShardHome(shard))
   }
 }

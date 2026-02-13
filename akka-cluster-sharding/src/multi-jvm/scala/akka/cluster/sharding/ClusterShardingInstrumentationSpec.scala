@@ -71,14 +71,14 @@ class SpecClusterShardingTelemetry(@nowarn("msg=never used") system: ExtendedAct
 
   override def dependencies: Seq[String] = Nil
 
-  override def onRequestShardHome(
+  override def requestedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit =
     shardHomeRequests.incrementAndGet()
 
-  override def onReceiveShardHome(
+  override def receivedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,

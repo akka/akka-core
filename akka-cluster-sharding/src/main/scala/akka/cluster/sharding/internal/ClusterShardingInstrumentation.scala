@@ -97,19 +97,19 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
 
-  override def onRequestShardHome(
+  override def requestedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit =
-    instrumentations.foreach(_.onRequestShardHome(selfAddress, shardRegionActor, typeName, shardId))
+    instrumentations.foreach(_.requestedShardHome(selfAddress, shardRegionActor, typeName, shardId))
 
-  override def onReceiveShardHome(
+  override def receivedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit =
-    instrumentations.foreach(_.onReceiveShardHome(selfAddress, shardRegionActor, typeName, shardId))
+    instrumentations.foreach(_.receivedShardHome(selfAddress, shardRegionActor, typeName, shardId))
 }
 
 /**
@@ -137,13 +137,13 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 
   override def dependencies: immutable.Seq[String] = Nil
 
-  override def onRequestShardHome(
+  override def requestedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit = ()
 
-  override def onReceiveShardHome(
+  override def receivedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
@@ -166,13 +166,13 @@ trait ClusterShardingInstrumentation {
    */
   def incrementShardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
 
-  def onRequestShardHome(
+  def requestedShardHome(
                           selfAddress: Address,
                           shardRegionActor: ActorRef,
                           typeName: String,
                           shardId: String): Unit
 
-  def onReceiveShardHome(
+  def receivedShardHome(
                           selfAddress: Address,
                           shardRegionActor: ActorRef,
                           typeName: String,
