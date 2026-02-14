@@ -97,12 +97,12 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
 
-  override def requestedShardHome(
+  override def regionRequestedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit =
-    instrumentations.foreach(_.requestedShardHome(selfAddress, shardRegionActor, typeName, shardId))
+    instrumentations.foreach(_.regionRequestedShardHome(selfAddress, shardRegionActor, typeName, shardId))
 
   override def receivedShardHome(
       selfAddress: Address,
@@ -137,7 +137,7 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 
   override def dependencies: immutable.Seq[String] = Nil
 
-  override def requestedShardHome(
+  override def regionRequestedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
@@ -166,7 +166,7 @@ trait ClusterShardingInstrumentation {
    */
   def incrementShardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
 
-  def requestedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
+  def regionRequestedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
 
   def receivedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
 
