@@ -1299,7 +1299,7 @@ private[akka] class ShardRegion(
       context.system.deadLetters ! msg
     } else {
       shardBuffers.append(shardId, msg, snd)
-      instrumentation.incrementShardRegionBufferSize(cluster.selfAddress, self, typeName)
+      instrumentation.shardRegionBufferSizeIncremented(cluster.selfAddress, self, typeName)
       // log some insight to how buffers are filled up every 10% of the buffer capacity
       val tot = totBufSize + 1
       if (tot % (bufferSize / 10) == 0) {
@@ -1375,7 +1375,7 @@ private[akka] class ShardRegion(
               shardId,
               buf.size + 1)
             shardBuffers.append(shardId, msg, snd)
-            instrumentation.incrementShardRegionBufferSize(cluster.selfAddress, self, typeName)
+            instrumentation.shardRegionBufferSizeIncremented(cluster.selfAddress, self, typeName)
         }
 
       case _ =>

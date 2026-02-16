@@ -88,14 +88,11 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
       size: Int): Unit =
     instrumentations.foreach(_.shardRegionBufferSize(selfAddress, shardRegionActor, typeName, size))
 
-  override def incrementShardRegionBufferSize(
+  override def shardRegionBufferSizeIncremented(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String): Unit =
-    instrumentations.foreach(_.incrementShardRegionBufferSize(selfAddress, shardRegionActor, typeName))
-
-  override def dependencies: immutable.Seq[String] =
-    instrumentations.flatMap(_.dependencies)
+    instrumentations.foreach(_.shardRegionBufferSizeIncremented(selfAddress, shardRegionActor, typeName))
 
   override def regionRequestedShardHome(
       selfAddress: Address,
@@ -110,6 +107,25 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
       typeName: String,
       shardId: String): Unit =
     instrumentations.foreach(_.receivedShardHome(selfAddress, shardRegionActor, typeName, shardId))
+
+  override def shardHandoffStarted(
+      selfAddress: Address,
+      shardCoordinatorActor: ActorRef,
+      typeName: String,
+      shard: String): Unit =
+    instrumentations.foreach(_.shardHandoffStarted(selfAddress, shardCoordinatorActor, typeName, shard))
+
+  override def shardHandoffFinished(
+      selfAddress: Address,
+      shardCoordinatorActor: ActorRef,
+      typeName: String,
+      shard: String,
+      ok: Boolean): Unit =
+    instrumentations.foreach(_.shardHandoffFinished(selfAddress, shardCoordinatorActor, typeName, shard, ok))
+
+  override def dependencies: immutable.Seq[String] =
+    instrumentations.flatMap(_.dependencies)
+
 }
 
 /**
@@ -130,12 +146,10 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
       typeName: String,
       size: Int): Unit = ()
 
-  override def incrementShardRegionBufferSize(
+  override def shardRegionBufferSizeIncremented(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String): Unit = ()
-
-  override def dependencies: immutable.Seq[String] = Nil
 
   override def regionRequestedShardHome(
       selfAddress: Address,
@@ -148,6 +162,21 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit = ()
+
+  override def shardHandoffStarted(
+      selfAddress: Address,
+      shardRegionActor: ActorRef,
+      typeName: String,
+      shard: String): Unit = ()
+
+  override def shardHandoffFinished(
+      selfAddress: Address,
+      self: ActorRef,
+      typeName: String,
+      shard: String,
+      ok: Boolean): Unit = ()
+
+  override def dependencies: immutable.Seq[String] = Nil
 }
 
 /**
@@ -156,15 +185,9 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 @InternalStableApi
 trait ClusterShardingInstrumentation {
 
-  /**
-   * @param size set current size of the buffer.
-   */
   def shardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, size: Int): Unit
 
-  /**
-   * Increase the current size of the buffer by one.
-   */
-  def incrementShardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
+  def shardRegionBufferSizeIncremented(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
 
   def regionRequestedShardHome(
       selfAddress: Address,
@@ -173,6 +196,15 @@ trait ClusterShardingInstrumentation {
       shardId: String): Unit
 
   def receivedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
+
+  def shardHandoffStarted(selfAddress: Address, shardCoordinatorActor: ActorRef, typeName: String, shard: String): Unit
+
+  def shardHandoffFinished(
+      selfAddress: Address,
+      shardCoordinatorActor: ActorRef,
+      typeName: String,
+      shard: String,
+      ok: Boolean): Unit
 
   /**
    * Optional dependencies for this instrumentation.
