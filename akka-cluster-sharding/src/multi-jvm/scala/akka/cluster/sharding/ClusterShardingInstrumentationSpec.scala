@@ -8,7 +8,6 @@ import scala.concurrent.duration._
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{ Seconds, Span }
-
 import org.scalatest.concurrent.Eventually.eventually
 
 import akka.actor.{ Actor, ActorLogging, Address, Props }
@@ -86,15 +85,14 @@ abstract class ClusterShardingInstrumentationSpec
     .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
     .shardRegionBufferSizeCounter
 
+  private val dropMessageCounter = ClusterShardingInstrumentationProvider(system).instrumentation
+    .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
+    .dropMessageCounter
+
   val shardHomeRequests =
     ClusterShardingInstrumentationProvider(system).instrumentation
       .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
       .shardHomeRequests
-
-  val shardHomeResponses =
-    ClusterShardingInstrumentationProvider(system).instrumentation
-      .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
-      .shardHomeResponses
 
   override implicit val patienceConfig: PatienceConfig = {
     import akka.testkit.TestDuration
@@ -173,6 +171,7 @@ abstract class ClusterShardingInstrumentationSpec
           // we have 100 in the buffer, and our cap is 120 (per config in this test)
           // 10 are dropped
           shardRegionBufferSizeCounter.get() shouldBe 120
+          dropMessageCounter.get() shouldBe 10
         }
       }
       enterBarrier("buffer-overflow")
@@ -187,7 +186,21 @@ abstract class ClusterShardingInstrumentationSpec
 
     "record latency of requesting ShardHome" in {
       runOn(second) {
-        shardHomeRequests.get() shouldBe shardHomeResponses.get()
+        eventually(timeout(Span(5, Seconds))) {
+          shardHomeRequests.size > 0 shouldBe true
+          shardHomeRequests.foreach {
+            case (key, value) =>
+              if (key.startsWith("id")) {
+                // The "id-0", "id-1" ... messages were send during the blackhole.
+                // This means they were requested twice, but only received back once.
+                value.get() shouldBe 1
+              } else {
+                // The "a", "b", "c" messages were send before the blackhole.
+                // This means they got a proper send-and-request cycle
+                value.get() shouldBe 0
+              }
+          }
+        }
       }
       enterBarrier("measure-shard-home-latency")
     }

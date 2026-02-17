@@ -7,6 +7,7 @@ package akka.cluster.sharding
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.nowarn
+import scala.collection.concurrent.TrieMap
 
 import akka.actor.ActorRef
 import akka.actor.Address
@@ -19,8 +20,10 @@ class ClusterShardingInstrumentationSpecTelemetry(@nowarn("msg=never used") syst
   val shardRegionBufferSizeCounter = new AtomicInteger(0)
   val beginShardHandoffDurationCounter = new AtomicInteger(0)
   val finishShardHandoffDurationCounter = new AtomicInteger(0)
-  val shardHomeRequests = new AtomicInteger(0)
-  val shardHomeResponses = new AtomicInteger(0)
+
+  val shardHomeRequests = new TrieMap[String, AtomicInteger]()
+
+  val dropMessageCounter = new AtomicInteger(0)
 
   override def shardRegionBufferSize(
       selfAddress: Address,
@@ -54,14 +57,21 @@ class ClusterShardingInstrumentationSpecTelemetry(@nowarn("msg=never used") syst
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
-      shardId: String): Unit =
-    shardHomeRequests.incrementAndGet()
+      shardId: String): Unit = shardHomeRequests.getOrElseUpdate(shardId, new AtomicInteger(0)).incrementAndGet()
 
   override def receivedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
-      shardId: String): Unit = shardHomeResponses.incrementAndGet()
+      shardId: String): Unit =
+    shardHomeRequests.get(shardId) match {
+      case Some(value) =>
+        value.decrementAndGet()
+      case None => () // should not happen
+    }
+
+  override def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit =
+    dropMessageCounter.incrementAndGet()
 
   override def dependencies: Seq[String] = Nil
 }

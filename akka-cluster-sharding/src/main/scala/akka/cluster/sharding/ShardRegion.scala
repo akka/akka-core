@@ -1297,6 +1297,7 @@ private[akka] class ShardRegion(
         loggedFullBufferWarning = true
       }
       context.system.deadLetters ! msg
+      instrumentation.messageDropped(cluster.selfAddress, self, typeName)
     } else {
       shardBuffers.append(shardId, msg, snd)
       instrumentation.shardRegionBufferSizeIncremented(cluster.selfAddress, self, typeName)
