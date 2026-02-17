@@ -202,9 +202,6 @@ trait ClusterShardingInstrumentation {
 
   def receivedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
 
-  /**
-   * Drop a message send to a Shard Region if the buffer is full.
-   */
   def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit
 
   def shardHandoffStarted(selfAddress: Address, shardCoordinatorActor: ActorRef, typeName: String, shard: String): Unit
