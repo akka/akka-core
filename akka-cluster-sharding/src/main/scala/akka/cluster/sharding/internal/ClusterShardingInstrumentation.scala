@@ -111,10 +111,6 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
       shardId: String): Unit =
     instrumentations.foreach(_.receivedShardHome(selfAddress, shardRegionActor, typeName, shardId))
 
-  override def dependencies: immutable.Seq[String] =
-    instrumentations.flatMap(_.dependencies)
-
-
   override def shardHandoffStarted(
       selfAddress: Address,
       shardCoordinatorActor: ActorRef,

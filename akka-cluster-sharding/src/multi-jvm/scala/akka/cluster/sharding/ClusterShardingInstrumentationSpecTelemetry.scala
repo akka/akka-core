@@ -21,6 +21,7 @@ class ClusterShardingInstrumentationSpecTelemetry(@nowarn("msg=never used") syst
   val finishShardHandoffDurationCounter = new AtomicInteger(0)
   val shardHomeRequests = new AtomicInteger(0)
   val shardHomeResponses = new AtomicInteger(0)
+  val dropMessageCounter = new AtomicInteger(0)
 
   override def shardRegionBufferSize(
       selfAddress: Address,
@@ -62,6 +63,9 @@ class ClusterShardingInstrumentationSpecTelemetry(@nowarn("msg=never used") syst
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit = shardHomeResponses.incrementAndGet()
+
+  override def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit =
+    dropMessageCounter.incrementAndGet()
 
   override def dependencies: Seq[String] = Nil
 }

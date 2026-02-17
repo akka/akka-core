@@ -7,13 +7,13 @@ package akka.cluster.sharding
 import scala.concurrent.duration._
 
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.concurrent.Eventually.eventually
 
-import akka.actor.{Actor, ActorLogging, Address, Props}
+import akka.actor.{ Actor, ActorLogging, Address, Props }
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus
-import akka.cluster.sharding.ClusterShardingInstrumentationSpec.GiveMeYourHome.{Get, Home}
+import akka.cluster.sharding.ClusterShardingInstrumentationSpec.GiveMeYourHome.{ Get, Home }
 import akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider
 import akka.remote.testkit.Direction
 import akka.testkit.TestProbe
