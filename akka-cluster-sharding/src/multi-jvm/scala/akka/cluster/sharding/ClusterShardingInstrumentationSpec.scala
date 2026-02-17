@@ -171,7 +171,7 @@ abstract class ClusterShardingInstrumentationSpec
         }
         eventually {
           // we have 100 in the buffer, and our cap is 120 (per config in this test)
-          // 10 are dropped. Should we have a metric on this? Or custom events?
+          // 10 are dropped
           shardRegionBufferSizeCounter.get() shouldBe 120
         }
       }
