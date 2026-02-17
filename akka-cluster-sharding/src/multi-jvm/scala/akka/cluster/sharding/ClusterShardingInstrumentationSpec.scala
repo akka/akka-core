@@ -94,11 +94,6 @@ abstract class ClusterShardingInstrumentationSpec
       .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
       .shardHomeRequests
 
-  val shardHomeResponses =
-    ClusterShardingInstrumentationProvider(system).instrumentation
-      .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
-      .shardHomeResponses
-
   override implicit val patienceConfig: PatienceConfig = {
     import akka.testkit.TestDuration
     PatienceConfig(testKitSettings.DefaultTimeout.duration.dilated, Span(1000, org.scalatest.time.Millis))
@@ -191,7 +186,21 @@ abstract class ClusterShardingInstrumentationSpec
 
     "record latency of requesting ShardHome" in {
       runOn(second) {
-        shardHomeRequests.get() shouldBe shardHomeResponses.get()
+        eventually(timeout(Span(5, Seconds))) {
+          shardHomeRequests.size > 0 shouldBe true
+          shardHomeRequests.foreach {
+            case (key, value) =>
+              if (key.startsWith("id")) {
+                // The "id-0", "id-1" ... messages were send during the blackhole.
+                // This means they were requested twice, but only received back once.
+                value.get() shouldBe 1
+              } else {
+                // The "a", "b", "c" messages were send before the blackhole.
+                // This means they got a proper send-and-request cycle
+                value.get() shouldBe 0
+              }
+          }
+        }
       }
       enterBarrier("measure-shard-home-latency")
     }
