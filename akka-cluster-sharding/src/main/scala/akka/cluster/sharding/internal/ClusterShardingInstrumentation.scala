@@ -43,14 +43,23 @@ object ClusterShardingInstrumentationProvider
 class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extends Extension {
   private val fqcnConfigPath = "akka.cluster.sharding.telemetry.instrumentations"
 
+  println("opeeee")
+
   lazy val instrumentation: ClusterShardingInstrumentation = {
     if (!system.settings.config.hasPath(fqcnConfigPath)) {
+      println("opeeee noe")
       EmptyClusterShardingInstrumentation
     } else {
+      println("opeeee noe jo")
       val fqcns = system.settings.config.getStringList(fqcnConfigPath).asScala.toVector
+      println(s"opeeee noe jo ${fqcns.size}")
       fqcns.size match {
-        case 0 => EmptyClusterShardingInstrumentation
-        case 1 => create(fqcns.head)
+        case 0 =>
+          println(s"opeeee noe jo empt")
+          EmptyClusterShardingInstrumentation
+        case 1 =>
+          println(s"opeeee noe jo frist")
+          create(fqcns.head)
         case _ =>
           val instrumentationsByFqcn = fqcns.iterator.map(fqcn => fqcn -> create(fqcn)).toMap
           val sortedNames = topologicalSort[String](fqcns, fqcn => instrumentationsByFqcn(fqcn).dependencies.toSet)
