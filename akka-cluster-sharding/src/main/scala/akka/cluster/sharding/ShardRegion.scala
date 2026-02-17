@@ -1297,6 +1297,7 @@ private[akka] class ShardRegion(
         loggedFullBufferWarning = true
       }
       context.system.deadLetters ! msg
+      instrumentation.messageDropped(cluster.selfAddress, self, typeName)
     } else {
       shardBuffers.append(shardId, msg, snd)
       instrumentation.shardRegionBufferSizeIncremented(cluster.selfAddress, self, typeName)
@@ -1456,7 +1457,7 @@ private[akka] class ShardRegion(
   }
 
   private def requestShardHome(shard: ShardId): Unit = {
-    instrumentation.regionRequestedShardHome(cluster.selfAddress, self, typeName, shard)
+    instrumentation.requestedShardHome(cluster.selfAddress, self, typeName, shard)
     coordinator.foreach(_ ! GetShardHome(shard))
   }
 }

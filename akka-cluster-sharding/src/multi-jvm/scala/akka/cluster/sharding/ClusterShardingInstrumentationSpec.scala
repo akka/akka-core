@@ -7,14 +7,13 @@ package akka.cluster.sharding
 import scala.concurrent.duration._
 
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{ Seconds, Span }
-
+import org.scalatest.time.{Seconds, Span}
 import org.scalatest.concurrent.Eventually.eventually
 
-import akka.actor.{ Actor, ActorLogging, Address, Props }
+import akka.actor.{Actor, ActorLogging, Address, Props}
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus
-import akka.cluster.sharding.ClusterShardingInstrumentationSpec.GiveMeYourHome.{ Get, Home }
+import akka.cluster.sharding.ClusterShardingInstrumentationSpec.GiveMeYourHome.{Get, Home}
 import akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider
 import akka.remote.testkit.Direction
 import akka.testkit.TestProbe
@@ -85,6 +84,10 @@ abstract class ClusterShardingInstrumentationSpec
   private val shardRegionBufferSizeCounter = ClusterShardingInstrumentationProvider(system).instrumentation
     .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
     .shardRegionBufferSizeCounter
+
+  private val dropMessageCounter = ClusterShardingInstrumentationProvider(system).instrumentation
+    .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
+    .dropMessageCounter
 
   val shardHomeRequests =
     ClusterShardingInstrumentationProvider(system).instrumentation
@@ -173,6 +176,7 @@ abstract class ClusterShardingInstrumentationSpec
           // we have 100 in the buffer, and our cap is 120 (per config in this test)
           // 10 are dropped. Should we have a metric on this? Or custom events?
           shardRegionBufferSizeCounter.get() shouldBe 120
+          dropMessageCounter.get() shouldBe 10
         }
       }
       enterBarrier("buffer-overflow")

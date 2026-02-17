@@ -101,12 +101,19 @@ class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterSharding
       shardId: String): Unit =
     instrumentations.foreach(_.regionRequestedShardHome(selfAddress, shardRegionActor, typeName, shardId))
 
+  override def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit =
+    instrumentations.foreach(_.messageDropped(selfAddress, self, typeName))
+
   override def receivedShardHome(
       selfAddress: Address,
       shardRegionActor: ActorRef,
       typeName: String,
       shardId: String): Unit =
     instrumentations.foreach(_.receivedShardHome(selfAddress, shardRegionActor, typeName, shardId))
+
+  override def dependencies: immutable.Seq[String] =
+    instrumentations.flatMap(_.dependencies)
+
 
   override def shardHandoffStarted(
       selfAddress: Address,
@@ -163,6 +170,8 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
       typeName: String,
       shardId: String): Unit = ()
 
+  override def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit = ()
+
   override def shardHandoffStarted(
       selfAddress: Address,
       shardRegionActor: ActorRef,
@@ -196,6 +205,11 @@ trait ClusterShardingInstrumentation {
       shardId: String): Unit
 
   def receivedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
+
+  /**
+   * Drop a message send to a Shard Region if the buffer is full.
+   */
+  def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit
 
   def shardHandoffStarted(selfAddress: Address, shardCoordinatorActor: ActorRef, typeName: String, shard: String): Unit
 
