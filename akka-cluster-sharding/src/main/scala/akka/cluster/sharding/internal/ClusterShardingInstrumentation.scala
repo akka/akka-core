@@ -9,9 +9,7 @@ import akka.annotation.InternalStableApi
 import scala.collection.immutable
 import scala.jdk.CollectionConverters._
 
-import akka.actor.ActorRef
 import akka.actor.ActorSystem
-import akka.actor.Address
 import akka.actor.ClassicActorSystemProvider
 import akka.actor.Extension
 import akka.actor.ExtensionId
@@ -43,22 +41,22 @@ object ClusterShardingInstrumentationProvider
 class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extends Extension {
   private val fqcnConfigPath = "akka.cluster.sharding.telemetry.instrumentations"
 
-  println("opeeee")
+  system.log.error("opeeee")
 
   lazy val instrumentation: ClusterShardingInstrumentation = {
     if (!system.settings.config.hasPath(fqcnConfigPath)) {
-      println("opeeee noe")
+      system.log.error("opeeee noe")
       EmptyClusterShardingInstrumentation
     } else {
-      println("opeeee noe jo")
+      system.log.error("opeeee noe jo")
       val fqcns = system.settings.config.getStringList(fqcnConfigPath).asScala.toVector
-      println(s"opeeee noe jo ${fqcns.size}")
+      system.log.error(s"opeeee noe jo ${fqcns.size}")
       fqcns.size match {
         case 0 =>
-          println(s"opeeee noe jo empt")
+          system.log.error(s"opeeee noe jo empt")
           EmptyClusterShardingInstrumentation
         case 1 =>
-          println(s"opeeee noe jo frist")
+          system.log.error(s"opeeee noe jo frist")
           create(fqcns.head)
         case _ =>
           val instrumentationsByFqcn = fqcns.iterator.map(fqcn => fqcn -> create(fqcn)).toMap
@@ -90,50 +88,26 @@ class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extend
 class ClusterShardingTelemetryEnsemble(val instrumentations: Seq[ClusterShardingInstrumentation])
     extends ClusterShardingInstrumentation {
 
-  override def shardRegionBufferSize(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      size: Int): Unit =
-    instrumentations.foreach(_.shardRegionBufferSize(selfAddress, shardRegionActor, typeName, size))
+  override def shardRegionBufferSize(typeName: String, size: Int): Unit =
+    instrumentations.foreach(_.shardRegionBufferSize(typeName, size))
 
-  override def shardRegionBufferSizeIncremented(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String): Unit =
-    instrumentations.foreach(_.shardRegionBufferSizeIncremented(selfAddress, shardRegionActor, typeName))
+  override def shardRegionBufferSizeIncremented(typeName: String): Unit =
+    instrumentations.foreach(_.shardRegionBufferSizeIncremented(typeName))
 
-  override def regionRequestedShardHome(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shardId: String): Unit =
-    instrumentations.foreach(_.regionRequestedShardHome(selfAddress, shardRegionActor, typeName, shardId))
+  override def regionRequestedShardHome(typeName: String, shardId: String): Unit =
+    instrumentations.foreach(_.regionRequestedShardHome(typeName, shardId))
 
-  override def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit =
-    instrumentations.foreach(_.messageDropped(selfAddress, self, typeName))
+  override def messageDropped(typeName: String): Unit =
+    instrumentations.foreach(_.messageDropped(typeName))
 
-  override def receivedShardHome(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shardId: String): Unit =
-    instrumentations.foreach(_.receivedShardHome(selfAddress, shardRegionActor, typeName, shardId))
+  override def receivedShardHome(typeName: String, shardId: String): Unit =
+    instrumentations.foreach(_.receivedShardHome(typeName, shardId))
 
-  override def shardHandoffStarted(
-      selfAddress: Address,
-      shardCoordinatorActor: ActorRef,
-      typeName: String,
-      shard: String): Unit =
-    instrumentations.foreach(_.shardHandoffStarted(selfAddress, shardCoordinatorActor, typeName, shard))
+  override def shardHandoffStarted(typeName: String, shard: String): Unit =
+    instrumentations.foreach(_.shardHandoffStarted(typeName, shard))
 
-  override def shardHandoffFinished(
-      selfAddress: Address,
-      shardCoordinatorActor: ActorRef,
-      typeName: String,
-      shard: String,
-      ok: Boolean): Unit =
-    instrumentations.foreach(_.shardHandoffFinished(selfAddress, shardCoordinatorActor, typeName, shard, ok))
+  override def shardHandoffFinished(typeName: String, shard: String, ok: Boolean): Unit =
+    instrumentations.foreach(_.shardHandoffFinished(typeName, shard, ok))
 
   override def dependencies: immutable.Seq[String] =
     instrumentations.flatMap(_.dependencies)
@@ -152,43 +126,19 @@ object EmptyClusterShardingInstrumentation extends EmptyClusterShardingInstrumen
 @InternalStableApi
 class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation {
 
-  override def shardRegionBufferSize(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      size: Int): Unit = ()
+  override def shardRegionBufferSize(typeName: String, size: Int): Unit = ()
 
-  override def shardRegionBufferSizeIncremented(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String): Unit = ()
+  override def shardRegionBufferSizeIncremented(typeName: String): Unit = ()
 
-  override def regionRequestedShardHome(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shardId: String): Unit = ()
+  override def regionRequestedShardHome(typeName: String, shardId: String): Unit = ()
 
-  override def receivedShardHome(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shardId: String): Unit = ()
+  override def receivedShardHome(typeName: String, shardId: String): Unit = ()
 
-  override def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit = ()
+  override def messageDropped(typeName: String): Unit = ()
 
-  override def shardHandoffStarted(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shard: String): Unit = ()
+  override def shardHandoffStarted(typeName: String, shard: String): Unit = ()
 
-  override def shardHandoffFinished(
-      selfAddress: Address,
-      self: ActorRef,
-      typeName: String,
-      shard: String,
-      ok: Boolean): Unit = ()
+  override def shardHandoffFinished(typeName: String, shard: String, ok: Boolean): Unit = ()
 
   override def dependencies: immutable.Seq[String] = Nil
 }
@@ -199,28 +149,19 @@ class EmptyClusterShardingInstrumentation extends ClusterShardingInstrumentation
 @InternalStableApi
 trait ClusterShardingInstrumentation {
 
-  def shardRegionBufferSize(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, size: Int): Unit
+  def shardRegionBufferSize(typeName: String, size: Int): Unit
 
-  def shardRegionBufferSizeIncremented(selfAddress: Address, shardRegionActor: ActorRef, typeName: String): Unit
+  def shardRegionBufferSizeIncremented(typeName: String): Unit
 
-  def regionRequestedShardHome(
-      selfAddress: Address,
-      shardRegionActor: ActorRef,
-      typeName: String,
-      shardId: String): Unit
+  def regionRequestedShardHome(typeName: String, shardId: String): Unit
 
-  def receivedShardHome(selfAddress: Address, shardRegionActor: ActorRef, typeName: String, shardId: String): Unit
+  def receivedShardHome(typeName: String, shardId: String): Unit
 
-  def messageDropped(selfAddress: Address, self: ActorRef, typeName: String): Unit
+  def messageDropped(typeName: String): Unit
 
-  def shardHandoffStarted(selfAddress: Address, shardCoordinatorActor: ActorRef, typeName: String, shard: String): Unit
+  def shardHandoffStarted(typeName: String, shard: String): Unit
 
-  def shardHandoffFinished(
-      selfAddress: Address,
-      shardCoordinatorActor: ActorRef,
-      typeName: String,
-      shard: String,
-      ok: Boolean): Unit
+  def shardHandoffFinished(typeName: String, shard: String, ok: Boolean): Unit
 
   /**
    * Optional dependencies for this instrumentation.

@@ -646,9 +646,8 @@ object ShardCoordinator {
     import Internal._
 
     private val instrumentation = ClusterShardingInstrumentationProvider.get(context.system).instrumentation
-    private val cluster = Cluster(context.system)
 
-    instrumentation.shardHandoffStarted(cluster.selfAddress, self, typeName, shard)
+    instrumentation.shardHandoffStarted(typeName, shard)
 
     regions.foreach { region =>
       region ! BeginHandOff(shard)
@@ -713,7 +712,7 @@ object ShardCoordinator {
     }
 
     def done(ok: Boolean): Unit = {
-      instrumentation.shardHandoffFinished(cluster.selfAddress, self, typeName, shard, ok)
+      instrumentation.shardHandoffFinished(typeName, shard, ok)
       context.parent ! RebalanceDone(shard, ok)
       context.stop(self)
     }
