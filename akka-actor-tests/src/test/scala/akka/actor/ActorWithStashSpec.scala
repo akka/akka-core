@@ -87,6 +87,34 @@ object ActorWithStashSpec {
     }
   }
 
+  /**
+   * Proves that stashAtHead() delivers Terminated before normally-stashed messages.
+   * Receives "normal" -> stash() (appended to tail), then Terminated -> stashAtHead()
+   * (prepended to head). After unstashAll(), Terminated is processed first.
+   */
+  class StashAtHeadTerminatedActor(probe: ActorRef) extends Actor with Stash {
+    val watched = context.watch(context.actorOf(Props[WatchedActor]()))
+
+    def receive = waiting
+
+    def waiting: Receive = {
+      case "normal" =>
+        stash()
+        context.stop(watched)
+      case Terminated(`watched`) =>
+        stashAtHead()
+        context.become(replaying)
+        unstashAll()
+    }
+
+    def replaying: Receive = {
+      case Terminated(`watched`) =>
+        probe ! "terminated"
+      case "normal" =>
+        probe ! "normal"
+    }
+  }
+
   object state {
     @volatile
     var s: String = ""
@@ -176,6 +204,14 @@ class ActorWithStashSpec extends AkkaSpec with DefaultTimeout with BeforeAndAfte
       system.actorOf(Props(classOf[TerminatedMessageStashingActor], testActor))
       expectMsg("terminated")
       expectMsg("terminated")
+    }
+
+    "deliver stashAtHead messages before normally-stashed messages after unstashAll" in {
+      val actor = system.actorOf(Props(new StashAtHeadTerminatedActor(testActor)))
+      actor ! "normal"
+      // Terminated arrives after "normal" is stashed; stashAtHead puts it at the front
+      expectMsg("terminated")
+      expectMsg("normal")
     }
   }
 }
