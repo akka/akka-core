@@ -604,6 +604,8 @@ object ShardCoordinator {
 
   private final case class DelayedShardRegionTerminated(region: ActorRef)
 
+  private case object StaleRegionCheckTick
+
   private final case class StopShardTimeout(requestId: UUID)
 
   /**
@@ -822,6 +824,18 @@ abstract class ShardCoordinator(
   var regionTerminationInProgress = Set.empty[ActorRef]
   // each waiting actor together with a request identifier to clear out all waiting for one request on timeout
   var waitingForShardsToStop: Map[ShardId, Set[(ActorRef, UUID)]] = Map.empty
+
+  // Stale region detection: track when we first notice a region's member is gone from the cluster
+  private var staleRegionFirstSeen: Map[ActorRef, Deadline] = Map.empty
+  private val staleRegionDetectionConfig = {
+    val c = context.system.settings.config.getConfig("akka.cluster.sharding.stale-region-detection")
+    val enabled = c.getBoolean("enabled")
+    val checkInterval = c.getDuration("check-interval", MILLISECONDS).millis
+    val regionStalenessTimeout = c.getDuration("region-staleness-timeout", MILLISECONDS).millis
+    val startupGracePeriod = c.getDuration("startup-grace-period", MILLISECONDS).millis
+    val dryRun = c.getBoolean("dry-run")
+    (enabled, checkInterval, regionStalenessTimeout, startupGracePeriod, dryRun)
+  }
 
   import context.dispatcher
 
@@ -1141,6 +1155,50 @@ abstract class ShardCoordinator(
           }
         }
 
+      case StaleRegionCheckTick =>
+        val (_, srdCheckInterval, srdTimeout, _, srdDryRun) = staleRegionDetectionConfig
+        // Start repeating timer on first tick (first tick came after startup grace period)
+        if (!timers.isTimerActive("stale-region-check")) {
+          timers.startTimerWithFixedDelay("stale-region-check", StaleRegionCheckTick, srdCheckInterval)
+        }
+
+        val memberAddresses = cluster.state.members.map(_.address)
+        val staleRegions = state.regions.keys.filter { ref =>
+          val addr = ref.path.address
+          !addr.hasLocalScope && !memberAddresses(addr)
+        }
+
+        // Remove recovered regions, add newly-stale
+        staleRegionFirstSeen = staleRegionFirstSeen.filter { case (ref, _) => staleRegions.exists(_ == ref) }
+        staleRegions.foreach { ref =>
+          if (!staleRegionFirstSeen.contains(ref)) {
+            staleRegionFirstSeen += ref -> srdTimeout.fromNow
+            log.info("{}: Detected region [{}] with member not in cluster, tracking staleness", typeName, ref)
+          }
+        }
+
+        // Act on regions stale longer than the timeout
+        staleRegionFirstSeen.foreach {
+          case (ref, deadline) =>
+            if (deadline.isOverdue()) {
+              if (srdDryRun) {
+                log.warning(
+                  "{}: [DRY-RUN] Stale region detected [{}] — member not in cluster for [{}], would trigger cleanup",
+                  typeName,
+                  ref,
+                  srdTimeout)
+              } else {
+                log.warning(
+                  "{}: Stale region detected [{}] — member not in cluster for [{}], triggering cleanup",
+                  typeName,
+                  ref,
+                  srdTimeout)
+                self ! DelayedShardRegionTerminated(ref)
+                staleRegionFirstSeen -= ref
+              }
+            }
+        }
+
       case ShardCoordinator.Internal.Terminate =>
         terminate()
     }: Receive).orElse[Any, Unit](receiveTerminated)
@@ -1319,6 +1377,12 @@ abstract class ShardCoordinator(
     // This is an optimization that makes it operational faster and reduces the
     // amount of lost messages during startup.
     context.system.scheduler.scheduleOnce(500.millis, self, StateInitialized)
+
+    // Start stale region detection after the startup grace period
+    val (srdEnabled, _, _, srdStartupGrace, _) = staleRegionDetectionConfig
+    if (srdEnabled) {
+      context.system.scheduler.scheduleOnce(srdStartupGrace, self, StaleRegionCheckTick)
+    }
   }
 
   def stateInitialized(): Unit = {
@@ -1336,6 +1400,7 @@ abstract class ShardCoordinator(
   }
 
   def regionTerminated(ref: ActorRef): Unit = {
+    staleRegionFirstSeen -= ref
     rebalanceWorkers.foreach(_ ! RebalanceWorker.ShardRegionTerminated(ref))
     if (state.regions.contains(ref)) {
       if (log.isDebugEnabled) {
