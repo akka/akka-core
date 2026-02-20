@@ -777,6 +777,31 @@ The health check is disabled (always returns success true) after a duration of f
 
 See also additional information about how to make @ref:[smooth rolling updates](../additional/rolling-updates.md#cluster-sharding).
 
+## Stale region detection
+
+When a cluster member is removed, DeathWatch delivers a `Terminated` message to the `ShardCoordinator`,
+which then reallocates the shards that were running on that member. DeathWatch reliably delivers `Terminated`
+messages under normal operation. This feature provides an additional consistency guarantee: if the coordinator's
+view of shard locations ever diverges from the actual cluster state, it will self-correct.
+
+When enabled, the coordinator periodically unwatches and re-watches all remote shard regions. If a node is gone,
+`ClusterRemoteWatcher` will immediately deliver a new `Terminated` via its member tombstones check. If the node
+is alive, the watch is simply re-established (no-op).
+
+This feature is disabled by default. To enable it:
+
+```ruby
+akka.cluster.sharding.stale-region-detection {
+  enabled = on
+  check-interval = 30s
+  startup-grace-period = 300s
+}
+```
+
+`check-interval` controls how often remote regions are re-watched. `startup-grace-period` delays the first
+check after coordinator startup, since `watchStateActors()` already handles stale regions during initialization
+and the cluster may still be converging.
+
 ## Inspecting cluster sharding state
 
 Two requests to inspect the cluster state are available:
