@@ -274,7 +274,7 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
       Set(evt1.region, evt2.region) should ===(Set(regionA.ref, regionB.ref))
     }
 
-    "handle Terminated for region with zero shards via normal stash" in
+    "handle Terminated for region with zero shards via stashAtHead" in
     withFixture(regionCount = 2) { (f, regions) =>
       val Fixture(coordinator, replicatorProbe, strategy) = f
       val regionA = regions(0)
@@ -289,7 +289,7 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
       coordinator.tell(GetShardHome("s2"), s2Probe.ref)
       val pendingUpdate = interceptNextUpdate(replicatorProbe)
 
-      // Kill regionB (0 shards) -> stashed at tail (not head)
+      // Kill regionB (0 shards) -> stashed at head (known region)
       stopAndWaitForTerminated(regionB.ref)
 
       // Complete s2 -> Terminated(regionB) unstashed

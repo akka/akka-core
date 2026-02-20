@@ -188,6 +188,7 @@ private[akka] trait StashSupport {
    * This allows priority handling of certain messages (e.g., `Terminated`)
    * while still going through the stash mechanism's correct `terminatedQueuedFor` handling.
    */
+  @InternalApi
   private[akka] def stashAtHead(): Unit = {
     val currMsg = actorCell.currentMessage
     if (theStash.nonEmpty && (currMsg eq theStash.head))

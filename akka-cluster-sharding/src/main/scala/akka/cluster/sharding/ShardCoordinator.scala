@@ -1893,12 +1893,6 @@ private[akka] class DDataShardCoordinator(
       if (!handleGetShardHome(shard))
         stashGetShardHomeRequest(sender(), g) // must wait for update that is in progress
 
-    case Terminated(ref) if state.regions.get(ref).fold(0)(_.size) > 0 =>
-      // Stash at head so Terminated is processed before any other message.
-      // This ensures region termination is handled with priority
-      // while still going through the stash mechanism's correct terminatedQueuedFor handling.
-      stashAtHead()
-
     case ShardCoordinator.Internal.Terminate =>
       log.debug("{}: The ShardCoordinator received termination message while waiting for update", typeName)
       terminating = true
@@ -1959,6 +1953,9 @@ private[akka] class DDataShardCoordinator(
     case _: RememberEntitiesCoordinatorStore.RememberedShards =>
       log.debug("{}: Late arrival of remembered shards while waiting for update, stashing", typeName)
       stash()
+
+    case Terminated(ref) if state.regions.contains(ref) =>
+      stashAtHead()
 
     case _ => stash()
   }
