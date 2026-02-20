@@ -1159,7 +1159,6 @@ abstract class ShardCoordinator(
         // If the node is alive, the watch is simply re-established (no-op).
         state.regions.keys.foreach { ref =>
           if (!ref.path.address.hasLocalScope) {
-            log.warning("{}: Stale region detection, re-watching region [{}]", typeName, ref)
             context.unwatch(ref)
             context.watch(ref)
           }
