@@ -181,6 +181,25 @@ private[akka] trait StashSupport {
   }
 
   /**
+   * INTERNAL API.
+   *
+   * Adds the current message to the head of the actor's stash (instead of the tail).
+   * When `unstashAll()` is called, messages at the head are processed first.
+   * This allows priority handling of certain messages (e.g., `Terminated`)
+   * while still going through the stash mechanism's correct `terminatedQueuedFor` handling.
+   */
+  @InternalApi
+  private[akka] def stashAtHead(): Unit = {
+    val currMsg = actorCell.currentMessage
+    if (theStash.nonEmpty && (currMsg eq theStash.head))
+      throw new IllegalStateException(s"Can't stash the same message $currMsg more than once")
+    if (capacity <= 0 || theStash.size < capacity) theStash = currMsg +: theStash
+    else
+      throw new StashOverflowException(
+        s"Couldn't enqueue message ${currMsg.message.getClass.getName} from ${currMsg.sender} to stash of $self")
+  }
+
+  /**
    * Prepends `others` to this stash. This method is optimized for a large stash and
    * small `others`.
    */

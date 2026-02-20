@@ -1954,6 +1954,9 @@ private[akka] class DDataShardCoordinator(
       log.debug("{}: Late arrival of remembered shards while waiting for update, stashing", typeName)
       stash()
 
+    case Terminated(ref) if state.regions.contains(ref) =>
+      stashAtHead()
+
     case _ => stash()
   }
 

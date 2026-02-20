@@ -87,6 +87,81 @@ object ActorWithStashSpec {
     }
   }
 
+  /**
+   * Proves that self.tell(Terminated) is silently dropped by DeathWatch.
+   * On first delivery, DeathWatch removes the ref from terminatedQueued.
+   * The re-sent Terminated finds nothing in terminatedQueued and is ignored.
+   */
+  class SelfTellTerminatedActor(probe: ActorRef) extends Actor {
+    val watched = context.watch(context.actorOf(Props[WatchedActor]()))
+    var alreadyReceived = false
+
+    context.stop(watched)
+
+    def receive = {
+      case t @ Terminated(`watched`) =>
+        if (!alreadyReceived) {
+          alreadyReceived = true
+          probe ! "first"
+          self.tell(t, ActorRef.noSender)
+        } else {
+          probe ! "second"
+        }
+    }
+  }
+
+  /**
+   * Counterpart to SelfTellTerminatedActor that uses stashAtHead/unstashAll instead of self.tell.
+   * The stash mechanism calls enqueueFirst which re-adds the ref to terminatedQueued,
+   * so the Terminated is delivered again. Probe receives "first" AND "second".
+   */
+  class StashAtHeadRedeliveryActor(probe: ActorRef) extends Actor with Stash {
+    val watched = context.watch(context.actorOf(Props[WatchedActor]()))
+    var alreadyReceived = false
+
+    context.stop(watched)
+
+    def receive = {
+      case Terminated(`watched`) =>
+        if (!alreadyReceived) {
+          alreadyReceived = true
+          probe ! "first"
+          stashAtHead()
+          unstashAll()
+        } else {
+          probe ! "second"
+        }
+    }
+  }
+
+  /**
+   * Proves that stashAtHead() delivers Terminated before normally-stashed messages.
+   * Receives "normal" -> stash() (appended to tail), then Terminated -> stashAtHead()
+   * (prepended to head). After unstashAll(), Terminated is processed first.
+   */
+  class StashAtHeadTerminatedActor(probe: ActorRef) extends Actor with Stash {
+    val watched = context.watch(context.actorOf(Props[WatchedActor]()))
+
+    def receive = waiting
+
+    def waiting: Receive = {
+      case "normal" =>
+        stash()
+        context.stop(watched)
+      case Terminated(`watched`) =>
+        stashAtHead()
+        context.become(replaying)
+        unstashAll()
+    }
+
+    def replaying: Receive = {
+      case Terminated(`watched`) =>
+        probe ! "terminated"
+      case "normal" =>
+        probe ! "normal"
+    }
+  }
+
   object state {
     @volatile
     var s: String = ""
@@ -176,6 +251,29 @@ class ActorWithStashSpec extends AkkaSpec with DefaultTimeout with BeforeAndAfte
       system.actorOf(Props(classOf[TerminatedMessageStashingActor], testActor))
       expectMsg("terminated")
       expectMsg("terminated")
+    }
+
+    "drop self.tell(Terminated) because terminatedQueued was already cleared" in {
+      system.actorOf(Props(new SelfTellTerminatedActor(testActor)))
+      expectMsg("first")
+      // The re-sent Terminated via self.tell is dropped — "second" never arrives
+      expectNoMessage(3.seconds)
+    }
+
+    "re-deliver stashAtHead Terminated because unstashAll re-adds to terminatedQueued" in {
+      system.actorOf(Props(new StashAtHeadRedeliveryActor(testActor)))
+      expectMsg("first")
+      // Unlike self.tell, stashAtHead/unstashAll goes through enqueueFirst which
+      // calls terminatedQueuedFor. So the Terminated IS re-delivered.
+      expectMsg("second")
+    }
+
+    "deliver stashAtHead messages before normally-stashed messages after unstashAll" in {
+      val actor = system.actorOf(Props(new StashAtHeadTerminatedActor(testActor)))
+      actor ! "normal"
+      // Terminated arrives after "normal" is stashed; stashAtHead puts it at the front
+      expectMsg("terminated")
+      expectMsg("normal")
     }
   }
 }
