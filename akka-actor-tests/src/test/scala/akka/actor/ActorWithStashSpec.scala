@@ -254,14 +254,14 @@ class ActorWithStashSpec extends AkkaSpec with DefaultTimeout with BeforeAndAfte
     }
 
     "drop self.tell(Terminated) because terminatedQueued was already cleared" in {
-      val actor = system.actorOf(Props(new SelfTellTerminatedActor(testActor)))
+      system.actorOf(Props(new SelfTellTerminatedActor(testActor)))
       expectMsg("first")
       // The re-sent Terminated via self.tell is dropped — "second" never arrives
       expectNoMessage(3.seconds)
     }
 
     "re-deliver stashAtHead Terminated because unstashAll re-adds to terminatedQueued" in {
-      val actor = system.actorOf(Props(new StashAtHeadRedeliveryActor(testActor)))
+      system.actorOf(Props(new StashAtHeadRedeliveryActor(testActor)))
       expectMsg("first")
       // Unlike self.tell, stashAtHead/unstashAll goes through enqueueFirst which
       // calls terminatedQueuedFor. So the Terminated IS re-delivered.
