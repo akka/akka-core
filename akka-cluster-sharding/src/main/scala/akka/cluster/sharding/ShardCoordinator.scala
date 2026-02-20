@@ -12,6 +12,7 @@ import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.util.Success
 
 import akka.actor._
@@ -604,6 +605,8 @@ object ShardCoordinator {
 
   private final case class DelayedShardRegionTerminated(region: ActorRef)
 
+  private case object StaleRegionCheckTick
+
   private final case class StopShardTimeout(requestId: UUID)
 
   /**
@@ -822,6 +825,14 @@ abstract class ShardCoordinator(
   var regionTerminationInProgress = Set.empty[ActorRef]
   // each waiting actor together with a request identifier to clear out all waiting for one request on timeout
   var waitingForShardsToStop: Map[ShardId, Set[(ActorRef, UUID)]] = Map.empty
+
+  private val staleRegionDetectionConfig = {
+    val c = context.system.settings.config.getConfig("akka.cluster.sharding.stale-region-detection")
+    val enabled = c.getBoolean("enabled")
+    val checkInterval = c.getDuration("check-interval").toScala
+    val startupGracePeriod = c.getDuration("startup-grace-period").toScala
+    (enabled, checkInterval, startupGracePeriod)
+  }
 
   import context.dispatcher
 
@@ -1141,6 +1152,19 @@ abstract class ShardCoordinator(
           }
         }
 
+      case StaleRegionCheckTick =>
+        // Re-watch all remote regions.
+        // If the node is gone, ClusterRemoteWatcher.addWatch() will immediately
+        // trigger a new Terminated via the memberTombstones check.
+        // If the node is alive, the watch is simply re-established (no-op).
+        state.regions.keys.foreach { ref =>
+          if (!ref.path.address.hasLocalScope) {
+            log.warning("{}: Stale region detection, re-watching region [{}]", typeName, ref)
+            context.unwatch(ref)
+            context.watch(ref)
+          }
+        }
+
       case ShardCoordinator.Internal.Terminate =>
         terminate()
     }: Receive).orElse[Any, Unit](receiveTerminated)
@@ -1319,6 +1343,12 @@ abstract class ShardCoordinator(
     // This is an optimization that makes it operational faster and reduces the
     // amount of lost messages during startup.
     context.system.scheduler.scheduleOnce(500.millis, self, StateInitialized)
+
+    // Start stale region detection after the startup grace period
+    val (srdEnabled, srdCheckInterval, srdStartupGrace) = staleRegionDetectionConfig
+    if (srdEnabled) {
+      timers.startTimerWithFixedDelay(StaleRegionCheckTick, StaleRegionCheckTick, srdStartupGrace, srdCheckInterval)
+    }
   }
 
   def stateInitialized(): Unit = {
