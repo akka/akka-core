@@ -12,6 +12,7 @@ import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.util.Success
 
 import akka.actor._
@@ -828,8 +829,8 @@ abstract class ShardCoordinator(
   private val staleRegionDetectionConfig = {
     val c = context.system.settings.config.getConfig("akka.cluster.sharding.stale-region-detection")
     val enabled = c.getBoolean("enabled")
-    val checkInterval = c.getDuration("check-interval", MILLISECONDS).millis
-    val startupGracePeriod = c.getDuration("startup-grace-period", MILLISECONDS).millis
+    val checkInterval = c.getDuration("check-interval").toScala
+    val startupGracePeriod = c.getDuration("startup-grace-period").toScala
     (enabled, checkInterval, startupGracePeriod)
   }
 
@@ -1152,12 +1153,6 @@ abstract class ShardCoordinator(
         }
 
       case StaleRegionCheckTick =>
-        val (_, srdCheckInterval, _) = staleRegionDetectionConfig
-        // Start repeating timer on first tick (first tick came after startup grace period)
-        if (!timers.isTimerActive("stale-region-check")) {
-          timers.startTimerWithFixedDelay("stale-region-check", StaleRegionCheckTick, srdCheckInterval)
-        }
-
         // Re-watch all remote regions.
         // If the node is gone, ClusterRemoteWatcher.addWatch() will immediately
         // trigger a new Terminated via the memberTombstones check.
@@ -1349,9 +1344,9 @@ abstract class ShardCoordinator(
     context.system.scheduler.scheduleOnce(500.millis, self, StateInitialized)
 
     // Start stale region detection after the startup grace period
-    val (srdEnabled, _, srdStartupGrace) = staleRegionDetectionConfig
+    val (srdEnabled, srdCheckInterval, srdStartupGrace) = staleRegionDetectionConfig
     if (srdEnabled) {
-      context.system.scheduler.scheduleOnce(srdStartupGrace, self, StaleRegionCheckTick)
+      timers.startTimerWithFixedDelay(StaleRegionCheckTick, StaleRegionCheckTick, srdStartupGrace, srdCheckInterval)
     }
   }
 
