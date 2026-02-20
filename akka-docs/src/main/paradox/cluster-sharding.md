@@ -221,10 +221,6 @@ graceful leaving process of a cluster member.
 
 See @ref:[removal of Internal Cluster Sharding Data](typed/cluster-sharding.md#removal-of-internal-cluster-sharding-data) in the documentation of the new APIs.
 
-## Stale region detection
-
-See @ref:[Stale region detection](typed/cluster-sharding.md#stale-region-detection) in the documentation of the new APIs.
-
 ## Inspecting cluster sharding state
 
 Two requests to inspect the cluster state are available:
