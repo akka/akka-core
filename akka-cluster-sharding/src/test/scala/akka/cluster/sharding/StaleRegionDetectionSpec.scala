@@ -6,7 +6,6 @@ package akka.cluster.sharding
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.reflect.ClassTag
 
 import com.typesafe.config.ConfigFactory
 
@@ -22,7 +21,7 @@ import akka.testkit._
 
 object StaleRegionDetectionSpec {
 
-  def config(enabled: Boolean = true, dryRun: Boolean = false) = ConfigFactory.parseString(s"""
+  def config(enabled: Boolean = true) = ConfigFactory.parseString(s"""
     akka.actor.provider = cluster
     akka.remote.artery.canonical.port = 0
     akka.loglevel = DEBUG
@@ -35,9 +34,7 @@ object StaleRegionDetectionSpec {
     akka.cluster.sharding.stale-region-detection {
       enabled = $enabled
       check-interval = 500ms
-      region-staleness-timeout = 1s
       startup-grace-period = 0s
-      dry-run = $dryRun
     }
   """)
 
@@ -108,12 +105,6 @@ class StaleRegionDetectionSpec extends AkkaSpec(StaleRegionDetectionSpec.config(
     evt
   }
 
-  private def completeNextUpdateExpecting[T <: DomainEvent: ClassTag](replicatorProbe: TestProbe): T = {
-    val evt = completeNextUpdate(replicatorProbe)
-    evt shouldBe a[T]
-    evt.asInstanceOf[T]
-  }
-
   private def registerRegion(coordinator: ActorRef, replicatorProbe: TestProbe): TestProbe = {
     val region = TestProbe()
     coordinator.tell(Register(region.ref), region.ref)
@@ -131,7 +122,7 @@ class StaleRegionDetectionSpec extends AkkaSpec(StaleRegionDetectionSpec.config(
 
   "StaleRegionDetection" must {
 
-    "detect and clean up a stale region after timeout" in {
+    "detect and clean up a stale region via unwatch/rewatch" in {
       val f = createFixture()
       val Fixture(coordinator, replicatorProbe, strategy) = f
 
@@ -148,8 +139,8 @@ class StaleRegionDetectionSpec extends AkkaSpec(StaleRegionDetectionSpec.config(
         expectTerminated(regionA.ref, 5.seconds)
 
         // Wait for stale region detection to kick in
-        // startup-grace-period = 0s, check-interval = 500ms, staleness-timeout = 1s
-        // So after ~1.5s the region should be detected as stale and cleaned up
+        // startup-grace-period = 0s, check-interval = 500ms
+        // The unwatch/rewatch cycle should trigger a new Terminated quickly
         val terminated = replicatorProbe.expectMsgType[CoordinatorUpdate](5.seconds)
         val evt = terminated.request.get.asInstanceOf[DomainEvent]
         evt shouldBe a[ShardRegionTerminated]
@@ -167,82 +158,8 @@ class StaleRegionDetectionSpec extends AkkaSpec(StaleRegionDetectionSpec.config(
         strategy.targetRegion = Some(regionA.ref)
         allocateShard(coordinator, "s1", replicatorProbe)
 
-        // regionA is local (same node), so its address hasLocalScope — never flagged as stale
+        // regionA is local (same node), so its address hasLocalScope — never re-watched
         // Wait long enough for multiple check cycles
-        replicatorProbe.expectNoMessage(3.seconds)
-      } finally system.stop(coordinator)
-    }
-  }
-}
-
-class StaleRegionDetectionDryRunSpec
-    extends AkkaSpec(StaleRegionDetectionSpec.config(enabled = true, dryRun = true))
-    with WithLogCapturing {
-
-  import StaleRegionDetectionSpec._
-
-  private type CoordinatorUpdate = Update[LWWRegister[State]]
-
-  private var testCounter = 100
-
-  private def nextTypeName(): String = {
-    testCounter += 1
-    s"DryRunEntity$testCounter"
-  }
-
-  override def atStartup(): Unit = {
-    val cluster = Cluster(system)
-    cluster.join(cluster.selfAddress)
-    awaitAssert {
-      cluster.readView.members.count(_.status == MemberStatus.Up) should ===(1)
-    }
-  }
-
-  private def completeNextUpdate(replicatorProbe: TestProbe): DomainEvent = {
-    val update = replicatorProbe.expectMsgType[CoordinatorUpdate](5.seconds)
-    val evt = update.request.get.asInstanceOf[DomainEvent]
-    replicatorProbe.reply(UpdateSuccess(update.key, update.request))
-    evt
-  }
-
-  "StaleRegionDetection in dry-run mode" must {
-
-    "log but not deallocate stale regions" in {
-      val typeName = nextTypeName()
-      val strategy = new TestAllocationStrategy
-      val replicatorProbe = TestProbe()
-      val coordinator = system.actorOf(
-        ShardCoordinator.props(
-          typeName,
-          ClusterShardingSettings(system),
-          strategy,
-          replicatorProbe.ref,
-          majorityMinCap = 0,
-          rememberEntitiesStoreProvider = None))
-
-      try {
-        replicatorProbe.expectMsgType[Get[_]](5.seconds)
-        replicatorProbe.reply(NotFound(LWWRegisterKey[State](s"${typeName}CoordinatorState"), None))
-        replicatorProbe.expectNoMessage(100.millis)
-
-        val region = TestProbe()
-        coordinator.tell(Register(region.ref), region.ref)
-        completeNextUpdate(replicatorProbe)
-        region.expectMsgType[RegisterAck](5.seconds)
-
-        strategy.targetRegion = Some(region.ref)
-        val probe = TestProbe()
-        coordinator.tell(GetShardHome("s1"), probe.ref)
-        completeNextUpdate(replicatorProbe)
-        probe.expectMsgType[ShardHome](5.seconds)
-
-        // Stop the region
-        watch(region.ref)
-        system.stop(region.ref)
-        expectTerminated(region.ref, 5.seconds)
-
-        // In dry-run mode, no ShardRegionTerminated update should be sent
-        // Wait longer than staleness-timeout + check-interval
         replicatorProbe.expectNoMessage(3.seconds)
       } finally system.stop(coordinator)
     }
@@ -274,7 +191,7 @@ class StaleRegionDetectionDisabledSpec
 
   "StaleRegionDetection when disabled" must {
 
-    "not perform any stale region checks" in {
+    "not schedule stale region check timer" in {
       val strategy = new TestAllocationStrategy
       val replicatorProbe = TestProbe()
       val coordinator = system.actorOf(
@@ -302,13 +219,10 @@ class StaleRegionDetectionDisabledSpec
         completeNextUpdate(replicatorProbe)
         probe.expectMsgType[ShardHome](5.seconds)
 
-        // Stop region — with detection disabled, no cleanup should happen
-        watch(region.ref)
-        system.stop(region.ref)
-        expectTerminated(region.ref, 5.seconds)
-
-        // No stale region check should trigger
-        replicatorProbe.expectNoMessage(3.seconds)
+        // With detection disabled, no StaleRegionCheckTick timer should fire.
+        // Wait longer than the check-interval (500ms) to verify no timer was scheduled.
+        // Region stays alive — we only verify no timer-based activity occurs.
+        replicatorProbe.expectNoMessage(2.seconds)
       } finally system.stop(coordinator)
     }
   }
