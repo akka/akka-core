@@ -26,6 +26,7 @@ import akka.cluster.Member
 import akka.cluster.MemberStatus
 import akka.cluster.sharding.ClusterShardingSettings.PassivationStrategy
 import akka.cluster.sharding.Shard.ShardStats
+import akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider
 import akka.cluster.sharding.internal.RememberEntitiesProvider
 import akka.cluster.sharding.internal.RememberEntityStarterManager
 import akka.event.Logging
@@ -639,6 +640,8 @@ private[akka] class ShardRegion(
 
   private val verboseDebug = context.system.settings.config.getBoolean("akka.cluster.sharding.verbose-debug-logging")
 
+  private val instrumentation = ClusterShardingInstrumentationProvider.get(context.system).instrumentation
+
   // sort by age, oldest first
   val ageOrdering = Member.ageOrdering
   // membersByAge is only used for tracking where coordinator is running
@@ -687,6 +690,7 @@ private[akka] class ShardRegion(
     timers.startTimerWithFixedDelay(Retry, Retry, retryInterval)
     startRegistration()
     logPassivationStrategy()
+    instrumentation.shardRegionBufferSize(cluster.selfAddress, self, typeName, 0)
   }
 
   override def postStop(): Unit = {
@@ -695,6 +699,7 @@ private[akka] class ShardRegion(
     coordinator.foreach(_ ! RegionStopped(context.self))
     cluster.unsubscribe(self)
     gracefulShutdownProgress.trySuccess(Done)
+    instrumentation.shardRegionBufferSize(cluster.selfAddress, self, typeName, 0)
   }
 
   private def logPassivationStrategy(): Unit = {
@@ -749,7 +754,7 @@ private[akka] class ShardRegion(
     coordinator.map { coordRef =>
       val a = coordRef.path.address
 
-      if (a.hasLocalScope) cluster.selfMember.address
+      if (a.hasLocalScope) cluster.selfAddress
       else a
     }
 
@@ -902,6 +907,7 @@ private[akka] class ShardRegion(
       }
 
     case ShardHome(shard, shardRegionRef) =>
+      instrumentation.receivedShardHome(cluster.selfAddress, self, typeName, shard)
       receiveShardHome(shard, shardRegionRef)
 
     case ShardHomes(homes) =>
@@ -942,12 +948,15 @@ private[akka] class ShardRegion(
       if (shardBuffers.contains(shard)) {
         val dropped = shardBuffers
           .drop(shard, "Avoiding reordering of buffered messages at shard handoff", context.system.deadLetters)
-        if (dropped > 0)
+        if (dropped > 0) {
           log.warning(
             "{}: Dropping [{}] buffered messages to shard [{}] during hand off to avoid re-ordering",
             typeName,
             dropped,
             shard)
+          // better to decrease by "dropped" to avoid calculating the size?
+          instrumentation.shardRegionBufferSize(cluster.selfAddress, self, typeName, shardBuffers.totalSize)
+        }
         loggedFullBufferWarning = false
       }
 
@@ -1258,7 +1267,7 @@ private[akka] class ShardRegion(
             shard,
             coord,
             buf.size)
-          coord ! GetShardHome(shard)
+          requestShardHome(shard)
       }
 
       if (retryCount >= 5 && retryCount % 5 == 0 && log.isWarningEnabled) {
@@ -1288,9 +1297,10 @@ private[akka] class ShardRegion(
         loggedFullBufferWarning = true
       }
       context.system.deadLetters ! msg
+      instrumentation.messageDropped(cluster.selfAddress, self, typeName)
     } else {
       shardBuffers.append(shardId, msg, snd)
-
+      instrumentation.shardRegionBufferSizeIncremented(cluster.selfAddress, self, typeName)
       // log some insight to how buffers are filled up every 10% of the buffer capacity
       val tot = totBufSize + 1
       if (tot % (bufferSize / 10) == 0) {
@@ -1323,6 +1333,7 @@ private[akka] class ShardRegion(
       }
 
       shardBuffers.remove(shardId)
+      instrumentation.shardRegionBufferSize(cluster.selfAddress, self, typeName, shardBuffers.totalSize)
     }
     loggedFullBufferWarning = false
     retryCount = 0
@@ -1356,7 +1367,7 @@ private[akka] class ShardRegion(
           case None =>
             if (!shardBuffers.contains(shardId)) {
               log.debug("{}: Request shard [{}] home. Coordinator [{}]", typeName, shardId, coordinator)
-              coordinator.foreach(_ ! GetShardHome(shardId))
+              requestShardHome(shardId)
             }
             val buf = shardBuffers.getOrEmpty(shardId)
             log.debug(
@@ -1365,6 +1376,7 @@ private[akka] class ShardRegion(
               shardId,
               buf.size + 1)
             shardBuffers.append(shardId, msg, snd)
+            instrumentation.shardRegionBufferSizeIncremented(cluster.selfAddress, self, typeName)
         }
 
       case _ =>
@@ -1390,7 +1402,7 @@ private[akka] class ShardRegion(
           case None =>
             if (!shardBuffers.contains(shardId)) {
               log.debug("{}: Request shard [{}] home. Coordinator [{}]", typeName, shardId, coordinator)
-              coordinator.foreach(_ ! GetShardHome(shardId))
+              requestShardHome(shardId)
             }
             bufferMessage(shardId, msg, snd)
         }
@@ -1442,5 +1454,10 @@ private[akka] class ShardRegion(
       log.debug("{}: Sending graceful shutdown to {}", typeName, actorSelections)
       actorSelections.foreach(_ ! GracefulShutdownReq(self))
     }
+  }
+
+  private def requestShardHome(shard: ShardId): Unit = {
+    instrumentation.regionRequestedShardHome(cluster.selfAddress, self, typeName, shard)
+    coordinator.foreach(_ ! GetShardHome(shard))
   }
 }

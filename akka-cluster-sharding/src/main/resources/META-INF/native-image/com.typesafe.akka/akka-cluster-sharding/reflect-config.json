@@ -15,6 +15,11 @@
     "name" : "MODULE$"
   } ]
 }, {
+  "name" : "akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider$",
+  "fields" : [ {
+    "name" : "MODULE$"
+  } ]
+}, {
   "name" : "akka.cluster.sharding.protobuf.ClusterShardingMessageSerializer",
   "methods" : [ {
     "name" : "<init>",
