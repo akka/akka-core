@@ -232,6 +232,12 @@ trait ClusterSharding extends Extension { javadslSelf: javadsl.ClusterSharding =
    */
   @InternalApi private[akka] def asJava: javadsl.ClusterSharding = javadslSelf
 
+  /**
+   * Direct the shard region or proxy actor for the given entity to resolve the location of the given shard
+   * and cache it.  This may result in the shard being allocated on some node in the cluster.  No message will
+   * be sent to any entity within the shard.
+   */
+  def preResolveShard[M, E](entity: Entity[M, E], shard: String): Unit
 }
 
 object Entity {
