@@ -40,23 +40,15 @@ object ClusterShardingInstrumentationProvider
 @InternalStableApi
 class ClusterShardingInstrumentationProvider(system: ExtendedActorSystem) extends Extension {
   private val fqcnConfigPath = "akka.cluster.sharding.telemetry.instrumentations"
-
-  system.log.error("opeeee")
-
   lazy val instrumentation: ClusterShardingInstrumentation = {
     if (!system.settings.config.hasPath(fqcnConfigPath)) {
-      system.log.error("opeeee noe")
       EmptyClusterShardingInstrumentation
     } else {
-      system.log.error("opeeee noe jo")
       val fqcns = system.settings.config.getStringList(fqcnConfigPath).asScala.toVector
-      system.log.error(s"opeeee noe jo ${fqcns.size}")
       fqcns.size match {
         case 0 =>
-          system.log.error(s"opeeee noe jo empt")
           EmptyClusterShardingInstrumentation
         case 1 =>
-          system.log.error(s"opeeee noe jo frist")
           create(fqcns.head)
         case _ =>
           val instrumentationsByFqcn = fqcns.iterator.map(fqcn => fqcn -> create(fqcn)).toMap
