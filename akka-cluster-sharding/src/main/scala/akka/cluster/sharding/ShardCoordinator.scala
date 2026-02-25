@@ -35,6 +35,7 @@ import akka.cluster.sharding.internal.{
 import akka.cluster.sharding.internal.AbstractLeastShardAllocationStrategy
 import akka.cluster.sharding.internal.ClusterShardAllocationMixin.RegionEntry
 import akka.cluster.sharding.internal.ClusterShardAllocationMixin.ShardSuitabilityOrdering
+import akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider
 import akka.cluster.sharding.internal.EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker
 import akka.event.{ BusLogging, Logging }
 import akka.pattern.{ pipe, AskTimeoutException }
@@ -647,6 +648,10 @@ object ShardCoordinator {
 
     import Internal._
 
+    private val instrumentation = ClusterShardingInstrumentationProvider.get(context.system).instrumentation
+
+    instrumentation.shardHandoffStarted(typeName, shard)
+
     regions.foreach { region =>
       region ! BeginHandOff(shard)
     }
@@ -710,6 +715,7 @@ object ShardCoordinator {
     }
 
     def done(ok: Boolean): Unit = {
+      instrumentation.shardHandoffFinished(typeName, shard, ok)
       context.parent ! RebalanceDone(shard, ok)
       context.stop(self)
     }

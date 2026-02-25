@@ -14,6 +14,7 @@ import akka.actor.Address
 import akka.actor.Props
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.Up
+import akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider
 import akka.serialization.jackson.CborSerializable
 import akka.testkit.ImplicitSender
 
@@ -29,6 +30,8 @@ object RollingUpdateShardAllocationSpecConfig
         akka.coordinated-shutdown.terminate-actor-system = off
         # use the new LeastShardAllocationStrategy
         akka.cluster.sharding.least-shard-allocation-strategy.rebalance-absolute-limit = 1
+        # to test shard handoff instrumentation
+        telemetry.instrumentations += akka.cluster.sharding.ClusterShardingInstrumentationSpecTelemetry
       }
      """) {
 
@@ -220,7 +223,19 @@ abstract class RollingUpdateShardAllocationSpec
       }
       enterBarrier("completo")
     }
+    "verify instrumentation" in {
+      // only run on oldest - Shard Coordinator
+      runOn(third) {
+        val beginShardHandoffDurationCounter = ClusterShardingInstrumentationProvider(system).instrumentation
+          .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
+          .beginShardHandoffDurationCounter
+        val finishShardHandoffDurationCounter = ClusterShardingInstrumentationProvider(system).instrumentation
+          .asInstanceOf[ClusterShardingInstrumentationSpecTelemetry]
+          .finishShardHandoffDurationCounter
 
+        beginShardHandoffDurationCounter.get() shouldBe finishShardHandoffDurationCounter.get()
+      }
+      enterBarrier("shard-handoff-telemetry")
+    }
   }
-
 }

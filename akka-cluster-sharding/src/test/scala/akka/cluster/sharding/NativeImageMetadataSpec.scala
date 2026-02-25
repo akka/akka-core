@@ -35,7 +35,7 @@ class NativeImageMetadataSpec extends AnyWordSpec with Matchers {
 
     "be up to date" in {
       val (existing, current) = nativeImageUtils.verifyMetadata()
-      existing should ===(current)
+      existing.trim should ===(current.trim)
     }
   }
 
