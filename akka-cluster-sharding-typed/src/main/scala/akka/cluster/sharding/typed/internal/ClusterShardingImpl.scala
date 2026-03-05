@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import scala.annotation.nowarn
 import scala.jdk.DurationConverters._
-import scala.jdk.FutureConverters._
+//import scala.jdk.FutureConverters._
 import scala.concurrent.Future
 
 import akka.actor.ActorRefProvider
@@ -43,7 +43,9 @@ import akka.japi.function.{ Function => JFunction }
 import akka.pattern.AskTimeoutException
 import akka.pattern.PromiseActorRef
 import akka.pattern.StatusReply
-import akka.util.{ ByteString, Timeout }
+import akka.util.ByteString
+import akka.util.DispatcherFutureConverters.ScalaFutureOpsWithShiftTo
+import akka.util.Timeout
 
 /**
  * INTERNAL API
@@ -259,7 +261,8 @@ import akka.util.{ ByteString, Timeout }
     new EntityRefImpl[M](
       classicSharding.shardRegion(typeKey.name),
       entityId,
-      typeKey.asInstanceOf[EntityTypeKeyImpl[M]])
+      typeKey.asInstanceOf[EntityTypeKeyImpl[M]],
+      system)
   }
 
   @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
@@ -274,6 +277,7 @@ import akka.util.{ ByteString, Timeout }
         classicSharding.shardRegionProxy(typeKey.name, dataCenter),
         entityId,
         typeKey.asInstanceOf[EntityTypeKeyImpl[M]],
+        system,
         Some(dataCenter))
   }
 
@@ -281,7 +285,8 @@ import akka.util.{ ByteString, Timeout }
     new EntityRefImpl[M](
       classicSharding.shardRegion(typeKey.name),
       entityId,
-      typeKey.asInstanceOf[EntityTypeKeyImpl[M]])
+      typeKey.asInstanceOf[EntityTypeKeyImpl[M]],
+      system)
   }
 
   @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
@@ -296,6 +301,7 @@ import akka.util.{ ByteString, Timeout }
         classicSharding.shardRegionProxy(typeKey.name, dataCenter),
         entityId,
         typeKey.asInstanceOf[EntityTypeKeyImpl[M]],
+        system,
         Some(dataCenter))
   }
 
@@ -328,6 +334,7 @@ import akka.util.{ ByteString, Timeout }
     shardRegion: akka.actor.ActorRef,
     override val entityId: String,
     override val typeKey: EntityTypeKeyImpl[M],
+    system: ActorSystem[_],
     override val dataCenter: Option[String] = None)
     extends javadsl.EntityRef[M]
     with scaladsl.EntityRef[M]
@@ -359,13 +366,13 @@ import akka.util.{ ByteString, Timeout }
   }
 
   override def ask[U](message: JFunction[ActorRef[U], M], timeout: Duration): CompletionStage[U] =
-    ask[U](replyTo => message.apply(replyTo))(timeout.toScala).asJava
+    ask[U](replyTo => message.apply(replyTo))(timeout.toScala).asJava(system.executionContext)
 
   override def askWithStatus[Res](f: ActorRef[StatusReply[Res]] => M)(implicit timeout: Timeout): Future[Res] =
     StatusReply.flattenStatusFuture(ask[StatusReply[Res]](f))
 
   override def askWithStatus[Res](f: ActorRef[StatusReply[Res]] => M, timeout: Duration): CompletionStage[Res] =
-    askWithStatus(f.apply)(timeout.toScala).asJava
+    askWithStatus(f.apply)(timeout.toScala).asJava(system.executionContext)
 
   /** Similar to [[akka.actor.typed.scaladsl.AskPattern.PromiseRef]] but for an `EntityRef` target. */
   @InternalApi
@@ -435,7 +442,7 @@ import akka.util.{ ByteString, Timeout }
   override private[akka] def asJava: javadsl.EntityRef[M] = this
 
   private[internal] def withDataCenter(dataCenter: Option[String]): EntityRefImpl[M] =
-    new EntityRefImpl[M](shardRegion, entityId, typeKey, dataCenter)
+    new EntityRefImpl[M](shardRegion, entityId, typeKey, system, dataCenter)
 }
 
 /**
