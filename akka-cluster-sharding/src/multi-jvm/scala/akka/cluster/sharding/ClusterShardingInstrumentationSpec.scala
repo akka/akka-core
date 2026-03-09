@@ -190,10 +190,6 @@ abstract class ClusterShardingInstrumentationSpec
           shardHomeRequests.nonEmpty shouldBe true
           shardHomeRequests.foreach {
             case (key, value) =>
-              println(s"%%%%% $key $value")
-          }
-          shardHomeRequests.foreach {
-            case (key, value) =>
               if (key.startsWith("id")) {
                 // The "id-0", "id-1" ... messages were send during the blackhole.
                 // This means they were requested twice, but only received back once.
