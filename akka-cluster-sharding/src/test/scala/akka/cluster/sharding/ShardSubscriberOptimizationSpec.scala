@@ -11,6 +11,7 @@ import scala.reflect.ClassTag
 import com.typesafe.config.ConfigFactory
 
 import akka.actor._
+import akka.actor.ExtendedActorSystem
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus
 import akka.cluster.ddata.LWWRegister
@@ -232,6 +233,34 @@ class ShardSubscriberOptimizationSpec extends AkkaSpec(ShardSubscriberOptimizati
       // regionB acks, HandOff goes to regionA, which replies ShardStopped
       regionB.reply(BeginHandOffAck("s1"))
       regionA.fishForMessage(3.seconds, "HandOff") { case HandOff("s1") => true; case _ => false }
+    }
+
+    // Regression test: shards allocated via the coordinator's internal ignoreRef self-tells
+    // (rememberEntities, regionTerminated recovery, post-handoff re-allocation) must not get
+    // ignoreRef added as a subscriber.  If they did, BeginHandOff would be sent only to ignoreRef,
+    // which discards the message, causing the handoff to time out and entities never to stop.
+    "fall back to full BeginHandOff fan-out for shards allocated via ignoreRef self-tells" in
+    withFixture(regionCount = 2) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy) = f
+      val regionA = regions(0)
+      val regionB = regions(1)
+
+      // Simulate an internal coordinator self-tell (as done by allocateShardHomesForRememberEntities,
+      // regionTerminated recovery, etc.) by using the same ignoreRef the coordinator uses internally.
+      // The shard must NOT end up tracked with ignoreRef as its only subscriber.
+      val ignoreRef = system.asInstanceOf[ExtendedActorSystem].provider.ignoreRef
+      strategy.targetRegion = Some(regionA.ref)
+      coordinator.tell(GetShardHome("s1"), ignoreRef)
+      completeNextUpdateExpecting[ShardHomeAllocated](replicatorProbe)
+
+      // Trigger graceful shutdown of regionA
+      coordinator.tell(GracefulShutdownReq(regionA.ref), regionA.ref)
+
+      // Both regions must receive BeginHandOff — the full fan-out fallback applies because
+      // the shard was allocated with ignoreRef and is therefore not in shardSubscribers.
+      // regionA also receives HostShard during allocation, so fish past it.
+      regionA.fishForMessage(3.seconds, "BeginHandOff(s1)") { case BeginHandOff("s1") => true; case _ => false }
+      regionB.expectMsg(3.seconds, BeginHandOff("s1"))
     }
   }
 }

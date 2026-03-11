@@ -1227,12 +1227,15 @@ abstract class ShardCoordinator(
   // Only adds the subscriber if we are already tracking this shard (i.e. it was freshly allocated
   // by this coordinator instance). Shards recovered from state are absent from shardSubscribers and
   // continue to use the full BeginHandOff fan-out as a safe fallback.
+  // ignoreRef is never tracked: it is used for internal self-tells and discards all messages,
+  // so including it as a subscriber would cause BeginHandOff to go nowhere and the handoff to time out.
   private def recordShardSubscriber(shard: ShardId, subscriber: ActorRef): Unit =
-    shardSubscribers.get(shard) match {
-      case Some(current) =>
-        shardSubscribers = shardSubscribers.updated(shard, current + subscriber)
-      case None =>
-    }
+    if (subscriber != ignoreRef)
+      shardSubscribers.get(shard) match {
+        case Some(current) =>
+          shardSubscribers = shardSubscribers.updated(shard, current + subscriber)
+        case None =>
+      }
 
   private def deferGetShardHomeRequest(shard: ShardId, from: ActorRef): Unit = {
     log.debug(
@@ -1476,7 +1479,7 @@ abstract class ShardCoordinator(
 
               sendHostShardMsg(evt.shard, evt.region)
               getShardHomeSender ! ShardHome(evt.shard, evt.region)
-              if (allRegionsRegistered)
+              if (allRegionsRegistered && getShardHomeSender != ignoreRef)
                 shardSubscribers = shardSubscribers.updated(evt.shard, Set(getShardHomeSender))
               unstashGetShardHomeRequestsForShard(evt.shard)
             }
