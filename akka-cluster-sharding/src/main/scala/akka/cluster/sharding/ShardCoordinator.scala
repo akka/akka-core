@@ -822,6 +822,11 @@ abstract class ShardCoordinator(
   var preparingForShutdown = false
   // rebalanceInProgress for the ShardId keys, pending GetShardHome requests by the ActorRef values
   var rebalanceInProgress = Map.empty[ShardId, Set[ActorRef]]
+  // Tracks which regions/proxies have received ShardHome for each shard.
+  // Only populated for shards freshly allocated by THIS coordinator instance after allRegionsRegistered,
+  // so after a coordinator failover, recovered shards are absent and fall back to full fan-out.
+  // Used to scope BeginHandOff to only regions that have the shard location cached.
+  var shardSubscribers = Map.empty[ShardId, Set[ActorRef]]
   var rebalanceWorkers: Set[ActorRef] = Set.empty
   var unAckedHostShards = Map.empty[ShardId, Cancellable]
   // regions that have requested handoff, for graceful shutdown
@@ -1043,11 +1048,13 @@ abstract class ShardCoordinator(
             update(ShardHomeDeallocated(shard)) { evt =>
               log.debug("{}: Shard [{}] deallocated after", typeName, shard)
               state = state.updated(evt)
+              shardSubscribers -= shard
               clearRebalanceInProgress(shard)
               allocateShardHomesForRememberEntities()
               self.tell(GetShardHome(shard), ignoreRef)
             }
           } else {
+            shardSubscribers -= shard
             clearRebalanceInProgress(shard)
           }
 
@@ -1217,6 +1224,16 @@ abstract class ShardCoordinator(
     }
   }
 
+  // Only adds the subscriber if we are already tracking this shard (i.e. it was freshly allocated
+  // by this coordinator instance). Shards recovered from state are absent from shardSubscribers and
+  // continue to use the full BeginHandOff fan-out as a safe fallback.
+  private def recordShardSubscriber(shard: ShardId, subscriber: ActorRef): Unit =
+    shardSubscribers.get(shard) match {
+      case Some(current) =>
+        shardSubscribers = shardSubscribers.updated(shard, current + subscriber)
+      case None =>
+    }
+
   private def deferGetShardHomeRequest(shard: ShardId, from: ActorRef): Unit = {
     log.debug(
       "{}: GetShardHome [{}] request from [{}] deferred, because rebalance is in progress for this shard. " +
@@ -1258,6 +1275,7 @@ abstract class ShardCoordinator(
               else map.updated(regionRef, shardId :: Nil)
           }
           ref ! ShardHomes(shardsSubMap)
+          shardsSubMap.values.foreach(_.foreach(recordShardSubscriber(_, ref)))
         }
     }
   }
@@ -1287,8 +1305,10 @@ abstract class ShardCoordinator(
               typeName,
               shard,
               shardRegionRef)
-          else
+          else {
             sender() ! ShardHome(shard, shardRegionRef)
+            recordShardSubscriber(shard, sender())
+          }
 
           unstashOneGetShardHomeRequest() // continue unstashing
           true
@@ -1372,10 +1392,15 @@ abstract class ShardCoordinator(
 
   def regionTerminated(ref: ActorRef): Unit = {
     rebalanceWorkers.foreach(_ ! RebalanceWorker.ShardRegionTerminated(ref))
+    state.regions.get(ref) match {
+      case Some(shards) => shards.foreach(shardSubscribers -= _)
+      case None         =>
+    }
+    shardSubscribers = shardSubscribers.transform((_, subs) => subs - ref)
     if (state.regions.contains(ref)) {
       if (log.isDebugEnabled) {
         log.debug(
-          "{}: ShardRegion terminated{}: [{}] {}",
+          "{}: ShardRegion terminated{}: [{}]",
           typeName,
           if (gracefulShutdownInProgress.contains(ref)) " (gracefully)" else "",
           ref)
@@ -1403,6 +1428,7 @@ abstract class ShardCoordinator(
 
   def regionProxyTerminated(ref: ActorRef): Unit = {
     rebalanceWorkers.foreach(_ ! RebalanceWorker.ShardRegionTerminated(ref))
+    shardSubscribers = shardSubscribers.transform((_, subs) => subs - ref)
     if (state.regionProxies.contains(ref)) {
       log.debug("{}: ShardRegion proxy terminated: [{}]", typeName, ref)
       update(ShardRegionProxyTerminated(ref)) { evt =>
@@ -1433,7 +1459,9 @@ abstract class ShardCoordinator(
       deferGetShardHomeRequest(shard, getShardHomeSender)
     } else {
       state.shards.get(shard) match {
-        case Some(ref) => getShardHomeSender ! ShardHome(shard, ref)
+        case Some(ref) =>
+          getShardHomeSender ! ShardHome(shard, ref)
+          recordShardSubscriber(shard, getShardHomeSender)
         case None =>
           if (state.regions.contains(region) && !gracefulShutdownInProgress(region) && !regionTerminationInProgress
                 .contains(region)) {
@@ -1448,6 +1476,8 @@ abstract class ShardCoordinator(
 
               sendHostShardMsg(evt.shard, evt.region)
               getShardHomeSender ! ShardHome(evt.shard, evt.region)
+              if (allRegionsRegistered)
+                shardSubscribers = shardSubscribers.updated(evt.shard, Set(getShardHomeSender))
               unstashGetShardHomeRequestsForShard(evt.shard)
             }
           } else {
@@ -1493,7 +1523,7 @@ abstract class ShardCoordinator(
           shard,
           from,
           handOffTimeout,
-          state.regions.keySet.union(state.regionProxies),
+          shardSubscribers.getOrElse(shard, state.regions.keySet.union(state.regionProxies)),
           isRebalance = isRebalance).withDispatcher(context.props.dispatcher))
     }
   }
