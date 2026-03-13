@@ -14,6 +14,10 @@ import akka.cluster.{ Cluster, MemberStatus }
 import akka.cluster.ClusterEvent.CurrentClusterState
 import akka.testkit.{ AkkaSpec, DeadLettersFilter, TestProbe, WithLogCapturing }
 import akka.testkit.TestEvent.Mute
+import akka.cluster.sharding.ShardRegion.GetClusterShardingStats
+import akka.cluster.sharding.ShardRegion.ClusterShardingStats
+import akka.cluster.sharding.ShardRegion.ShardId
+import akka.cluster.sharding.ShardRegion.ResolveShard
 
 object ShardRegionSpec {
   val host = "127.0.0.1"
@@ -124,8 +128,50 @@ class ShardRegionSpec extends AkkaSpec(ShardRegionSpec.config) with WithLogCaptu
         }
       }
 
+      val coordinator = sysA.actorSelection(s"/system/sharding/${shardTypeName}Coordinator/singleton/coordinator")
+      within(2.seconds) {
+        awaitAssert {
+          coordinator.tell(GetClusterShardingStats(1.second), testActor)
+
+          // No shards allocated
+          val regions = expectMsgType[ClusterShardingStats].regions
+          regions.size shouldBe 2
+          regions.foreach {
+            case (_, regionStats) =>
+              regionStats.stats shouldBe empty
+              regionStats.failed shouldBe empty
+          }
+        }
+      }
+
       region1.tell(1, p1.ref)
       p1.expectMsg(1)
+
+      within(1.second) {
+        awaitAssert {
+          coordinator.tell(GetClusterShardingStats(1.second), testActor)
+          val regions = expectMsgType[ClusterShardingStats].regions
+          regions.size shouldBe 2
+          regions.map(_._2.failed.size).sum shouldBe 0
+          regions.foldLeft(Set.empty[ShardId]) { (shards, kv) =>
+            shards ++ kv._2.stats.keySet
+          } should contain theSameElementsAs (Set("1"))
+        }
+      }
+
+      // pre-allocate shard 2 from region 1
+      region1 ! ResolveShard("2")
+      within(1.second) {
+        awaitAssert {
+          coordinator.tell(GetClusterShardingStats(1.second), testActor)
+          val regions = expectMsgType[ClusterShardingStats].regions
+          regions.size shouldBe 2
+          regions.map(_._2.failed.size).sum shouldBe 0
+          regions.foldLeft(Set.empty[ShardId]) { (shards, kv) =>
+            shards ++ kv._2.stats.keySet
+          } should contain theSameElementsAs (Set("1", "2"))
+        }
+      }
 
       region2.tell(2, p2.ref)
       p2.expectMsg(2)
