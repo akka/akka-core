@@ -17,12 +17,12 @@ jobs:
 
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Scrape
+        # master
         uses: darrenjennings/algolia-docsearch-action@75b0f6d28d82eff3dd76f57a96a99490df11a250
         with:
           algolia_application_id: 'XUXZ6LW9B1'

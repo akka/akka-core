@@ -20,7 +20,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Checkout Global Scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: akka/github-actions-scripts
           path: scripts
@@ -33,16 +33,14 @@ jobs:
 
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           # we don't know what commit the last tag was it's safer to get entire repo so previousStableVersion resolves
           fetch-depth: 0
 
       - name: Set up JDK 11
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.11
 
@@ -60,7 +58,7 @@ jobs:
 
       - name: Email on failure
         if: ${{ failure() }}
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2
+        uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
           server_port: 465
