@@ -17,6 +17,8 @@ import akka.remote.RemoteActorRefProvider
 import akka.remote.RemoteRef
 import akka.util.OptionVal
 
+import scala.util.control.NonFatal
+
 /**
  * INTERNAL API
  */
@@ -47,11 +49,16 @@ private[remote] class MessageDispatcher(system: ExtendedActorSystem, provider: R
           if (debugLogEnabled)
             log.debug(LogMarker.Security, "dropping daemon message [{}] in untrusted mode", messageClassName(message))
         } else {
-          if (LogReceive && debugLogEnabled)
-            log.debug(
-              "received daemon message [{}] from [{}]",
-              message,
-              senderOption.getOrElse(originAddress.getOrElse("")))
+          if (LogReceive && debugLogEnabled) {
+            try {
+              log.debug(
+                "received daemon message [{}] from [{}]",
+                message,
+                senderOption.getOrElse(originAddress.getOrElse("")))
+            } catch {
+              case NonFatal(_) => // ignore message toString exceptions
+            }
+          }
           remoteDaemon ! message
         }
 
