@@ -14,7 +14,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Checkout Global Scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: akka/github-actions-scripts
           path: scripts
@@ -27,8 +27,7 @@ jobs:
 
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2000
           fetch-tags: true
@@ -41,13 +40,11 @@ jobs:
 
       - name: Cache Coursier cache
         # https://github.com/coursier/cache-action/releases
-        # v7.0.0
-        uses: coursier/cache-action@bebeeb0e6f48ebad66d3783946588ecf43114433
+        uses: coursier/cache-action@v8.1.0
 
       - name: Set up JDK 11
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.11
           apps: cs

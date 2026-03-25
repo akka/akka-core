@@ -26,7 +26,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Checkout Global Scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: akka/github-actions-scripts
           path: scripts
@@ -39,8 +39,7 @@ jobs:
 
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -48,17 +47,15 @@ jobs:
         run: |
           sudo snap install kubectl --classic
       # https://github.com/google-github-actions/auth/releases
-      # v1.0.0
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d
+        uses: google-github-actions/auth@v3
         with:
           project_id: ${{ secrets.GKE_PROJECT }}
           credentials_json: ${{ secrets.GKE_SA_KEY }}
 
       # https://github.com/google-github-actions/setup-gcloud/releases
-      # v1.0.1
       - name: Install gcloud cli
-        uses: google-github-actions/setup-gcloud@d51b5346f85640ec2aa2fa057354d2b82c2fcbce
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ secrets.GKE_PROJECT }}
 
@@ -76,13 +73,11 @@ jobs:
 
       - name: Cache Coursier cache
         # https://github.com/coursier/cache-action/releases
-        # v7.0.0
-        uses: coursier/cache-action@bebeeb0e6f48ebad66d3783946588ecf43114433
+        uses: coursier/cache-action@v8.1.0
 
       - name: Set up JDK 17
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.17
 
@@ -110,7 +105,7 @@ jobs:
 
       - name: Email on failure
         if: ${{ failure() }}
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2
+        uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
           server_port: 465
