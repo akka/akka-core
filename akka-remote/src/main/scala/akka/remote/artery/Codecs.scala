@@ -168,7 +168,13 @@ private[remote] class Encoder(
                 outboundEnvelope.recipient.getOrElse(""),
                 outboundEnvelope.sender.getOrElse(""))
             } catch {
-              case NonFatal(_) => // ignore message toString exceptions
+              case NonFatal(_) =>
+                // message.toString threw
+                log.debug(
+                  "sending remote message [{}] to [{}] from [{}]",
+                  outboundEnvelope.message.getClass.getName,
+                  outboundEnvelope.recipient.getOrElse(""),
+                  outboundEnvelope.sender.getOrElse(""))
             }
           }
 

@@ -56,7 +56,12 @@ private[remote] class MessageDispatcher(system: ExtendedActorSystem, provider: R
                 message,
                 senderOption.getOrElse(originAddress.getOrElse("")))
             } catch {
-              case NonFatal(_) => // ignore message toString exceptions
+              case NonFatal(_) =>
+                // message.toString threw
+                log.debug(
+                  "received daemon message [{}] from [{}]",
+                  message.getClass.getName,
+                  senderOption.getOrElse(originAddress.getOrElse("")))
             }
           }
           remoteDaemon ! message
