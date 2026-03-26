@@ -160,12 +160,23 @@ private[remote] class Encoder(
 
           envelope.byteBuffer.flip()
 
-          if (debugLogSendEnabled)
-            log.debug(
-              "sending remote message [{}] to [{}] from [{}]",
-              outboundEnvelope.message,
-              outboundEnvelope.recipient.getOrElse(""),
-              outboundEnvelope.sender.getOrElse(""))
+          if (debugLogSendEnabled) {
+            try {
+              log.debug(
+                "sending remote message [{}] to [{}] from [{}]",
+                outboundEnvelope.message,
+                outboundEnvelope.recipient.getOrElse(""),
+                outboundEnvelope.sender.getOrElse(""))
+            } catch {
+              case NonFatal(_) =>
+                // message.toString threw
+                log.debug(
+                  "sending remote message [{}] to [{}] from [{}]",
+                  WrappedMessage.unwrap(outboundEnvelope.message).getClass.getName,
+                  outboundEnvelope.recipient.getOrElse(""),
+                  outboundEnvelope.sender.getOrElse(""))
+            }
+          }
 
           push(out, envelope)
 
