@@ -11,6 +11,7 @@ import akka.actor.ExtendedActorSystem
 import akka.actor.LocalRef
 import akka.actor.PossiblyHarmful
 import akka.actor.RepointableRef
+import akka.actor.WrappedMessage
 import akka.dispatch.sysmsg.SystemMessage
 import akka.event.{ LogMarker, Logging }
 import akka.remote.RemoteActorRefProvider
@@ -60,7 +61,7 @@ private[remote] class MessageDispatcher(system: ExtendedActorSystem, provider: R
                 // message.toString threw
                 log.debug(
                   "received daemon message [{}] from [{}]",
-                  message.getClass.getName,
+                  WrappedMessage.unwrap(message).getClass.getName,
                   senderOption.getOrElse(originAddress.getOrElse("")))
             }
           }

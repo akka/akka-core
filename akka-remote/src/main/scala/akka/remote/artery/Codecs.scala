@@ -172,7 +172,7 @@ private[remote] class Encoder(
                 // message.toString threw
                 log.debug(
                   "sending remote message [{}] to [{}] from [{}]",
-                  outboundEnvelope.message.getClass.getName,
+                  WrappedMessage.unwrap(outboundEnvelope.message).getClass.getName,
                   outboundEnvelope.recipient.getOrElse(""),
                   outboundEnvelope.sender.getOrElse(""))
             }
