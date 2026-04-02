@@ -44,11 +44,15 @@ object DispatcherFutureConverters {
 
     def asJava(shiftTo: ExecutionContext): CompletionStage[T] = {
       val executor = shiftTo match {
-        case ece: ExecutionContextExecutor => ece
-        case _                             => ForkJoinPool.commonPool // match the Scala stdlib behavior when the provided EC isn't an Executor
+        case ece: ExecutionContextExecutor =>
+          ece // Not actually possible to reach normally, since we have a specific overload for ECE
+        case _ => ForkJoinPool.commonPool // match the Scala stdlib behavior when the provided EC isn't an Executor
       }
       DispatcherFutureConverters.asJava(scalaFuture, executor)
     }
+
+    def asJava(ece: ExecutionContextExecutor): CompletionStage[T] =
+      asJava(ece: Executor)
   }
 
   /** A minimal implementation of a Java CompletableFuture which shifts further computation onto the given
