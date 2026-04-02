@@ -53,19 +53,35 @@ object Jvm {
   }
 
   def syncJar(jarName: String, hostAndUser: String, remoteDir: String, sbtLogger: Logger): Process = {
-    val podName = getPodName(hostAndUser, sbtLogger)
-    val command: Array[String] =
-      Array("kubectl", "exec", podName, "--", "/bin/bash", "-c", s"rm -rf $remoteDir && mkdir -p $remoteDir")
-    val builder = new JProcessBuilder(command: _*)
-    sbtLogger.debug("Jvm.syncJar about to run " + command.mkString(" "))
-    val process = Process(builder).run(sbtLogger, false)
-    if (process.exitValue() == 0) {
-      val command: Array[String] = Array("kubectl", "cp", osPath(jarName), podName + ":" + remoteDir + "/")
-      val builder = new JProcessBuilder(command: _*)
-      sbtLogger.debug("Jvm.syncJar about to run " + command.mkString(" "))
-      Process(builder).run(sbtLogger, false)
-    } else {
-      process
+    // Retry up to 3 times to handle transient GKE API server connection resets
+    @annotation.tailrec
+    def attempt(attemptsLeft: Int): Int = {
+      val podName = getPodName(hostAndUser, sbtLogger)
+      val mkdirCommand: Array[String] =
+        Array("kubectl", "exec", podName, "--", "/bin/bash", "-c", s"rm -rf $remoteDir && mkdir -p $remoteDir")
+      sbtLogger.debug("Jvm.syncJar about to run " + mkdirCommand.mkString(" "))
+      val mkdirExitCode = Process(new JProcessBuilder(mkdirCommand: _*)).run(sbtLogger, false).exitValue()
+      val exitCode = if (mkdirExitCode == 0) {
+        val cpCommand: Array[String] = Array("kubectl", "cp", osPath(jarName), podName + ":" + remoteDir + "/")
+        sbtLogger.debug("Jvm.syncJar about to run " + cpCommand.mkString(" "))
+        Process(new JProcessBuilder(cpCommand: _*)).run(sbtLogger, false).exitValue()
+      } else {
+        mkdirExitCode
+      }
+      if (exitCode == 0 || attemptsLeft <= 1) {
+        exitCode
+      } else {
+        sbtLogger.warn(
+          s"Jvm.syncJar failed (exit code $exitCode), retrying in 5s (${attemptsLeft - 1} attempt(s) left)")
+        Thread.sleep(5000)
+        attempt(attemptsLeft - 1)
+      }
+    }
+    val exitCode = attempt(3)
+    new Process {
+      def exitValue(): Int = exitCode
+      def destroy(): Unit = ()
+      def isAlive: Boolean = false
     }
   }
 
