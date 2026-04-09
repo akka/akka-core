@@ -459,7 +459,7 @@ private[stream] final class TlsStageLogic(
   }
 
   private def doOutbound(isInboundClosed: Boolean): Unit = {
-    if (userInAtEnd && mayCloseOutbound) {
+    if (userInAtEnd && handshakeIdle) {
       if (isInboundClosed || !closing.ignoreComplete) {
         engine.closeOutbound()
         lastHandshakeStatus = engine.getHandshakeStatus
@@ -484,12 +484,10 @@ private[stream] final class TlsStageLogic(
     }
   }
 
-  /**
-   * In JDK 8 it is not allowed to call `closeOutbound` before the handshake is
-   * done or otherwise an IllegalStateException might be thrown when the next
-   * handshake packet arrives.
-   */
-  private def mayCloseOutbound: Boolean = lastHandshakeStatus match {
+  // Calling closeOutbound mid-handshake makes the engine emit a close alert
+  // instead of finishing the handshake, which would hide handshake-time
+  // failures (e.g. cert validation errors) from the user side.
+  private def handshakeIdle: Boolean = lastHandshakeStatus match {
     case HandshakeStatus.NOT_HANDSHAKING | HandshakeStatus.FINISHED => true
     case _                                                          => false
   }
