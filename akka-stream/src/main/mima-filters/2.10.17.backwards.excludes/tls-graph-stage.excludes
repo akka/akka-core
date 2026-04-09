@@ -1,0 +1,9 @@
+# internals
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.TlsModuleIslandTag")
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.TlsModuleIslandTag$")
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.TlsModulePhase")
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.io.TLSActor")
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.io.TLSActor$")
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.io.TLSActor$ChoppingBlock")
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.io.TlsModule")
+ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.io.TlsModule$")

@@ -7,7 +7,7 @@ package akka.stream.scaladsl
 import akka.NotUsed
 import akka.stream.TLSProtocol._
 import akka.stream._
-import akka.stream.impl.io.TlsModule
+import akka.stream.impl.io.TlsStage
 import akka.util.ByteString
 
 import javax.net.ssl.SSLContext
@@ -68,7 +68,7 @@ object TLS {
       createSSLEngine: () => SSLEngine, // we don't offer the internal `ActorSystem => SSLEngine` API here, see #21753
       verifySession: SSLSession => Try[Unit], // we don't offer the internal API that provides `ActorSystem` here, see #21753
       closing: TLSClosing): scaladsl.BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
-    scaladsl.BidiFlow.fromGraph(TlsModule(Attributes.none, createSSLEngine, verifySession, closing))
+    scaladsl.BidiFlow.fromGraph(new TlsStage(createSSLEngine, verifySession, closing))
 
   /**
    * Create a StreamTls [[akka.stream.scaladsl.BidiFlow]].
