@@ -24,10 +24,9 @@ import akka.util.ByteString
 /**
  * INTERNAL API.
  *
- * GraphStage implementation of the TLS bidi. Replaces the legacy
- * [[TlsModule]] + `TLSActor` pair. Ports the SSLEngine wrap/unwrap state
- * machine one-for-one from the previous actor implementation, preserving
- * all JDK SSLEngine workarounds and `TLSClosing` semantics.
+ * GraphStage implementation of the TLS bidi. Ports the SSLEngine wrap/unwrap
+ * state machine one-for-one from the previous actor-based implementation,
+ * preserving all JDK SSLEngine workarounds and `TLSClosing` semantics.
  */
 @InternalApi private[stream] final class TlsStage(
     createSSLEngine: () => SSLEngine,
@@ -35,8 +34,8 @@ import akka.util.ByteString
     closing: TLSClosing)
     extends GraphStage[BidiShape[SslTlsOutbound, ByteString, ByteString, SslTlsInbound]] {
 
-  val plainIn: Inlet[SslTlsOutbound] = Inlet("StreamTls.transportIn")
-  val plainOut: Outlet[SslTlsInbound] = Outlet("StreamTls.transportOut")
+  val plainIn: Inlet[SslTlsOutbound] = Inlet("StreamTls.plainIn")
+  val plainOut: Outlet[SslTlsInbound] = Outlet("StreamTls.plainOut")
   val cipherIn: Inlet[ByteString] = Inlet("StreamTls.cipherIn")
   val cipherOut: Outlet[ByteString] = Outlet("StreamTls.cipherOut")
 
@@ -414,6 +413,8 @@ private[stream] final class TlsStageLogic(
             setNewSessionParameters(n)
           }
           done = true
+        case unexpected =>
+          throw new IllegalArgumentException(s"Unexpected SslTlsOutbound message: $unexpected")
       }
     }
   }
@@ -441,8 +442,12 @@ private[stream] final class TlsStageLogic(
         nextPhase(FlushingOutbound)
       }
       true
-    } else if (if (inboundHalfClosed) inboundHalfClosedReady
-               else transportHasData && canUnwrap) {
+    } else if ({
+      val readyToUnwrap =
+        if (inboundHalfClosed) inboundHalfClosedReady
+        else transportHasData && canUnwrap
+      readyToUnwrap
+    }) {
       ensureTransportInChopped()
       try {
         doUnwrap(ignoreOutput = false)

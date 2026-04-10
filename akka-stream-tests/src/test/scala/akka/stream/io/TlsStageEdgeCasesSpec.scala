@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026-2025 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2026 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.io

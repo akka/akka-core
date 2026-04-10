@@ -4,7 +4,7 @@
 
 package akka.stream.impl.io
 
-import javax.net.ssl.{ SSLEngine, SSLParameters }
+import javax.net.ssl.SSLEngine
 
 import akka.annotation.InternalApi
 import akka.stream.TLSClientAuth
@@ -28,17 +28,4 @@ import akka.stream.TLSProtocol.NegotiateNewSession
     }
   }
 
-  def cloneParameters(old: SSLParameters): SSLParameters = {
-    val newParameters = new SSLParameters()
-    newParameters.setAlgorithmConstraints(old.getAlgorithmConstraints)
-    newParameters.setCipherSuites(old.getCipherSuites)
-    newParameters.setEndpointIdentificationAlgorithm(old.getEndpointIdentificationAlgorithm)
-    newParameters.setNeedClientAuth(old.getNeedClientAuth)
-    newParameters.setProtocols(old.getProtocols)
-    newParameters.setServerNames(old.getServerNames)
-    newParameters.setSNIMatchers(old.getSNIMatchers)
-    newParameters.setUseCipherSuitesOrder(old.getUseCipherSuitesOrder)
-    newParameters.setWantClientAuth(old.getWantClientAuth)
-    newParameters
-  }
 }
