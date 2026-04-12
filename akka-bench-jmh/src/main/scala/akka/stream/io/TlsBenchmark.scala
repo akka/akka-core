@@ -96,6 +96,10 @@ object TlsBenchmark {
  * usage (one TLS instance per JVM with a network in between). Without it,
  * both TLS stages run in the same fused interpreter, which prevents the
  * pipelining the old actor-based TlsModule got from being its own island.
+ *
+ * Pass `-Dakka.stream.materializer.io.tls.use-graph-stage-implementation=true`
+ * to benchmark the new GraphStage-based TLS implementation instead of the
+ * default actor-based one.
  */
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -152,6 +156,10 @@ class TlsThroughputBenchmark {
  * Measures TLS handshake cost by materialising a fresh TLS loopback per
  * invocation and sending a single byte through (forcing the handshake to
  * complete before any application data flows).
+ *
+ * Pass `-Dakka.stream.materializer.io.tls.use-graph-stage-implementation=true`
+ * to benchmark the new GraphStage-based TLS implementation instead of the
+ * default actor-based one.
  */
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -194,6 +202,10 @@ class TlsHandshakeBenchmark {
  * Pushes a large number of small messages through the TLS loopback to
  * stress the pump loop, chopping block, and demand management rather than
  * the SSLEngine crypto itself.
+ *
+ * Pass `-Dakka.stream.materializer.io.tls.use-graph-stage-implementation=true`
+ * to benchmark the new GraphStage-based TLS implementation instead of the
+ * default actor-based one.
  */
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -255,6 +267,10 @@ class TlsFramingBenchmark {
  * Uses `Source.actorRef` with a feedback loop: on each received pong the
  * sink callback sends the next ping to the source actor, so exactly one
  * message is in flight at any time.
+ *
+ * Pass `-Dakka.stream.materializer.io.tls.use-graph-stage-implementation=true`
+ * to benchmark the new GraphStage-based TLS implementation instead of the
+ * default actor-based one.
  */
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.SECONDS)
