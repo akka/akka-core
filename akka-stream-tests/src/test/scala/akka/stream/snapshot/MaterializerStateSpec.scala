@@ -49,7 +49,7 @@ class MaterializerStateSpec extends AkkaSpec() {
       promise.success(1)
     }
 
-    "snapshot a running stream that includes a TLS stage" in {
+    "snapshot a running stream that includes a TLSActor" in {
       Source.never
         .via(Tcp(system).outgoingConnectionWithTls(InetSocketAddress.createUnresolved("akka.io", 443), () => {
           val engine = SSLContext.getDefault.createSSLEngine("akka.io", 443)
@@ -59,9 +59,8 @@ class MaterializerStateSpec extends AkkaSpec() {
         .runWith(Sink.seq)
 
       val snapshots = MaterializerState.streamSnapshots(system).futureValue
-      snapshots should not be empty
-      val labels = snapshots.flatMap(_.activeInterpreters.flatMap(_.logics.map(_.label)))
-      labels.exists(_.contains("StreamTls")) shouldBe true
+      snapshots.size should be(2)
+      snapshots.toString should include("TLS-")
     }
 
     "snapshot a stream that has a stopped stage" in {

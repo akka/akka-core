@@ -7,9 +7,11 @@ package akka.stream.scaladsl
 import akka.NotUsed
 import akka.stream.TLSProtocol._
 import akka.stream._
+import akka.stream.impl.io.TlsModule
 import akka.stream.impl.io.TlsStage
 import akka.util.ByteString
 
+import com.typesafe.config.ConfigFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSession
@@ -53,8 +55,10 @@ import scala.util.Try
  */
 object TLS {
 
-  // Reusable buffer stage blueprints for the TLS bidi inlets, matching the
-  // batching the old actor-based TlsModule got from the InputBunch.
+  private lazy val useGraphStageImpl: Boolean =
+    ConfigFactory.load().getBoolean("akka.stream.materializer.io.tls.use-graph-stage-implementation")
+
+  // Reusable buffer stage blueprints for the graph-stage TLS bidi inlets
   private val plainInBuffer = scaladsl.Flow[SslTlsOutbound].buffer(16, OverflowStrategy.backpressure)
   private val cipherInBuffer = scaladsl.Flow[ByteString].buffer(16, OverflowStrategy.backpressure)
 
@@ -73,15 +77,18 @@ object TLS {
       createSSLEngine: () => SSLEngine, // we don't offer the internal `ActorSystem => SSLEngine` API here, see #21753
       verifySession: SSLSession => Try[Unit], // we don't offer the internal API that provides `ActorSystem` here, see #21753
       closing: TLSClosing): scaladsl.BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
-    scaladsl.BidiFlow.fromGraph(scaladsl.GraphDSL.createGraph(new TlsStage(createSSLEngine, verifySession, closing)) {
-      implicit b => tls =>
-        import scaladsl.GraphDSL.Implicits._
-        val plainBuf = b.add(plainInBuffer)
-        val cipherBuf = b.add(cipherInBuffer)
-        plainBuf ~> tls.in1
-        cipherBuf ~> tls.in2
-        BidiShape(plainBuf.in, tls.out1, cipherBuf.in, tls.out2)
-    })
+    if (useGraphStageImpl)
+      scaladsl.BidiFlow.fromGraph(scaladsl.GraphDSL.createGraph(new TlsStage(createSSLEngine, verifySession, closing)) {
+        implicit b => tls =>
+          import scaladsl.GraphDSL.Implicits._
+          val plainBuf = b.add(plainInBuffer)
+          val cipherBuf = b.add(cipherInBuffer)
+          plainBuf ~> tls.in1
+          cipherBuf ~> tls.in2
+          BidiShape(plainBuf.in, tls.out1, cipherBuf.in, tls.out2)
+      })
+    else
+      scaladsl.BidiFlow.fromGraph(TlsModule(Attributes.none, createSSLEngine, verifySession, closing))
 
   /**
    * Create a StreamTls [[akka.stream.scaladsl.BidiFlow]].
