@@ -351,8 +351,6 @@ private[stream] final class TlsStageLogic(
           case CompletedPhase =>
         }
 
-        // Real progress: phase changed, engine handshake status advanced, a
-        // push consumed downstream demand, or wrap/unwrap touched buffer state.
         madeProgress = (phase ne phaseBefore) ||
           (lastHandshakeStatus ne hsBefore) ||
           (cOutAvailBefore && !isAvailable(cipherOut)) ||
@@ -370,8 +368,6 @@ private[stream] final class TlsStageLogic(
         if (!pendingTruncated) completeStage()
       } else {
         // Demand-driven pulling: keep inlets primed when we still need bytes.
-        // Pull only when both the chopping block and the queue are empty so
-        // we don't accumulate more than one element ahead.
         if (!userInChoppingBlock.hasData && userInQueue.isEmpty &&
             !hasBeenPulled(plainIn) && !isClosed(plainIn)) pull(plainIn)
         if (!transportInChoppingBlock.hasData && !hasBeenPulled(cipherIn) && !isClosed(cipherIn)) pull(cipherIn)
