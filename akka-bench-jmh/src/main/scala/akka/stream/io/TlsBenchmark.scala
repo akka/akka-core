@@ -59,26 +59,10 @@ object TlsBenchmark {
   }
 
   /** Client TLS atop reversed server TLS with an echo flow that bounces
-   *  decrypted SessionBytes back as SendBytes.
-   *
-   * If `simulateNetwork` is true, an `.async` boundary is inserted between
-   * client and server TLS to model the async hop a real TCP socket would
-   * provide. Without it, fused topologies run both TLS stages in the same
-   * interpreter and lose the natural pipelining the old actor-based
-   * `TlsModule` got from being its own island. Real Akka usage only has
-   * one TLS stage per JVM, so the network-simulating variant is closer to
-   * production reality.
-   */
-  def tlsEcho(
-      sslContext: SSLContext,
-      closing: TLSClosing,
-      simulateNetwork: Boolean = false): Flow[SslTlsOutbound, SslTlsInbound, akka.NotUsed] = {
+   *  decrypted SessionBytes back as SendBytes. */
+  def tlsEcho(sslContext: SSLContext, closing: TLSClosing): Flow[SslTlsOutbound, SslTlsInbound, akka.NotUsed] = {
     val echo = Flow[SslTlsInbound].collect { case SessionBytes(_, bytes) => SendBytes(bytes) }
-    val transport: BidiFlow[ByteString, ByteString, ByteString, ByteString, akka.NotUsed] =
-      if (simulateNetwork) BidiFlow.fromFlows(Flow[ByteString].async, Flow[ByteString].async)
-      else BidiFlow.fromFlows(Flow[ByteString], Flow[ByteString])
     TLS(() => mkEngine(sslContext, Client), closing)
-      .atop(transport)
       .atop(TLS(() => mkEngine(sslContext, Server), closing).reversed)
       .join(echo)
   }
@@ -113,9 +97,6 @@ class TlsThroughputBenchmark {
   @Param(Array("64", "1024", "16384", "65536"))
   var payloadSize = 0
 
-  @Param(Array("false", "true"))
-  var simulateNetwork = false
-
   private val messageCount = 1000
   private var messages: immutable.Seq[SslTlsOutbound] = _
 
@@ -138,10 +119,11 @@ class TlsThroughputBenchmark {
     val expectedBytes = payloadSize.toLong * messageCount
     val latch = new CountDownLatch(1)
     Source(messages)
-      .via(tlsEcho(sslContext, IgnoreComplete, simulateNetwork))
+      .via(tlsEcho(sslContext, IgnoreComplete))
       .collect { case SessionBytes(_, b) => b }
       .scan(ByteString.empty)(_ ++ _)
       .filter(_.size >= expectedBytes)
+      .take(1) // cancel stream so prior iterations don't leak
       .to(Sink.foreach(_ => latch.countDown()))
       .run()
 
@@ -219,9 +201,6 @@ class TlsFramingBenchmark {
   @Param(Array("10", "100"))
   var messageSize = 0
 
-  @Param(Array("false", "true"))
-  var simulateNetwork = false
-
   private val messageCount = 10000
   private var messages: immutable.Seq[SslTlsOutbound] = _
 
@@ -244,10 +223,11 @@ class TlsFramingBenchmark {
     val expectedBytes = messageSize.toLong * messageCount
     val latch = new CountDownLatch(1)
     Source(messages)
-      .via(tlsEcho(sslContext, IgnoreComplete, simulateNetwork))
+      .via(tlsEcho(sslContext, IgnoreComplete))
       .collect { case SessionBytes(_, b) => b }
       .scan(ByteString.empty)(_ ++ _)
       .filter(_.size >= expectedBytes)
+      .take(1) // cancel stream so prior iterations don't leak
       .to(Sink.foreach(_ => latch.countDown()))
       .run()
 
@@ -281,9 +261,6 @@ class TlsPingPongBenchmark {
   implicit var system: ActorSystem = _
   private var sslContext: SSLContext = _
 
-  @Param(Array("false", "true"))
-  var simulateNetwork = false
-
   private val roundTrips = 100
 
   @Setup(Level.Trial)
@@ -306,19 +283,20 @@ class TlsPingPongBenchmark {
     val remaining = new java.util.concurrent.atomic.AtomicInteger(roundTrips)
     val refHolder = new java.util.concurrent.atomic.AtomicReference[akka.actor.ActorRef]()
 
-    val ref = Source
+    val ((ref, killSwitch), _) = Source
       .actorRef[SslTlsOutbound](
         completionMatcher = PartialFunction.empty,
         failureMatcher = PartialFunction.empty,
         bufferSize = 1,
         overflowStrategy = OverflowStrategy.dropBuffer)
-      .via(tlsEcho(sslContext, IgnoreComplete, simulateNetwork))
-      .to(Sink.foreach {
+      .via(tlsEcho(sslContext, IgnoreComplete))
+      .viaMat(KillSwitches.single)(Keep.both)
+      .toMat(Sink.foreach {
         case SessionBytes(_, _) =>
           if (remaining.decrementAndGet() > 0) refHolder.get().tell(ping, akka.actor.ActorRef.noSender)
           else latch.countDown()
         case _ => ()
-      })
+      })(Keep.both)
       .run()
 
     refHolder.set(ref)
@@ -326,5 +304,7 @@ class TlsPingPongBenchmark {
 
     if (!latch.await(30, TimeUnit.SECONDS))
       throw new RuntimeException("TLS ping-pong bench timed out")
+
+    killSwitch.abort(new RuntimeException("done")) // tear down the stream to avoid leaking across iterations
   }
 }

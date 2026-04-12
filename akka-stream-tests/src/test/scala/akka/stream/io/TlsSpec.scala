@@ -95,10 +95,14 @@ object TlsSpec {
     """
 }
 
-class TlsSpec extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing {
+abstract class TlsSpecBase extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing {
   import GraphDSL.Implicits._
   import TlsSpec._
   import system.dispatcher
+
+  protected def createTls(
+      createSSLEngine: () => SSLEngine,
+      closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed]
 
   "SslTls" must {
     "work for TLSv1.2" must { workFor("TLSv1.2", TLS12Ciphers) }
@@ -148,13 +152,13 @@ class TlsSpec extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing 
       }
 
       def clientTls(closing: TLSClosing) =
-        TLS(() => createSSLEngine(sslContext, Client), closing)
+        createTls(() => createSSLEngine(sslContext, Client), closing)
 
       def badClientTls(closing: TLSClosing) =
-        TLS(() => createSSLEngine(initWithTrust("/badtruststore", protocol), Client), closing)
+        createTls(() => createSSLEngine(initWithTrust("/badtruststore", protocol), Client), closing)
 
       def serverTls(closing: TLSClosing) =
-        TLS(() => createSSLEngine(sslContext, Server), closing)
+        createTls(() => createSSLEngine(sslContext, Server), closing)
 
       trait Named {
         def name: String =
@@ -555,7 +559,7 @@ class TlsSpec extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing 
             case SessionTruncated   => SendBytes(ByteString.empty)
             case SessionBytes(_, b) => SendBytes(b)
           }
-          val clientTls = TLS(
+          val clientTls = createTls(
             () => createSSLEngine2(sslContext, Client, hostnameVerification = true, hostInfo = Some((hostName, 80))),
             EagerClose)
 
@@ -601,4 +605,20 @@ class TlsSpec extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing 
 
   }
 
+}
+
+/** Runs all TLS tests against the default actor-based TLS implementation. */
+class TlsSpec extends TlsSpecBase {
+  protected def createTls(
+      createSSLEngine: () => SSLEngine,
+      closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
+    TLS(createSSLEngine, closing)
+}
+
+/** Runs all TLS tests against the new GraphStage-based TLS implementation. */
+class TlsGraphStageSpec extends TlsSpecBase {
+  protected def createTls(
+      createSSLEngine: () => SSLEngine,
+      closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
+    TLS.graphStageApply(createSSLEngine, _ => scala.util.Success(()), closing)
 }

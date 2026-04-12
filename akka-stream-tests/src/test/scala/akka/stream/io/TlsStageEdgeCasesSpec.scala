@@ -63,11 +63,13 @@ class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrid
     engine
   }
 
+  // Use graphStageApply directly to always exercise the graph-stage implementation
+  // regardless of the akka.stream.materializer.io.tls.use-graph-stage-implementation config toggle
   private def clientTls(closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
-    TLS(() => mkEngine(Client), closing)
+    TLS.graphStageApply(() => mkEngine(Client), _ => scala.util.Success(()), closing)
 
   private def serverTls(closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
-    TLS(() => mkEngine(Server), closing)
+    TLS.graphStageApply(() => mkEngine(Server), _ => scala.util.Success(()), closing)
 
   /** Wrap-and-echo helper: client sends `inputs`, server echoes back the
    *  decrypted SslTlsInbound as plaintext SendBytes, and the bytes returned

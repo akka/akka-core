@@ -109,6 +109,13 @@ private[stream] final class TlsStageLogic(
     }
   }
 
+  // Pull eagerly up to this many bytes of plaintext to enable batching multiple
+  // wrap() calls per pump cycle, but avoid excessive buffering for large payloads.
+  private val MaxUserInBufferedBytes = 64 * 1024
+  // Flush accumulated ciphertext once it exceeds this size rather than
+  // concatenating more ByteStrings — avoids overhead for large TLS records.
+  private val MaxPendingTransportOutBytes = 32 * 1024
+
   // Netty's default sizes: 16665 + 1024 (compressed data) + 1024 (OpenJDK compat).
   private val transportOutBuffer = ByteBuffer.allocate(16665 + 2048)
   // Larger: chopping multiple input packets can lead to OVERFLOW that is also
@@ -132,6 +139,8 @@ private[stream] final class TlsStageLogic(
   private var lastHandshakeStatus: HandshakeStatus = _
   private var corkUser: Boolean = true
   private var unwrapPutBackCounter: Int = 0
+
+  private var pendingTransportOut: ByteString = ByteString.empty
 
   private var phase: Phase = Bidirectional
   private var pumping: Boolean = false
@@ -294,6 +303,7 @@ private[stream] final class TlsStageLogic(
         val transChopBefore = transportInChoppingBlock.size
         val userChopBefore = userInChoppingBlock.size
         val transBufPosBefore = transportInBuffer.position()
+        val pendingTransOutBefore = pendingTransportOut.size
 
         // Drain pending plaintext / SessionTruncated to plainOut first.
         if (pendingUserOut != null && isAvailable(plainOut)) {
@@ -357,8 +367,11 @@ private[stream] final class TlsStageLogic(
           (pOutAvailBefore && !isAvailable(plainOut)) ||
           (transportInChoppingBlock.size != transChopBefore) ||
           (userInChoppingBlock.size != userChopBefore) ||
-          (transportInBuffer.position() != transBufPosBefore)
+          (transportInBuffer.position() != transBufPosBefore) ||
+          (pendingTransportOut.size != pendingTransOutBefore)
       }
+
+      emitPendingTransportOut()
 
       if (phase eq CompletedPhase) {
         if (pendingTruncated && isAvailable(plainOut)) {
@@ -367,9 +380,8 @@ private[stream] final class TlsStageLogic(
         }
         if (!pendingTruncated) completeStage()
       } else {
-        // Demand-driven pulling: keep inlets primed when we still need bytes.
-        if (!userInChoppingBlock.hasData && userInQueue.isEmpty &&
-            !hasBeenPulled(plainIn) && !isClosed(plainIn)) pull(plainIn)
+        if (!hasBeenPulled(plainIn) && !isClosed(plainIn) &&
+            userInChoppingBlock.size < MaxUserInBufferedBytes) pull(plainIn)
         if (!transportInChoppingBlock.hasData && !hasBeenPulled(cipherIn) && !isClosed(cipherIn)) pull(cipherIn)
       }
     } finally {
@@ -397,14 +409,15 @@ private[stream] final class TlsStageLogic(
    */
   private def drainUserInQueueIntoChop(): Unit = {
     var done = false
-    while (!done && !userInQueue.isEmpty && userInChoppingBlock.isEmpty) {
+    while (!done && !userInQueue.isEmpty) {
       userInQueue.peek() match {
         case SendBytes(bs) =>
           userInQueue.poll()
           userInChoppingBlock.offer(bs)
         case n: NegotiateNewSession =>
-          if (lastHandshakeStatus == HandshakeStatus.NOT_HANDSHAKING ||
-              lastHandshakeStatus == HandshakeStatus.FINISHED) {
+          if (userInChoppingBlock.isEmpty &&
+              (lastHandshakeStatus == HandshakeStatus.NOT_HANDSHAKING ||
+              lastHandshakeStatus == HandshakeStatus.FINISHED)) {
             userInQueue.poll()
             setNewSessionParameters(n)
           }
@@ -501,9 +514,20 @@ private[stream] final class TlsStageLogic(
 
   private def flushToTransport(): Unit = {
     transportOutBuffer.flip()
-    if (transportOutBuffer.hasRemaining && isAvailable(cipherOut))
-      push(cipherOut, ByteString(transportOutBuffer))
+    if (transportOutBuffer.hasRemaining)
+      pendingTransportOut = pendingTransportOut ++ ByteString(transportOutBuffer)
     transportOutBuffer.clear()
+    // For large payloads, flush immediately rather than accumulating —
+    // ByteString concatenation overhead outweighs the batching benefit.
+    if (pendingTransportOut.size >= MaxPendingTransportOutBytes)
+      emitPendingTransportOut()
+  }
+
+  private def emitPendingTransportOut(): Unit = {
+    if (pendingTransportOut.nonEmpty && isAvailable(cipherOut)) {
+      push(cipherOut, pendingTransportOut)
+      pendingTransportOut = ByteString.empty
+    }
   }
 
   private def flushToUser(): Unit = {
