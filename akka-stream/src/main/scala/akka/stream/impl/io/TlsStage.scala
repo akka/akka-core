@@ -451,25 +451,25 @@ private[stream] final class TlsStageLogic(
         nextPhase(FlushingOutbound)
       }
       true
-    } else if ({
+    } else {
       val readyToUnwrap =
         if (inboundHalfClosed) inboundHalfClosedReady
         else transportHasData && canUnwrap
-      readyToUnwrap
-    }) {
-      ensureTransportInChopped()
-      try {
-        doUnwrap(ignoreOutput = false)
-        true
-      } catch {
-        case ex: SSLException =>
-          failTls(ex, closeTransport = false)
-          try engine.closeInbound()
-          catch { case _: SSLException => () }
-          completeOrFlush()
-          false
-      }
-    } else true
+      if (readyToUnwrap) {
+        ensureTransportInChopped()
+        try {
+          doUnwrap(ignoreOutput = false)
+          true
+        } catch {
+          case ex: SSLException =>
+            failTls(ex, closeTransport = false)
+            try engine.closeInbound()
+            catch { case _: SSLException => () }
+            completeOrFlush()
+            false
+        }
+      } else true
+    }
   }
 
   private def doOutbound(isInboundClosed: Boolean): Unit = {
@@ -597,7 +597,7 @@ private[stream] final class TlsStageLogic(
               transportInBuffer.position() == oldInPosition =>
             throw new IllegalStateException("SSLEngine trying to loop NEED_UNWRAP without producing output")
           case _ =>
-            if (transportInBuffer.hasRemaining) doUnwrap(ignoreOutput = false)
+            if (transportInBuffer.hasRemaining) doUnwrap(ignoreOutput)
             else flushToUser()
         }
       case CLOSED =>
