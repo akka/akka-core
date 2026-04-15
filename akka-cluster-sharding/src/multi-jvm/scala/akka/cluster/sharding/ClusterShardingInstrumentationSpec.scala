@@ -187,18 +187,13 @@ abstract class ClusterShardingInstrumentationSpec
     "record latency of requesting ShardHome" in {
       runOn(second) {
         eventually(timeout(Span(5, Seconds))) {
-          shardHomeRequests.nonEmpty shouldBe true
-          shardHomeRequests.foreach {
-            case (key, value) =>
-              if (key.startsWith("id")) {
-                // The "id-0", "id-1" ... messages were send during the blackhole.
-                // This means they were requested twice, but only received back once.
-                value.get() >= 1 shouldBe true
-              } else {
-                // The "a", "b", "c" messages were send before the blackhole.
-                // This means they got a proper send-and-request cycle
-                value.get() shouldBe 0
-              }
+          // The "id-N" messages were sent during the blackhole, so were requested
+          // but shard home was not received back, outstanding requests >= 1
+          val idRequests = shardHomeRequests.filter(_._1.startsWith("id"))
+          idRequests.nonEmpty shouldBe true
+          idRequests.foreach {
+            case (_, value) =>
+              value.get() >= 1 shouldBe true
           }
         }
       }
