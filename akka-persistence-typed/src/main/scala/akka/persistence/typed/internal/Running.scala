@@ -525,7 +525,10 @@ private[akka] object Running {
           val newEventsWithMetadata = f(state.state, eventWithMetadata)
           if (newEventsWithMetadata.isEmpty)
             throw new IllegalStateException("At least one event is required in replicatedEventTransformation")
-          (newEventsWithMetadata.head.event, newEventsWithMetadata.head.metadataEntries, newEventsWithMetadata.tail)
+          if (newEventsWithMetadata.size == 1 && (newEventsWithMetadata.head eq eventWithMetadata))
+            (event.event, Nil, Nil) // unchanged, avoid duplicating metadata entries
+          else
+            (newEventsWithMetadata.head.event, newEventsWithMetadata.head.metadataEntries, newEventsWithMetadata.tail)
       }
 
       val replicatedEventMetadata =
