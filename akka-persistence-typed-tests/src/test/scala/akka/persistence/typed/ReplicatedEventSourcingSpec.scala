@@ -17,10 +17,13 @@ import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.typed.ActorRef
 import akka.actor.typed.Behavior
+import akka.persistence.CompositeMetadata
+import akka.persistence.query.PersistenceQuery
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.persistence.testkit.query.scaladsl.PersistenceTestKitReadJournal
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.persistence.typed.scaladsl.{ Effect, EventSourcedBehavior, ReplicatedEventSourcing, ReplicationContext }
+import akka.stream.scaladsl.Sink
 import akka.serialization.jackson.CborSerializable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -963,6 +966,40 @@ class ReplicatedEventSourcingSpec
       eventProbe1.expectNoMessage()
       eventProbe2.expectNoMessage()
 
+    }
+
+    "not duplicate metadata when deprecated withReplicatedEventTransformation returns the input unchanged" in {
+      @scala.annotation.nowarn("cat=deprecation")
+      def addNoOp(b: EventSourcedBehavior[Command, String, State]) =
+        b.withReplicatedEventTransformation { (_, eventWithMeta) =>
+          eventWithMeta
+        }
+      val entityId = nextEntityId
+      val probe = createTestProbe[Done]()
+      val eventProbe2 = createTestProbe[EventAndContext]()
+      val r1 = spawn(testBehavior(entityId, "R1", modifyBehavior = addNoOp))
+      spawn(testBehavior(entityId, "R2", probe = Some(eventProbe2.ref), modifyBehavior = addNoOp))
+
+      r1 ! StoreMeWithMeta("from r1", probe.ref, Meta("meta from r1"))
+      probe.expectMessage(Done)
+      // wait for replication to r2
+      eventProbe2.expectMessageType[EventAndContext].event shouldEqual "from r1"
+
+      val queries =
+        PersistenceQuery(system).readJournalFor[PersistenceTestKitReadJournal](PersistenceTestKitReadJournal.Identifier)
+      val envelope = queries
+        .eventsByPersistenceIdTyped[String](s"ReplicatedEventSourcingSpec|$entityId|R2", 0L, Long.MaxValue)
+        .take(1)
+        .runWith(Sink.head)
+        .futureValue
+      val entries = envelope.internalEventMetadata match {
+        case Some(CompositeMetadata(es)) => es
+        case Some(other)                 => other :: Nil
+        case None                        => Nil
+      }
+      // expected: exactly one ReplicatedEventMetadata and exactly one Meta
+      entries.count(_.isInstanceOf[ReplicatedEventMetadata]) shouldEqual 1
+      entries.count(_.isInstanceOf[Meta]) shouldEqual 1
     }
   }
 
