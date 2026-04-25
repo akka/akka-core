@@ -1,0 +1,2 @@
+# Scala 3 clinit change from adding lazy val to TLS object
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.scaladsl.TLS.<clinit>")
