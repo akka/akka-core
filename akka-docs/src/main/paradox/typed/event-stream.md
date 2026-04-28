@@ -32,7 +32,7 @@ It uses @ref:[Subchannel Classification](#subchannel-classification) which enabl
 
 ## How to use
 
-The following example demonstrates how a subscription works. Given an actor:
+The following example demonstrates how a subscription works. Given an actor will subscribe DeadLetter from startup:
 
 Scala
 :  @@snip [LoggingDocSpec.scala](/akka-actor-typed-tests/src/test/scala/akka/actor/typed/eventstream/LoggingDocSpec.scala) { #deadletters }
@@ -41,15 +41,24 @@ Java
 :  @@snip [LoggingDocTest.java](/akka-actor-typed-tests/src/test/java/akka/actor/typed/eventstream/LoggingDocTest.java) { #imports-deadletter }
 
 
+@@@ div { .group-scala }
+
+Or you can also subscribe after Actor starts:
+
+@@snip [LoggingDocSpec.scala](/akka-actor-typed-tests/src/test/scala/akka/actor/typed/eventstream/LoggingDocSpec.scala) { #subscribe-deadletter }
+
+@@@
+
+
 @@@ div { .group-java }
 
 the actor definition like this:
 
 @@snip [LoggingDocTest.java](/akka-actor-typed-tests/src/test/java/akka/actor/typed/eventstream/LoggingDocTest.java) { #deadletter-actor }
 
-it can be subscribed like this:
+Or you can also subscribe after Actor starts:
 
-@@snip [LoggingDocTest.java](/akka-actor-typed-tests/src/test/java/akka/actor/typed/eventstream/LoggingDocTest.java) { #deadletters }
+@@snip [LoggingDocTest.java](/akka-actor-typed-tests/src/test/java/akka/actor/typed/eventstream/LoggingDocTest.java) { #subscribe-deadletter }
 
 @@@
 
