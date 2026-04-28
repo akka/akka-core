@@ -179,6 +179,9 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
         case _ =>
           log.warning("Dns client failed to send {}", cmd)
       }
+    case Udp.Received(_, remote) if remote != ns =>
+      log.warning(Security, "Discarding DNS response from unexpected source [{}], expected [{}]", remote, ns)
+
     case Udp.Received(data, remote) =>
       log.debug("Received message from [{}]: [{}]", remote, data)
       val msg = Message.parse(data)
@@ -205,7 +208,7 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
           val sentQs = sentMsg.questions.flatMap(withAndWithoutTrailingDots).toSet
           val answeredQs = questions.flatMap(withAndWithoutTrailingDots).toSet
 
-          if (answeredQs.isEmpty || answeredQs.intersect(sentQs).nonEmpty) {
+          if (answeredQs.intersect(sentQs).nonEmpty) {
             reply ! response
             inflightRequests -= response.id
           } else {
