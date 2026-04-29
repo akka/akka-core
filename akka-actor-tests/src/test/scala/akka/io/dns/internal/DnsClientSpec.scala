@@ -76,6 +76,47 @@ class DnsClientSpec extends AkkaSpec("""akka.loglevel = DEBUG
       expectNoMessage(3.seconds)
     }
 
+    "discard UDP responses from a source other than the configured nameserver" in {
+      val udpExtensionProbe = TestProbe()
+      val client = system.actorOf(Props(new DnsClient(dnsServerAddress) {
+        override val udp = udpExtensionProbe.ref
+
+        override def createTcpClient() = TestProbe().ref
+      }))
+
+      client ! exampleRequest
+
+      udpExtensionProbe.expectMsgType[Udp.Bind]
+      udpExtensionProbe.lastSender ! Udp.Bound(InetSocketAddress.createUnresolved("localhost", 41325))
+
+      expectMsgType[Udp.Send]
+      val spoofedSource = InetSocketAddress.createUnresolved("attacker", 53)
+      client ! Udp.Received(
+        exampleResponseMessage.copy(questions = Seq(exampleRequestMessage.questions.head)).write(),
+        spoofedSource)
+
+      expectNoMessage(3.seconds)
+    }
+
+    "discard UDP responses with no question section" in {
+      val udpExtensionProbe = TestProbe()
+      val client = system.actorOf(Props(new DnsClient(dnsServerAddress) {
+        override val udp = udpExtensionProbe.ref
+
+        override def createTcpClient() = TestProbe().ref
+      }))
+
+      client ! exampleRequest
+
+      udpExtensionProbe.expectMsgType[Udp.Bind]
+      udpExtensionProbe.lastSender ! Udp.Bound(InetSocketAddress.createUnresolved("localhost", 41325))
+
+      expectMsgType[Udp.Send]
+      client ! Udp.Received(exampleResponseMessage.copy(questions = Seq.empty).write(), dnsServerAddress)
+
+      expectNoMessage(3.seconds)
+    }
+
     "Fall back to TCP when the UDP response is truncated" in {
       val udpExtensionProbe = TestProbe()
       val tcpClientProbe = TestProbe()
