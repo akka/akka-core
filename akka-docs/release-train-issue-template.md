@@ -16,17 +16,19 @@ Key links:
 
 ### Cutting the release
 
-- [ ] Check that open PRs and issues assigned to the milestone are reasonable
+- [ ] Check that [open PRs](https://github.com/akka/akka-core/pulls) and [issues assigned to the milestone](https://github.com/akka/akka-core/issues?q=milestone%3A%22$VERSION$%22) are reasonable
 - [ ] If PRs related to clustering were merged after the previous multi-node test run, trigger the [multi-node tests](https://github.com/akka/akka-core/actions/workflows/multi-node.yml) and see that they are green.
 - [ ] If PRs were merged after EU midnight, trigger the [native-image tests](https://github.com/akka/akka-core/actions/workflows/native-image-tests.yml) and see that they are green.
 - [ ] If PRs were merged after the last nightly, trigger nightlies [nightly-builds](https://github.com/akka/akka-core/actions/workflows/nightly-builds.yml) and see that they are green.
-- [ ] Update the version and change date in the LICENSE file.
-- [ ] Update the Akka version in the samples to $VERSION$, otherwise the published zip files of the samples will have the old version.
+- [ ] Run the release-prep script to update LICENSE (version, copyright year, change date + 3y) and bump the akka version in every sample build file. With `--commit-and-pr` it pushes a `release-prep-$VERSION$` branch and opens a PR:
+      ```
+      ./scripts/release-prep.sh --commit-and-pr $VERSION$
+      ```
 - [ ] Create a new milestone for the [next version](https://github.com/akka/akka-core/milestones)
 - [ ] Close the [$VERSION$ milestone](https://github.com/akka/akka-core/milestones?direction=asc&sort=due_date)
 - [ ] Make sure all important PRs have been merged
 - [ ] Wait until [main build finished](https://github.com/akka/akka-core/actions) after merging the latest PR
-- [ ] Update the [draft release](https://github.com/akka/akka-core/releases) with the next tag version `v$VERSION$`, title and release description. Use the `Publish release` button, which will create the tag.
+- [ ] Update the [draft release](https://github.com/akka/akka-core/releases/new?tag=v$VERSION$) with the title and release description. Use the `Publish release` button, which will create the tag.
 - [ ] Check that GitHub Actions release build has executed successfully (GitHub Actions will start a [CI build](https://github.com/akka/akka-core/actions) for the new tag and publish artifacts to https://repo.akka.io/TOKEN/secure)
 
 ### Check availability
