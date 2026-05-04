@@ -14,10 +14,27 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: Akka-Default
+    outputs:
+      license_and_readmes_only: ${{ steps.filter.outputs.license_and_readmes_only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect license/readmes-only changes
+        id: filter
+        uses: ./.github/actions/license-and-readmes-only
+
   documentation:
     name: Documentation
+    needs: changes
     runs-on: Akka-Default
-    if: github.event.repository.fork == false
+    if: |
+      github.event.repository.fork == false &&
+      needs.changes.outputs.license_and_readmes_only != 'true'
     steps:
       - name: Checkout Global Scripts
         uses: actions/checkout@v6

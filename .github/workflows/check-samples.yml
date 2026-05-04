@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'LICENSE'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
   workflow_dispatch:
 
 concurrency:
