@@ -1,0 +1,92 @@
+name: Release-prep-only changes
+description: >-
+  Detects whether this PR or push contains only release-preparation changes:
+  the top-level LICENSE file, and/or pure akka-version bumps in sample build
+  files (samples/**/build.sbt, samples/**/pom.xml, samples/**/build.gradle).
+  Sets release_prep_only="true" only when every changed file matches the
+  whitelist AND, for sample build files, the only diff is the akka version
+  literal. Any other change (a different dependency, a non-version edit, a
+  README, a sample source file) results in "false" so the regular CI runs.
+  Requires the repository to be checked out with sufficient history to diff
+  the base and head shas (typically fetch-depth: 0).
+outputs:
+  release_prep_only:
+    description: '"true" if change is limited to LICENSE and/or akka version bumps in sample build files'
+    value: ${{ steps.filter.outputs.release_prep_only }}
+runs:
+  using: composite
+  steps:
+    - name: Detect release-prep-only changes
+      id: filter
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      run: |
+        set -euo pipefail
+        if [ -z "${BASE_SHA:-}" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+          echo "No usable base sha; assuming non release-prep-only"
+          echo "release_prep_only=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+        echo "Changed files between $BASE_SHA and $HEAD_SHA:"
+        echo "$changed"
+
+        if [ -z "$changed" ]; then
+          echo "No changed files; treating as non release-prep"
+          echo "release_prep_only=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # For each sample build file, normalize the akka-version pattern out and
+        # compare base vs head. If the normalized contents differ, the change is
+        # not a pure version bump and full CI should run.
+        result=true
+        while IFS= read -r f; do
+          [ -z "$f" ] && continue
+
+          if [ "$f" = "LICENSE" ]; then
+            continue
+          fi
+
+          if [[ "$f" =~ ^samples/.+/build\.sbt$ ]]; then
+            # Two known akka-version patterns in sample sbt files: a literal
+            # 'val AkkaVersion = "..."' and the override-aware
+            # 'lazy val akkaVersion = sys.props.getOrElse("akka.version", "...")'
+            sed_args=(
+              -e 's/^val AkkaVersion = "[^"]*"$/val AkkaVersion = "X"/'
+              -e 's/^lazy val akkaVersion = sys\.props\.getOrElse\("akka\.version", "[^"]*"\)$/lazy val akkaVersion = sys.props.getOrElse("akka.version", "X")/'
+            )
+          elif [[ "$f" =~ ^samples/.+/pom\.xml$ ]]; then
+            sed_args=(-e 's|^([[:space:]]*)<akka\.version>[^<]*</akka\.version>$|\1<akka.version>X</akka.version>|')
+          elif [[ "$f" =~ ^samples/.+/build\.gradle$ ]]; then
+            sed_args=(-e "s|('com\\.typesafe\\.akka:[^:']+:)[^']*'|\\1X'|g")
+          else
+            echo "Non-release-prep file changed: $f"
+            result=false
+            break
+          fi
+
+          if ! base=$(git show "$BASE_SHA:$f" 2>/dev/null); then
+            echo "$f did not exist at base; treating as non release-prep"
+            result=false
+            break
+          fi
+          if ! head=$(git show "$HEAD_SHA:$f" 2>/dev/null); then
+            echo "$f deleted at head; treating as non release-prep"
+            result=false
+            break
+          fi
+
+          base_norm=$(echo "$base" | sed -E "${sed_args[@]}")
+          head_norm=$(echo "$head" | sed -E "${sed_args[@]}")
+          if [ "$base_norm" != "$head_norm" ]; then
+            echo "Change in $f is not limited to akka version bump"
+            result=false
+            break
+          fi
+        done <<< "$changed"
+
+        echo "release_prep_only=$result" >> "$GITHUB_OUTPUT"

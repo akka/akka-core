@@ -18,15 +18,15 @@ jobs:
     name: Detect changes
     runs-on: Akka-Default
     outputs:
-      license_and_readmes_only: ${{ steps.filter.outputs.license_and_readmes_only }}
+      release_prep_only: ${{ steps.filter.outputs.release_prep_only }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Detect license/readmes-only changes
+      - name: Detect release-prep-only changes
         id: filter
-        uses: ./.github/actions/license-and-readmes-only
+        uses: ./.github/actions/release-prep-only
 
   documentation:
     name: Documentation
@@ -34,7 +34,7 @@ jobs:
     runs-on: Akka-Default
     if: |
       github.event.repository.fork == false &&
-      needs.changes.outputs.license_and_readmes_only != 'true'
+      needs.changes.outputs.release_prep_only != 'true'
     steps:
       - name: Checkout Global Scripts
         uses: actions/checkout@v6
