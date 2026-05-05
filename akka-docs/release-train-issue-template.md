@@ -28,7 +28,7 @@ Key links:
 - [ ] Close the [$VERSION$ milestone](https://github.com/akka/akka-core/milestones?direction=asc&sort=due_date)
 - [ ] Make sure all important PRs have been merged
 - [ ] Wait until [main build finished](https://github.com/akka/akka-core/actions) after merging the latest PR
-- [ ] Update the [draft release](https://github.com/akka/akka-core/releases/new?tag=v$VERSION$), click `Generate release notes` to get a title and release description. Use the `Publish release` button, which will create the tag.
+- [ ] Create the [draft release](https://github.com/akka/akka-core/releases/new?tag=v$VERSION$), click `Generate release notes` to get a title and release description. Use the `Publish release` button, which will create the tag.
 - [ ] Check that GitHub Actions release build has executed successfully (GitHub Actions will start a [CI build](https://github.com/akka/akka-core/actions) for the new tag and publish artifacts to https://repo.akka.io/TOKEN/secure)
 
 ### Check availability
