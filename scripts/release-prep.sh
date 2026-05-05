@@ -42,7 +42,7 @@ if [ ${#POSITIONAL[@]} -ne 1 ]; then
 fi
 
 AKKA_VERSION="${POSITIONAL[0]}"
-COMMIT_MSG="chore: License change and sample bump for $AKKA_VERSION"
+COMMIT_MSG="chore: License change date and sample bump for $AKKA_VERSION"
 
 # Cross-platform date arithmetic: BSD (macOS) and GNU (Linux) take different flags.
 if date -v+0d >/dev/null 2>&1; then
@@ -75,6 +75,10 @@ if [ "$COMMIT_AND_PR" = true ]; then
     exit 1
   fi
   TARGET_BASE=$(git rev-parse --abbrev-ref HEAD)
+  if [ "$TARGET_BASE" = "HEAD" ]; then
+    echo "Detached HEAD; check out the target branch (e.g. main or release-X.Y) first." >&2
+    exit 1
+  fi
   NEW_BRANCH="release-prep-$AKKA_VERSION"
   if git rev-parse --verify "$NEW_BRANCH" >/dev/null 2>&1; then
     echo "Branch $NEW_BRANCH already exists; aborting." >&2
