@@ -13,7 +13,7 @@
 #      * samples/**/build.gradle ('com.typesafe.akka:<artifact>:<version>')
 #
 # By default the script only updates the files; review with `git diff` and
-# commit yourself. With --commit-and-pr it creates a release-prep-X.Y.Z
+# commit yourself. With --commit-and-pr it creates a wip-release-prep-X.Y.Z
 # branch off of the currently checked-out branch, applies the changes,
 # commits, pushes, and opens a pull request via the gh CLI.
 
@@ -79,7 +79,7 @@ if [ "$COMMIT_AND_PR" = true ]; then
     echo "Detached HEAD; check out the target branch (e.g. main or release-X.Y) first." >&2
     exit 1
   fi
-  NEW_BRANCH="release-prep-$AKKA_VERSION"
+  NEW_BRANCH="wip-release-prep-$AKKA_VERSION"
   if git rev-parse --verify "$NEW_BRANCH" >/dev/null 2>&1; then
     echo "Branch $NEW_BRANCH already exists; aborting." >&2
     exit 1

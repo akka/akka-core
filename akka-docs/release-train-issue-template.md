@@ -20,7 +20,7 @@ Key links:
 - [ ] If PRs related to clustering were merged after the previous multi-node test run, trigger the [multi-node tests](https://github.com/akka/akka-core/actions/workflows/multi-node.yml) and see that they are green.
 - [ ] If PRs were merged after EU midnight, trigger the [native-image tests](https://github.com/akka/akka-core/actions/workflows/native-image-tests.yml) and see that they are green.
 - [ ] If PRs were merged after the last nightly, trigger nightlies [nightly-builds](https://github.com/akka/akka-core/actions/workflows/nightly-builds.yml) and see that they are green.
-- [ ] Run the release-prep script to update LICENSE (version, copyright year, change date + 3y) and bump the akka version in every sample build file. With `--commit-and-pr` it pushes a `release-prep-$VERSION$` branch and opens a PR:
+- [ ] Run the release-prep script to update LICENSE (version, copyright year, change date + 3y) and bump the akka version in every sample build file. With `--commit-and-pr` it pushes a `wip-release-prep-$VERSION$` branch and opens a PR:
       ```
       ./scripts/release-prep.sh --commit-and-pr $VERSION$
       ```
