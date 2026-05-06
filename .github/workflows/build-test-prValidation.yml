@@ -12,8 +12,24 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: Akka-Default
+    outputs:
+      release_prep_only: ${{ steps.filter.outputs.release_prep_only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect release-prep-only changes
+        id: filter
+        uses: ./.github/actions/release-prep-only
+
   check-code-style:
     name: Check / Code Style
+    needs: changes
+    if: needs.changes.outputs.release_prep_only != 'true'
     runs-on: Akka-Default
     steps:
       - name: Checkout Global Scripts
@@ -55,6 +71,8 @@ jobs:
 
   pull-request-validation:
     name: Check / Tests
+    needs: changes
+    if: needs.changes.outputs.release_prep_only != 'true'
     runs-on: Akka-Default
     steps:
       - name: Checkout Global Scripts
