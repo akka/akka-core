@@ -1,17 +1,13 @@
 # Persistence Query for LevelDB
 
 The LevelDB journal and query plugin is deprecated and it is not advised to build new applications with it.
-As a replacement we recommend using [Akka Persistence JDBC](https://doc.akka.io/docs/akka-persistence-jdbc/current/index.html).
+As a replacement we recommend using [Akka Persistence JDBC](https://doc.akka.io/libraries/akka-persistence-jdbc/current/index.html).
 
 ## Dependency
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Persistence Query, you must add the following dependency in your project:
 

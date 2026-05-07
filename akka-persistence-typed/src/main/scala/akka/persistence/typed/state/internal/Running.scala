@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.internal
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.immutable
 
@@ -14,14 +15,12 @@ import akka.actor.typed.internal.PoisonPill
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.annotation.InternalApi
 import akka.annotation.InternalStableApi
 import akka.persistence.typed.state.internal.DurableStateBehaviorImpl.GetState
 import akka.persistence.typed.state.scaladsl.Effect
 import akka.persistence.typed.telemetry.DurableStateBehaviorInstrumentation
 import akka.util.OptionVal
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -58,7 +57,9 @@ private[akka] object Running {
     def nextRevision(): RunningState[State] =
       copy(revision = revision + 1)
 
-    def applyState[C, E](@unused setup: BehaviorSetup[C, State], updated: State): RunningState[State] = {
+    def applyState[C, E](
+        @nowarn("msg=never used") setup: BehaviorSetup[C, State],
+        updated: State): RunningState[State] = {
       copy(state = updated)
     }
 
@@ -112,7 +113,7 @@ private[akka] object Running {
 
     def onCommand(state: RunningState[S], cmd: C): Behavior[InternalProtocol] = {
       val effect = setup.commandHandler(state.state, cmd)
-      val (next, doUnstash) = applyEffects(cmd, state, effect.asInstanceOf[EffectImpl[S]]) // TODO can we avoid the cast?
+      val (next, doUnstash) = applyEffects(cmd, state, effect.asInstanceOf[EffectImpl[S]])
       if (doUnstash) tryUnstashOne(next)
       else {
         recursiveUnstashOne = 0
@@ -167,7 +168,7 @@ private[akka] object Running {
         effect: Effect[S],
         sideEffects: immutable.Seq[SideEffect[S]] = Nil): (Behavior[InternalProtocol], Boolean) = {
       if (setup.internalLogger.isDebugEnabled && !effect.isInstanceOf[CompositeEffect[_]])
-        setup.internalLogger.debugN(
+        setup.internalLogger.debug(
           s"Handled command [{}], resulting effect: [{}], side effects: [{}]",
           msg.getClass.getName,
           effect,
@@ -423,15 +424,15 @@ private[akka] object Running {
       case _ =>
         // case _: Callback[S] should be covered by above case, but needed needed to silence Scala 3 exhaustive match
         throw new IllegalStateException(
-          s"Unexpected effect [${effect.getClass.getName}]. This is a bug, please report https://github.com/akka/akka/issues")
+          s"Unexpected effect [${effect.getClass.getName}]. This is a bug, please report https://github.com/akka/akka-core/issues")
     }
   }
 
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  private[akka] def onWriteFailed(@unused ctx: ActorContext[_], @unused reason: Throwable): Unit = ()
+  private[akka] def onWriteFailed(ctx: ActorContext[_], reason: Throwable): Unit = ()
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  private[akka] def onWriteSuccess(@unused ctx: ActorContext[_]): Unit = ()
+  private[akka] def onWriteSuccess(ctx: ActorContext[_]): Unit = ()
 
 }

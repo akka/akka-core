@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.cookbook
@@ -7,10 +7,14 @@ package docs.stream.cookbook
 import akka.NotUsed
 import akka.stream.scaladsl._
 import akka.stream.testkit._
+
 import scala.concurrent.duration._
 import akka.testkit.TestLatch
+
+import scala.annotation.nowarn
 import scala.concurrent.Await
 
+@nowarn("msg=never used") // sample snippets
 class RecipeMissedTicks extends RecipeSpec {
 
   "Recipe for collecting missed ticks" must {
@@ -25,11 +29,11 @@ class RecipeMissedTicks extends RecipeSpec {
 
       //#missed-ticks
       val missedTicks: Flow[Tick, Int, NotUsed] =
-        Flow[Tick].conflateWithSeed(seed = (_) => 0)((missedTicks, tick) => missedTicks + 1)
+        Flow[Tick].conflateWithSeed(seed = _ => 0)((missedTicks, _) => missedTicks + 1)
       //#missed-ticks
       val latch = TestLatch(3)
       val realMissedTicks: Flow[Tick, Int, NotUsed] =
-        Flow[Tick].conflateWithSeed(seed = (_) => 0)((missedTicks, tick) => { latch.countDown(); missedTicks + 1 })
+        Flow[Tick].conflateWithSeed(seed = _ => 0)((missedTicks, _) => { latch.countDown(); missedTicks + 1 })
 
       tickStream.via(realMissedTicks).to(sink).run()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal
@@ -13,7 +13,6 @@ import akka.persistence._
 import akka.persistence.JournalProtocol._
 import akka.persistence.scalatest.{ MayVerb, OptionalTests }
 import akka.testkit._
-import akka.util.unused
 
 object JournalSpec {
   val config: Config = ConfigFactory.parseString(s"""
@@ -56,6 +55,8 @@ abstract class JournalSpec(config: Config)
 
   override protected def supportsMetadata: CapabilityFlag = false
 
+  override protected def supportsReplayOnlyLast: CapabilityFlag = false
+
   override protected def beforeEach(): Unit = {
     super.beforeEach()
     senderProbe = TestProbe()
@@ -69,7 +70,7 @@ abstract class JournalSpec(config: Config)
    * test case. `pid` is the `persistenceId` that will be used in the test.
    * This method may be needed to clean pre-existing events from the log.
    */
-  def preparePersistenceId(@unused pid: String): Unit = ()
+  def preparePersistenceId(pid: String): Unit = ()
 
   /**
    * Implementation may override and return false if it does not
@@ -189,6 +190,12 @@ abstract class JournalSpec(config: Config)
       journal ! ReplayMessages(0, Long.MaxValue, Long.MaxValue, "non-existing-pid", receiverProbe.ref)
       receiverProbe.expectMsg(RecoverySuccess(highestSequenceNr = 0L))
     }
+    "retrieve highest sequenceNr without replaying events" in {
+      journal ! ReplayMessages(0, 0, 1, pid, receiverProbe.ref)
+      // no replayedMessage
+      receiverProbe.expectMsg(RecoverySuccess(highestSequenceNr = 5L))
+    }
+
     "not replay permanently deleted messages (range deletion)" in {
       val receiverProbe2 = TestProbe()
       val cmd = DeleteMessagesTo(pid, 3, receiverProbe2.ref)
@@ -237,6 +244,7 @@ abstract class JournalSpec(config: Config)
       journal ! ReplayMessages(0, Long.MaxValue, Long.MaxValue, pid, receiverProbe.ref)
       receiverProbe.expectMsg(RecoverySuccess(highestSequenceNr = 5L))
     }
+
   }
 
   "A Journal optionally".may {
@@ -349,5 +357,14 @@ abstract class JournalSpec(config: Config)
 
       }
     }
+
+    optional(flag = supportsReplayOnlyLast) {
+      "replay only last when fromSequenceNr is -1" in {
+        journal ! ReplayMessages(-1, Long.MaxValue, Long.MaxValue, pid, receiverProbe.ref)
+        receiverProbe.expectMsg(replayedMessage(snr = 5))
+        receiverProbe.expectMsg(RecoverySuccess(highestSequenceNr = 5L))
+      }
+    }
+
   }
 }

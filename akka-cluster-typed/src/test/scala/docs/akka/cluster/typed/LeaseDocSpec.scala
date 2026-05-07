@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.cluster.typed
@@ -16,7 +16,7 @@ import scala.annotation.nowarn
 import scala.concurrent.duration.DurationInt
 
 object LeaseDocSpec {
-  @nowarn("msg=interpolation")
+
   def config = ConfigFactory.parseString("""
       // #singleton-config
       my.app.my-singleton-lease {

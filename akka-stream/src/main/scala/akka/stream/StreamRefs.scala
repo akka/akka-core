@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
@@ -90,7 +90,7 @@ trait SourceRef[T] {
 final case class TargetRefNotInitializedYetException()
     extends IllegalStateException(
       "Internal remote target actor ref not yet resolved, yet attempted to send messages to it. " +
-      "This should not happen due to proper flow-control, please open a ticket on the issue tracker: https://github.com/akka/akka")
+      "This should not happen due to proper flow-control, please open a ticket on the issue tracker: https://github.com/akka/akka-core")
 
 final case class StreamRefSubscriptionTimeoutException(msg: String) extends IllegalStateException(msg)
 

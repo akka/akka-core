@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.Config
@@ -11,7 +12,6 @@ import language.postfixOps
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.testkit.{ AkkaSpec, DefaultTimeout }
-import akka.util.unused
 
 object StablePriorityDispatcherSpec {
   case object Result
@@ -25,7 +25,7 @@ object StablePriorityDispatcherSpec {
     }
     """
 
-  class Unbounded(@unused settings: ActorSystem.Settings, @unused config: Config)
+  class Unbounded(@nowarn("msg=never used") settings: ActorSystem.Settings, @nowarn("msg=never used") config: Config)
       extends UnboundedStablePriorityMailbox(PriorityGenerator({
         case i: Int if i <= 100 => i // Small integers have high priority
         case _: Int             => 101 // Don't care for other integers
@@ -33,7 +33,7 @@ object StablePriorityDispatcherSpec {
         case _                  => throw new RuntimeException() // compiler exhaustiveness check pleaser
       }: Any => Int))
 
-  class Bounded(@unused settings: ActorSystem.Settings, @unused config: Config)
+  class Bounded(@nowarn("msg=never used") settings: ActorSystem.Settings, @nowarn("msg=never used") config: Config)
       extends BoundedStablePriorityMailbox(PriorityGenerator({
         case i: Int if i <= 100 => i // Small integers have high priority
         case _: Int             => 101 // Don't care for other integers

@@ -14,13 +14,9 @@ A few deprecated features has been removed in Akka 2.9.x, see sections below.
 
 ## Akka repository
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 ## Support for Java 8 removed
 
@@ -33,7 +29,7 @@ The published artifacts are targeting Scala 2.13 and Scala 3.3.
 ## Deprecated Cluster Client removed
 
 Cluster client has been deprecated since Akka 2.6.0 (2019-11-06). Details on how to migrate can be found in the Akka 
-2.6 docs here: https://doc.akka.io/docs/akka/2.6/cluster-client.html#migration-to-akka-grpc
+2.6 docs here: https://doc.akka.io/libraries/akka-core/2.6/cluster-client.html#migration-to-akka-grpc
 
 
 ## Deprecated Typed Actor removed
@@ -58,7 +54,7 @@ version="0.6.1"
 ## Persistent FSM
 
 Persistent FSM has been deprecated since Akka 2.6.0 (2019-11-06) and has now been dropped. Details on how to migrate can be found in the Akka 2.8
-docs here: https://doc.akka.io/docs/akka/2.8/persistence-fsm.html#migration-to-eventsourcedbehavior
+docs here: https://doc.akka.io/libraries/akka-core/2.8/persistence-fsm.html#migration-to-eventsourcedbehavior
 
 # Migration Guide 2.9.2 to 2.9.3
 

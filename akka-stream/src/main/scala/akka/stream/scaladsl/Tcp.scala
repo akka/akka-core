@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -14,6 +14,7 @@ import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NoStackTrace
@@ -32,8 +33,6 @@ import akka.stream.impl.io.ConnectionSourceStage
 import akka.stream.impl.io.OutgoingConnectionStage
 import akka.stream.impl.io.TcpIdleTimeout
 import akka.util.ByteString
-import akka.util.JavaDurationConverters._
-import akka.util.unused
 
 object Tcp extends ExtensionId[Tcp] with ExtensionIdProvider {
 
@@ -103,7 +102,7 @@ final class Tcp(system: ExtendedActorSystem) extends akka.actor.Extension {
 
   // TODO maybe this should be a new setting, like `akka.stream.tcp.bind.timeout` / `shutdown-timeout` instead?
   val bindShutdownTimeout: FiniteDuration =
-    system.settings.config.getDuration("akka.stream.materializer.subscription-timeout.timeout").asScala
+    system.settings.config.getDuration("akka.stream.materializer.subscription-timeout.timeout").toScala
 
   /**
    * Creates a [[Tcp.ServerBinding]] instance which represents a prospective TCP server binding on the given `endpoint`.
@@ -394,7 +393,7 @@ final class Tcp(system: ExtendedActorSystem) extends akka.actor.Extension {
 
 }
 
-final class TcpIdleTimeoutException(msg: String, @unused timeout: Duration)
+final class TcpIdleTimeoutException(msg: String, @nowarn("msg=never used") timeout: Duration)
     extends TimeoutException(msg: String)
     with NoStackTrace // only used from a single stage
 

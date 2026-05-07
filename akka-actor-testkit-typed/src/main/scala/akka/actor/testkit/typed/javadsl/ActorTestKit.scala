@@ -1,10 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.javadsl
 
 import java.time.Duration
+
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -19,7 +21,6 @@ import akka.actor.typed.ActorSystem
 import akka.actor.typed.Behavior
 import akka.actor.typed.Props
 import akka.actor.typed.Scheduler
-import akka.util.JavaDurationConverters._
 import akka.util.Timeout
 
 object ActorTestKit {
@@ -113,7 +114,7 @@ object ActorTestKit {
    *                             no exception is thrown.
    */
   def shutdown(system: ActorSystem[_], duration: Duration, throwIfShutdownTimesOut: Boolean): Unit = {
-    TestKitUtils.shutdown(system, duration.asScala, throwIfShutdownTimesOut)
+    TestKitUtils.shutdown(system, duration.toScala, throwIfShutdownTimesOut)
   }
 
   /**
@@ -133,7 +134,7 @@ object ActorTestKit {
    */
   def shutdown(system: ActorSystem[_]): Unit = {
     val settings = TestKitSettings.create(system)
-    shutdown(system, settings.DefaultActorSystemShutdownTimeout.asJava, settings.ThrowOnShutdownTimeout)
+    shutdown(system, settings.DefaultActorSystemShutdownTimeout.toJava, settings.ThrowOnShutdownTimeout)
   }
 
   /**
@@ -212,7 +213,7 @@ final class ActorTestKit private[akka] (delegate: akka.actor.testkit.typed.scala
    * It can only be used for actors that were spawned by this `ActorTestKit`.
    * Other actors will not be stopped by this method.
    */
-  def stop[T](ref: ActorRef[T], max: Duration): Unit = delegate.stop(ref, max.asScala)
+  def stop[T](ref: ActorRef[T], max: Duration): Unit = delegate.stop(ref, max.toScala)
 
   /**
    * Shortcut for creating a new test probe for the testkit actor system

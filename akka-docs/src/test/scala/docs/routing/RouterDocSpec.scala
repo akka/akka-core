@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.routing
@@ -24,7 +24,9 @@ import akka.routing.ScatterGatherFirstCompletedPool
 import akka.routing.BalancingPool
 import akka.routing.TailChoppingGroup
 import akka.routing.TailChoppingPool
-import akka.util.ccompat.JavaConverters._
+
+import scala.annotation.nowarn
+import scala.jdk.CollectionConverters._
 
 object RouterDocSpec {
 
@@ -523,6 +525,7 @@ router-dispatcher {}
   }
 }
 
+@nowarn("msg=never used") // sample snippets
 class RouterDocSpec extends AkkaSpec(RouterDocSpec.config) with ImplicitSender {
 
   import RouterDocSpec._

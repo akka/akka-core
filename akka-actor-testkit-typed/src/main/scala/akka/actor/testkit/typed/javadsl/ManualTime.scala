@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.javadsl
@@ -7,12 +7,12 @@ package akka.actor.testkit.typed.javadsl
 import java.time.Duration
 
 import scala.annotation.varargs
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.internal.adapter.SchedulerAdapter
-import akka.util.JavaDurationConverters._
 
 /**
  * Manual time allows you to do async tests while controlling the scheduler of the system.
@@ -60,11 +60,11 @@ final class ManualTime(delegate: akka.testkit.ExplicitlyTriggeredScheduler) {
    * If you want the amount of time passed to be dilated, apply the dilation before passing the delay to
    * this method.
    */
-  def timePasses(amount: Duration): Unit = delegate.timePasses(amount.asScala)
+  def timePasses(amount: Duration): Unit = delegate.timePasses(amount.toScala)
 
   @varargs
   def expectNoMessageFor(duration: Duration, on: TestProbe[_]*): Unit = {
-    delegate.timePasses(duration.asScala)
+    delegate.timePasses(duration.toScala)
     on.foreach(_.expectNoMessage(Duration.ZERO))
   }
 

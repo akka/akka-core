@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.javadsl
 
 import akka.annotation.InternalApi
 import akka.persistence.typed.SnapshotSelectionCriteria
+import akka.persistence.typed.internal.ReplayOnlyLastRecovery
 import akka.persistence.typed.internal.{ DefaultRecovery, DisabledRecovery, RecoveryWithSnapshotSelectionCriteria }
 
 /**
@@ -28,7 +29,13 @@ object Recovery {
   /**
    * Snapshots and events are recovered
    */
+  @deprecated("Use Recovery.enabled, since default is a reserved word in Java", "2.10.1")
   val default: Recovery = DefaultRecovery
+
+  /**
+   * Snapshots and events are recovered
+   */
+  val enabled: Recovery = DefaultRecovery
 
   /**
    * Neither snapshots nor events are recovered
@@ -46,5 +53,10 @@ object Recovery {
    */
   def withSnapshotSelectionCriteria(snapshotSelectionCriteria: SnapshotSelectionCriteria) =
     RecoveryWithSnapshotSelectionCriteria(snapshotSelectionCriteria)
+
+  /**
+   * Don't load snapshot and replay only last event.
+   */
+  val replayOnlyLast: Recovery = ReplayOnlyLastRecovery
 
 }

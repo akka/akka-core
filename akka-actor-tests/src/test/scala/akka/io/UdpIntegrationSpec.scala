@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
@@ -74,17 +74,17 @@ class UdpIntegrationSpec extends AkkaSpec("""
       def checkSendingToClient(): Unit = {
         server ! Send(data, clientAddress)
         expectMsgPF() {
-          case Received(d, a) =>
-            d should ===(data)
-            a should ===(serverAddress)
+          case Received(indata, s) =>
+            indata should ===(data)
+            s should ===(serverAddress)
         }
       }
       def checkSendingToServer(): Unit = {
         client ! Send(data, serverAddress)
         expectMsgPF() {
-          case Received(d, a) =>
-            d should ===(data)
-            a should ===(clientAddress)
+          case Received(indata, s) =>
+            indata should ===(data)
+            s should ===(clientAddress)
         }
       }
 

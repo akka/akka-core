@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.javadsl
@@ -7,12 +7,12 @@ package akka.stream.javadsl
 import java.util.Optional
 import java.util.concurrent.CompletionStage
 
-import scala.compat.java8.FutureConverters._
-import scala.compat.java8.OptionConverters._
+import scala.concurrent.ExecutionContext
+import scala.jdk.FutureConverters._
+import scala.jdk.OptionConverters._
 import scala.concurrent.Future
 
 import akka.Done
-import akka.dispatch.ExecutionContexts
 import akka.stream.QueueOfferResult
 
 /**
@@ -83,9 +83,9 @@ object SourceQueueWithComplete {
     // would have been better to add `asScala` in SourceQueueWithComplete trait, but not doing
     // that for backwards compatibility reasons
     new akka.stream.scaladsl.SourceQueueWithComplete[T] {
-      def offer(elem: T): Future[QueueOfferResult] = queue.offer(elem).toScala
+      def offer(elem: T): Future[QueueOfferResult] = queue.offer(elem).asScala
 
-      def watchCompletion(): Future[Done] = queue.watchCompletion().toScala
+      def watchCompletion(): Future[Done] = queue.watchCompletion().asScala
 
       def complete(): Unit = queue.complete()
 
@@ -131,7 +131,7 @@ object SinkQueueWithCancel {
     new akka.stream.scaladsl.SinkQueueWithCancel[T] {
 
       override def pull(): Future[Option[T]] =
-        queue.pull().toScala.map(_.asScala)(ExecutionContexts.parasitic)
+        queue.pull().asScala.map(_.toScala)(ExecutionContext.parasitic)
 
       override def cancel(): Unit = queue.cancel()
     }

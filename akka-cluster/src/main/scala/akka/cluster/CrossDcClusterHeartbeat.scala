@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
+import scala.annotation.nowarn
 import scala.collection.SortedSet
 import scala.collection.immutable
 
@@ -15,7 +16,6 @@ import akka.event.ActorWithLogClass
 import akka.event.Logging
 import akka.remote.FailureDetectorRegistry
 import akka.util.ConstantFun
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
@@ -35,7 +35,7 @@ import akka.util.ccompat._
  * nodes which aggressively come and go as the traffic in the service changes.
  */
 @InternalApi
-@ccompatUsedUntil213
+@deprecated("Use Akka Distributed Cluster instead", "2.10.0")
 private[cluster] class CrossDcHeartbeatSender extends Actor {
   import CrossDcHeartbeatSender._
 
@@ -231,6 +231,7 @@ private[akka] object CrossDcHeartbeatSender {
 
 /** INTERNAL API */
 @InternalApi
+@nowarn("msg=Use Akka Distributed Cluster")
 private[cluster] final case class CrossDcHeartbeatingState(
     selfDataCenter: DataCenter,
     failureDetector: FailureDetectorRegistry[Address],
@@ -322,6 +323,7 @@ private[cluster] final case class CrossDcHeartbeatingState(
 
 /** INTERNAL API */
 @InternalApi
+@nowarn("msg=Use Akka Distributed Cluster")
 private[cluster] object CrossDcHeartbeatingState {
 
   /** Sorted by age */

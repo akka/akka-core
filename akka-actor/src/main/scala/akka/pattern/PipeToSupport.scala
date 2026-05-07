@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
@@ -7,6 +7,7 @@ package akka.pattern
 import java.util.concurrent.CompletionStage
 import java.util.function.BiConsumer
 
+import scala.annotation.nowarn
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
@@ -14,7 +15,6 @@ import language.implicitConversions
 
 import akka.actor.{ Actor, ActorRef, Status }
 import akka.actor.ActorSelection
-import akka.util.unused
 
 trait PipeToSupport {
 
@@ -44,7 +44,7 @@ trait PipeToSupport {
   }
 
   final class PipeableCompletionStage[T](val future: CompletionStage[T])(
-      implicit @unused executionContext: ExecutionContext) {
+      implicit @nowarn("msg=never used") executionContext: ExecutionContext) {
     def pipeTo(recipient: ActorRef)(implicit sender: ActorRef = Actor.noSender): CompletionStage[T] = {
       future.whenComplete(new BiConsumer[T, Throwable] {
         override def accept(t: T, ex: Throwable): Unit = {

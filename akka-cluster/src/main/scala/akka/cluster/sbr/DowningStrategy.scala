@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sbr
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
@@ -57,6 +58,7 @@ import akka.coordination.lease.scaladsl.Lease
 /**
  * INTERNAL API
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 @InternalApi private[akka] abstract class DowningStrategy(val selfDc: DataCenter, selfUniqueAddress: UniqueAddress) {
   import DowningStrategy._
 

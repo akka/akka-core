@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.io
@@ -26,7 +26,7 @@ object TcpHelper {
   case class ReadResult(bytes: ByteString) extends NoSerializationVerificationNeeded
 
   // FIXME: Workaround object just to force a ResumeReading that will poll for a possibly pending close event
-  // See https://github.com/akka/akka/issues/16552
+  // See https://github.com/akka/akka-core/issues/16552
   // remove this and corresponding code path once above is fixed
   case class PingClose(requester: ActorRef)
 

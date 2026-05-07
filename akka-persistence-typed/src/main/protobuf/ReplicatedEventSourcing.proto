@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 syntax = "proto2";
@@ -68,6 +68,7 @@ message ReplicatedSnapshotMetadata {
 message ReplicatedPublishedEventMetaData {
   optional string replicaId = 1;
   optional VersionVector versionVector = 2;
+  optional Payload metadata = 3;
 }
 
 message PublishedEvent {

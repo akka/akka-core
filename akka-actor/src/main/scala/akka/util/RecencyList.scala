@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2021-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -8,12 +8,12 @@ import scala.collection.immutable
 import scala.collection.mutable
 import scala.concurrent.duration.FiniteDuration
 
-import akka.annotation.InternalApi
+import akka.annotation.InternalStableApi
 
 /**
  * INTERNAL API
  */
-@InternalApi
+@InternalStableApi
 private[akka] object RecencyList {
   def emptyWithNanoClock[A]: RecencyList[A] =
     RecencyList[A](new NanoClock)
@@ -35,7 +35,7 @@ private[akka] object RecencyList {
  * Used for tracking recency of elements for implementing least/most recently used eviction policies.
  * Implemented using a doubly-linked list plus hash map for lookup, so that all operations are constant time.
  */
-@InternalApi
+@InternalStableApi
 private[akka] final class RecencyList[A] private (clock: Clock) {
   import RecencyList.Node
 

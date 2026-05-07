@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -7,6 +7,7 @@ package akka.cluster
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 import akka.actor.Actor
@@ -38,6 +39,7 @@ import akka.dispatch.UnboundedMessageQueueSemantics
  * Read view of cluster state, updated via subscription of
  * cluster events published on the event bus.
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 @InternalApi private[akka] class ClusterReadView(cluster: Cluster) extends Closeable {
   import ClusterReadView.State
   import cluster.ClusterLogger._
@@ -234,6 +236,8 @@ import akka.dispatch.UnboundedMessageQueueSemantics
           logInfo("event {}, {} members [{}]", event, s.members.size, s.members.mkString(", "))
         case MemberTombstonesChanged(tombstones) =>
           logInfo("event MemberTombstonesChanged({})", tombstones.size)
+        case _: ReachabilityChanged =>
+        // ignore ReachabilityChanged because it's changed often, and typically not interesting
         case _ =>
           logInfo("event {}", event)
       }

@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.telemetry
 
-import akka.util.ccompat.JavaConverters._
 import scala.collection.immutable
+import scala.jdk.CollectionConverters._
 
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
@@ -17,7 +17,6 @@ import akka.actor.ExtensionIdProvider
 import akka.annotation.InternalStableApi
 import akka.event.Logging
 import akka.util.TopologicalSort.topologicalSort
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -148,7 +147,7 @@ object EmptyEventsourcedInstrumentation extends EmptyEventsourcedInstrumentation
 class EmptyEventsourcedInstrumentation extends EventsourcedInstrumentation {
   import EventsourcedInstrumentation.{ Context, EmptyContext }
 
-  def this(@unused system: ActorSystem) = this()
+  def this(system: ActorSystem) = this()
 
   override def beforeRequestRecoveryPermit(actorRef: ActorRef): Context = EmptyContext
 

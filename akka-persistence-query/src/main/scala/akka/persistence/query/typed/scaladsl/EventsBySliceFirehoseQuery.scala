@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.query.typed.scaladsl
@@ -50,7 +50,8 @@ final class EventsBySliceFirehoseQuery(system: ExtendedActorSystem, config: Conf
     with EventsBySliceQuery
     with EventsBySliceStartingFromSnapshotsQuery
     with EventTimestampQuery
-    with LoadEventQuery {
+    with LoadEventQuery
+    with LatestEventTimestampQuery {
 
   private lazy val persistenceExt = Persistence(system)
   private lazy val settings = EventsBySliceFirehose.Settings(system, cfgPath)
@@ -99,6 +100,15 @@ final class EventsBySliceFirehoseQuery(system: ExtendedActorSystem, config: Conf
           s"Underlying ReadJournal [${settings.delegateQueryPluginId}] " +
           "doesn't implement LoadEventQuery")
     }
+
+  override def latestEventTimestamp(entityType: String, minSlice: Int, maxSlice: Int): Future[Option[Instant]] = {
+    eventsBySliceQuery match {
+      case q: LatestEventTimestampQuery => q.latestEventTimestamp(entityType, minSlice, maxSlice)
+      case _ =>
+        throw new IllegalArgumentException(
+          s"Underlying ReadJournal [${settings.delegateQueryPluginId}] doesn't implement LatestEventTimestampQuery")
+    }
+  }
 
   private def eventsBySliceQuery: EventsBySliceQuery = {
     val delegateQueryPluginId =

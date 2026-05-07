@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit.javadsl
@@ -19,7 +19,7 @@ import akka.actor.typed.Behavior
 import akka.annotation.ApiMayChange
 import akka.annotation.DoNotInherit
 import akka.persistence.testkit.scaladsl
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Testing of [[akka.persistence.typed.javadsl.EventSourcedBehavior]] implementations.
@@ -217,8 +217,8 @@ final class EventSourcedBehaviorTestKit[Command, Event, State](
 
   private val _persistenceTestKit = new PersistenceTestKit(delegate.persistenceTestKit)
   private val _snapshotTestKit = {
-    import scala.compat.java8.OptionConverters._
-    delegate.snapshotTestKit.map(new SnapshotTestKit(_)).asJava
+    import scala.jdk.OptionConverters._
+    delegate.snapshotTestKit.map(new SnapshotTestKit(_)).toJava
   }
 
   /**

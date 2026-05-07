@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.persistence
@@ -8,9 +8,10 @@ import akka.actor._
 import akka.pattern.{ BackoffOpts, BackoffSupervisor }
 import akka.persistence._
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
-import scala.language.postfixOps
 
+@nowarn("msg=never used") // sample snippets
 object PersistenceDocSpec {
 
   trait SomeOtherMessage

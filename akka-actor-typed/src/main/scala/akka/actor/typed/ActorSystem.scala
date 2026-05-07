@@ -1,9 +1,11 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed
 
+import java.time.LocalDate
+import java.util.Optional
 import java.util.concurrent.{ CompletionStage, ThreadFactory }
 
 import scala.concurrent.{ ExecutionContextExecutor, Future }
@@ -187,6 +189,18 @@ abstract class ActorSystem[-T] extends ActorRef[T] with Extensions with ClassicA
    */
   def address: Address
 
+  /**
+   * Scala API: When the license key will expire. `None` for perpetual keys.
+   * If a license key is not defined the expiry date will be today's date.
+   */
+  def licenseKeyExpiry: Option[LocalDate]
+
+  /**
+   * Java API: When the license key will expire. `Optional.empty` for perpetual keys.
+   * If a license key is not defined the expiry date will be today's date.
+   */
+  def getLicenseKeyExpiry: Optional[LocalDate]
+
 }
 
 object ActorSystem {
@@ -320,4 +334,7 @@ final class Settings(val config: Config, val classicSettings: classic.ActorSyste
 
   val RestartStashCapacity: Int =
     typedConfig.getInt("restart-stash-capacity").requiring(_ >= 0, "restart-stash-capacity must be >= 0")
+
+  val PubSubDeadLettersWhenNoSubscribers: Boolean =
+    typedConfig.getBoolean("pub-sub.send-to-dead-letters-when-no-subscribers")
 }

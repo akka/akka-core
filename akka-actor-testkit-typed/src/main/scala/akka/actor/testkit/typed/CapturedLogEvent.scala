@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed
 
 import java.util.Optional
 
-import scala.compat.java8.OptionConverters._
+import scala.jdk.OptionConverters._
 
 import org.slf4j.Marker
 import org.slf4j.event.Level
@@ -30,7 +30,7 @@ final case class CapturedLogEvent(level: Level, message: String, cause: Option[T
       errorCause: Optional[Throwable],
       marker: Optional[Marker],
       mdc: java.util.Map[String, Any]) =
-    this(level, message, errorCause.asScala, marker.asScala)
+    this(level, message, errorCause.toScala, marker.toScala)
 
   /**
    * Constructor for Java API
@@ -56,9 +56,9 @@ final case class CapturedLogEvent(level: Level, message: String, cause: Option[T
   def this(level: Level, message: String, errorCause: Throwable, marker: Marker) =
     this(level, message, Some(errorCause), Some(marker))
 
-  def getErrorCause: Optional[Throwable] = cause.asJava
+  def getErrorCause: Optional[Throwable] = cause.toJava
 
-  def getMarker: Optional[Marker] = marker.asJava
+  def getMarker: Optional[Marker] = marker.toJava
 }
 
 object CapturedLogEvent {

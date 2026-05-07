@@ -10,13 +10,9 @@ You are viewing the documentation for the new actor APIs, to view the Akka Class
 To use Logging, you must at least use the Akka actors dependency in your project, and configure logging
 via the SLF4J backend, such as Logback configuration.
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -98,33 +94,6 @@ It can be good to know that 3 or more arguments will result in the relatively sm
 an array (vararg parameter) also when the log level is disabled. The methods with 1 or 2 arguments
 don't allocate the vararg array.
 
-@@@ div { .group-scala }
-
-When using the methods for 2 argument placeholders the compiler will often not be able to select the
-right method and report compiler error "ambiguous reference to overloaded definition". To work around this
-problem you can use the `trace2`, `debug2`, `info2`, `warn2` or `error2` extension methods that are added
-by `import akka.actor.typed.scaladsl.LoggerOps` or `import akka.actor.typed.scaladsl._`.
-
-Scala
-:  @@snip [LoggingDocExamples.scala](/akka-actor-typed-tests/src/test/scala/docs/akka/typed/LoggingDocExamples.scala) { #info2 }
-
-When using the methods for 3 or more argument placeholders, the compiler will not be able to convert
-the method parameters to the vararg array when they contain primitive values such as `Int`,
-and report compiler error "overloaded method value info with alternatives".
-To work around this problem you can use the `traceN`, `debugN`, `infoN`, `warnN` or `errorN` extension
-methods that are added by the same `LoggerOps` import.
-
-Scala
-:  @@snip [LoggingDocExamples.scala](/akka-actor-typed-tests/src/test/scala/docs/akka/typed/LoggingDocExamples.scala) { #infoN }
-
-If you find it tedious to add the import of `LoggerOps` at many places you can make those additional methods
-available with a single implicit conversion placed in a root package object of your code:
-
-Scala
-:  @@snip [package.scala](/akka-actor-typed-tests/src/test/scala/docs/akka/typed/myapp/package.scala) { #loggerops-package-implicit }
-
-@@@
-
 ### Behaviors.logMessages
 
 If you want very detailed logging of messages and signals you can decorate a @apidoc[Behavior]
@@ -173,43 +142,9 @@ in the `ActorContext`.
 
 ## SLF4J API compatibility
 
-The SLF4J API broke binary compatibility between versions 1.7 and 2.0. Akka depends on 1.7 but supports either versions. 
+Since Akka 2.10.0, only SLF4j version `2.0` is supported. 
 
-It is however not possible to mix a logger backend supporting one version with SLF4J API of other version, that will lead
-to no logging to output like this:  
-
-```
-SLF4J(W): No SLF4J providers were found.
-SLF4J(W): Defaulting to no-operation (NOP) logger implementation
-SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
-SLF4J(W): Class path contains SLF4J bindings targeting slf4j-api versions 1.7.x or earlier.
-SLF4J(W): Ignoring binding found at [jar:file:/../../../logback-classic-1.2.13.jar!/org/slf4j/impl/StaticLoggerBinder.class]
-```
-
-@@@ div { .group-scala }
-
-Working around this for sbt based projects can either be done by depending on a newer version of the chosen logging backend,
-for example logback 1.4.0+ which support slf4j-api 2.0, or pinning `slf4j-api` to the older version using `dependencyOverrides`:
-```
-dependencyOverrides += "org.slf4j" % "slf4j-api" % "1.7.36"
-```
-
-@@@
-
-@@@ div { .group-java }
-
-Working around this for maven based projects can either be done by depending on a newer version of the chosen logging backend,
-for example logback 1.4.0+ which support slf4j-api 2.0, or pin `slf4j-api` to the older version using a direct dependency on the `slf4j-api` module:
-
-```xml
-<dependency>
-  <groupId>org.slf4j</groupId>
-  <artifactId>slf4j-api</artifactId>
-  <version>1.7.36</version>
-</dependency>
-```
-
-@@@
+It is not possible to mix a logger backend supporting one version with SLF4J API of older versions.
 
 ## SLF4J backend
 

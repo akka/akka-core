@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -515,7 +515,7 @@ abstract class StressSpec extends MultiNodeClusterSpec(StressMultiJvmSpec) with 
       .append(" MB")
     sb.append("\n")
 
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val args = runtime.getInputArguments.asScala.filterNot(_.contains("classpath")).mkString("\n  ")
     sb.append("Args:\n  ").append(args)
     sb.append("\n")
@@ -567,7 +567,7 @@ abstract class StressSpec extends MultiNodeClusterSpec(StressMultiJvmSpec) with 
       identifyClusterResultAggregator() match {
         case Some(r) =>
           watch(r)
-          expectMsgPF() { case Terminated(a) if a.path == r.path => true }
+          expectMsgPF() { case Terminated(ac) if ac.path == r.path => true }
         case None => // ok, already terminated
       }
     }
@@ -666,7 +666,7 @@ abstract class StressSpec extends MultiNodeClusterSpec(StressMultiJvmSpec) with 
     runOn(roles.head) {
       val expectedPath = RootActorPath(removeAddress) / "user" / "watchee"
       expectMsgPF() {
-        case Terminated(a) if a.path == expectedPath => true
+        case Terminated(ac) if ac.path == expectedPath => true
       }
     }
     enterBarrier("watch-verified-" + step)

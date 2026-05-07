@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.internal
@@ -70,7 +70,7 @@ import akka.annotation.InternalApi
 
   // invocations are synchronized via doAppend in AppenderBase
   override def append(event: ILoggingEvent): Unit = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     val throwable = event.getThrowableProxy match {
       case p: ThrowableProxy =>
@@ -84,11 +84,19 @@ import akka.annotation.InternalApi
       loggerName = event.getLoggerName,
       threadName = event.getThreadName,
       timeStamp = event.getTimeStamp,
-      marker = Option(event.getMarker),
+      marker = getMarker(event),
       throwable = throwable,
       mdc = event.getMDCPropertyMap.asScala.toMap)
 
     filter(loggingEvent)
+  }
+
+  private def getMarker(event: ILoggingEvent) = {
+    val markers = event.getMarkerList
+    if ((markers eq null) || markers.isEmpty)
+      None
+    else
+      Option(markers.get(0))
   }
 
   private def filter(event: LoggingEvent): Boolean = {

@@ -96,4 +96,10 @@ dead (with the notable exception of entering an infinite loop) instead they are 
 strategy can react to the fault, or they are stopped (in which case interested parties are notified).
 There is always a responsible entity for managing an actor: its parent. Restarts are not visible from the outside: collaborating actors can keep sending messages while the target actor restarts.
 
+@@@note
+
+🎓 For a deeper understanding of the Actor Model, consider the free online course [**Actor Fundamentals**](https://akkademy.akka.io/learn/courses/21/actor-fundamentals) in Akkademy.
+
+@@@
+
 Now, let's take a short tour of the functionality Akka provides.

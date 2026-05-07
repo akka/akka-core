@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -15,7 +15,6 @@ import akka.stream.impl.fusing.GraphStageModule
 import akka.stream.impl.fusing.GraphStages.SingleSource
 import akka.stream.scaladsl.Keep
 import akka.util.OptionVal
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -46,7 +45,7 @@ import akka.util.unused
     Concat.normalizeConcat(this, that)
   }
 
-  def rewireFirstTo(@unused relativeOffset: Int): Traversal = null
+  def rewireFirstTo(relativeOffset: Int): Traversal = null
 }
 
 /**

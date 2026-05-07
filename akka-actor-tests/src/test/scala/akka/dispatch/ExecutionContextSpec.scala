@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
@@ -141,7 +141,7 @@ class ExecutionContextSpec extends AkkaSpec with DefaultTimeout {
     }
 
     "work with same-thread executor plus blocking" in {
-      val ec = akka.dispatch.ExecutionContexts.parasitic
+      val ec = ExecutionContext.parasitic
       var x = 0
       ec.execute(new Runnable {
         override def run = {

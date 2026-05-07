@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -24,9 +24,7 @@ import akka.cluster.MemberStatus._
 import akka.remote.testkit.MultiNodeConfig
 import akka.remote.testkit.MultiNodeSpec
 import akka.testkit._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object RestartNodeMultiJvmSpec extends MultiNodeConfig {
   val first = role("first")
   val second = role("second")
@@ -102,8 +100,8 @@ abstract class RestartNodeSpec extends MultiNodeClusterSpec(RestartNodeMultiJvmS
       runOn(first, third) {
         system.actorOf(Props(new Actor {
           def receive = {
-            case a: UniqueAddress =>
-              secondUniqueAddress = a
+            case ua: UniqueAddress =>
+              secondUniqueAddress = ua
               sender() ! "ok"
           }
         }).withDeploy(Deploy.local), name = "address-receiver")

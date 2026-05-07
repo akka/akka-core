@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -85,7 +85,6 @@ private[remote] class AeronSource(
     aeron: Aeron,
     taskRunner: TaskRunner,
     pool: EnvelopeBufferPool,
-    flightRecorder: RemotingFlightRecorder,
     spinning: Int)
     extends GraphStageWithMaterializedValue[SourceShape[EnvelopeBuffer], AeronSource.AeronLifecycle] {
 
@@ -121,7 +120,7 @@ private[remote] class AeronSource(
       override protected def logSource = classOf[AeronSource]
 
       override def preStart(): Unit = {
-        flightRecorder.aeronSourceStarted(channel, streamId)
+        RemotingFlightRecorder.aeronSourceStarted(channel, streamId)
       }
 
       override def postStop(): Unit = {
@@ -131,7 +130,7 @@ private[remote] class AeronSource(
           case e: DriverTimeoutException =>
             // media driver was shutdown
             log.debug("DriverTimeout when closing subscription. {}", e)
-        } finally flightRecorder.aeronSourceStopped(channel, streamId)
+        } finally RemotingFlightRecorder.aeronSourceStopped(channel, streamId)
       }
 
       // OutHandler
@@ -158,7 +157,7 @@ private[remote] class AeronSource(
             subscriberLoop() // recursive
           } else {
             // delegate backoff to shared TaskRunner
-            flightRecorder.aeronSourceDelegateToTaskRunner(countBeforeDelegate)
+            RemotingFlightRecorder.aeronSourceDelegateToTaskRunner(countBeforeDelegate)
             delegatingToTaskRunner = true
             delegateTaskStartTime = System.nanoTime()
             taskRunner.command(addPollTask)
@@ -176,13 +175,13 @@ private[remote] class AeronSource(
         countBeforeDelegate = 0
         delegatingToTaskRunner = false
         // FIXME push calculation to JFR?
-        flightRecorder.aeronSourceReturnFromTaskRunner(System.nanoTime() - delegateTaskStartTime)
+        RemotingFlightRecorder.aeronSourceReturnFromTaskRunner(System.nanoTime() - delegateTaskStartTime)
         freeSessionBuffers()
         onMessage(data)
       }
 
       private def onMessage(data: EnvelopeBuffer): Unit = {
-        flightRecorder.aeronSourceReceived(data.byteBuffer.limit())
+        RemotingFlightRecorder.aeronSourceReceived(data.byteBuffer.limit())
         push(out, data)
       }
 

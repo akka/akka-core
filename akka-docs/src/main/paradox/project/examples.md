@@ -13,15 +13,15 @@ messages.
 
 ## FSM
 
-* Scala [Dining hackers with FSM](https://github.com/akka/akka/tree/main/samples/akka-sample-fsm-scala) ([akka-samples-fsm-scala.zip](../attachments/akka-samples-fsm-scala.zip))
-* Java [Dining hackers with FSM](https://github.com/akka/akka/tree/main/samples/akka-sample-fsm-java) ([akka-samples-fsm-java.zip](../attachments/akka-samples-fsm-java.zip))
+* Scala [Dining hackers with FSM](https://github.com/akka/akka-core/tree/main/samples/akka-sample-fsm-scala) ([akka-sample-fsm-scala.zip](../attachments/akka-sample-fsm-scala.zip))
+* Java [Dining hackers with FSM](https://github.com/akka/akka-core/tree/main/samples/akka-sample-fsm-java) ([akka-sample-fsm-java.zip](../attachments/akka-sample-fsm-java.zip))
 
 This project contains a Dining Hakkers sample illustrating how to model a Finite State Machine (FSM) with actors.
 
 ## Cluster
 
-* Scala [Cluster example project](https://github.com/akka/akka/tree/main/samples/akka-sample-cluster-scala#readme) ([akka-samples-cluster-scala.zip](../attachments/akka-samples-cluster-scala.zip))
-* Java [Cluster example project](https://github.com/akka/akka/tree/main/samples/akka-sample-cluster-java#readme) ([akka-samples-cluster-java.zip](../attachments/akka-samples-cluster-java.zip))
+* Scala [Cluster example project](https://github.com/akka/akka-core/tree/main/samples/akka-sample-cluster-scala#readme) ([akka-sample-cluster-scala.zip](../attachments/akka-sample-cluster-scala.zip))
+* Java [Cluster example project](https://github.com/akka/akka-core/tree/main/samples/akka-sample-cluster-java#readme) ([akka-sample-cluster-java.zip](../attachments/akka-sample-cluster-java.zip))
 
 This project contains samples illustrating different Cluster features, such as
 subscribing to cluster membership events, and sending messages to actors running on nodes in the cluster
@@ -31,15 +31,15 @@ It also includes Multi JVM Testing with the `sbt-multi-jvm` plugin.
 
 ## Distributed Data
 
-* Scala [Distributed data example project](https://github.com/akka/akka/tree/main/samples/akka-sample-distributed-data-scala#readme) ([akka-sample-distributed-data-scala.zip](../attachments/akka-sample-distributed-data-scala.zip))
-* Java [Distributed data example project](https://github.com/akka/akka/tree/main/samples/akka-sample-distributed-data-java#readme) ([akka-sample-distributed-data-java.zip](../attachments/akka-sample-distributed-data-java.zip))
+* Scala [Distributed data example project](https://github.com/akka/akka-core/tree/main/samples/akka-sample-distributed-data-scala#readme) ([akka-sample-distributed-data-scala.zip](../attachments/akka-sample-distributed-data-scala.zip))
+* Java [Distributed data example project](https://github.com/akka/akka-core/tree/main/samples/akka-sample-distributed-data-java#readme) ([akka-sample-distributed-data-java.zip](../attachments/akka-sample-distributed-data-java.zip))
 
 This project contains several samples illustrating how to use Distributed Data.
 
 ## Cluster Sharding
 
-* Scala [Cluster Sharding example](https://github.com/akka/akka/tree/main/samples/akka-sample-sharding-scala#readme) ([akka-sample-sharding-scala.zip](../attachments/akka-sample-sharding-scala.zip))
-* Java [Cluster Sharding example](https://github.com/akka/akka/tree/main/samples/akka-sample-sharding-java#readme) ([akka-sample-sharding-java.zip](../attachments/akka-sample-sharding-java.zip))
+* Scala [Cluster Sharding example](https://github.com/akka/akka-core/tree/main/samples/akka-sample-sharding-scala#readme) ([akka-sample-sharding-scala.zip](../attachments/akka-sample-sharding-scala.zip))
+* Java [Cluster Sharding example](https://github.com/akka/akka-core/tree/main/samples/akka-sample-sharding-java#readme) ([akka-sample-sharding-java.zip](../attachments/akka-sample-sharding-java.zip))
 
 This project contains a KillrWeather sample illustrating how to use Cluster Sharding.
 
@@ -53,7 +53,7 @@ to other services.
 ## Replicated Event Sourcing
 
 The @extref[Akka Distributed Cluster Guide](akka-distributed-cluster:guide/3-active-active.html) illustrates how to use @ref:[Replicated Event Sourcing](../typed/replicated-eventsourcing.md) that supports
-active-active persistent entities across data centers.
+active-active persistent entities.
 
 ## Kafka to Cluster Sharding 
 

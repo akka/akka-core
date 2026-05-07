@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.serialization
@@ -39,13 +39,13 @@ class ReplicatedEventSourcingSerializerSpec extends ScalaTestWithActorTestKit wi
           10,
           "payload",
           1,
-          Some(new ReplicatedPublishedEventMetaData(ReplicaId("R1"), VersionVector.empty)),
+          Some(new ReplicatedPublishedEventMetaData(ReplicaId("R1"), VersionVector.empty, Some("meta"))),
           Some(system.deadLetters)),
-        assertEquality = false)
+        assertEquality = true)
 
       serializationTestKit.verifySerialization(
         PublishedEventImpl(PersistenceId.ofUniqueId("cat"), 10, "payload", 1, None, None),
-        assertEquality = false)
+        assertEquality = true)
     }
   }
 

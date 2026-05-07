@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -15,7 +15,6 @@ import akka.annotation.InternalApi
 import akka.dispatch._
 import akka.dispatch.sysmsg._
 import akka.event.Logging.Warning
-import akka.util.{ unused, Unsafe }
 
 /**
  * This actor ref starts out with some dummy cell (by default just enqueuing
@@ -38,7 +37,7 @@ private[akka] class RepointableActorRef(
     extends ActorRefWithCell
     with RepointableRef {
 
-  import AbstractActorRef.{ cellOffset, lookupOffset }
+  import AbstractActorRef.{ cellHandle, lookupHandle }
 
   /*
    * H E R E   B E   D R A G O N S !
@@ -57,17 +56,17 @@ private[akka] class RepointableActorRef(
     _lookupDoNotCallMeDirectly
   }
 
-  def underlying: Cell = Unsafe.instance.getObjectVolatile(this, cellOffset).asInstanceOf[Cell]
-  def lookup = Unsafe.instance.getObjectVolatile(this, lookupOffset).asInstanceOf[Cell]
+  def underlying: Cell = cellHandle.getVolatile(this).asInstanceOf[Cell]
+  def lookup = lookupHandle.getVolatile(this).asInstanceOf[Cell]
 
   @tailrec final def swapCell(next: Cell): Cell = {
     val old = underlying
-    if (Unsafe.instance.compareAndSwapObject(this, cellOffset, old, next)) old else swapCell(next)
+    if (cellHandle.compareAndSet(this, old, next)) old else swapCell(next)
   }
 
   @tailrec final def swapLookup(next: Cell): Cell = {
     val old = lookup
-    if (Unsafe.instance.compareAndSwapObject(this, lookupOffset, old, next)) old else swapLookup(next)
+    if (lookupHandle.compareAndSet(this, old, next)) old else swapLookup(next)
   }
 
   /**
@@ -125,7 +124,7 @@ private[akka] class RepointableActorRef(
    * This is called by activate() to obtain the cell which is to replace the
    * unstarted cell. The cell must be fully functional.
    */
-  def newCell(@unused old: UnstartedCell): Cell =
+  def newCell(@nowarn("msg=never used") old: UnstartedCell): Cell =
     new ActorCell(system, this, props, dispatcher, supervisor).init(sendSupervise = false, mailboxType)
 
   def start(): Unit = ()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -15,7 +15,6 @@ class FlowStreamRefsDocSpec extends AkkaSpec with CompileOnlySpec {
   "offer a source ref" in compileOnlySpec {
     //#offer-source
     import akka.stream.SourceRef
-    import akka.pattern.pipe
 
     case class RequestLogs(streamId: Int)
     case class LogsOffer(streamId: Int, sourceRef: SourceRef[String])

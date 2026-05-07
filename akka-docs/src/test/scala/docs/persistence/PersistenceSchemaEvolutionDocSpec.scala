@@ -1,12 +1,11 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.persistence
 
 import java.io.NotSerializableException
 import java.nio.charset.Charset
-
 import akka.actor.ActorSystem
 import akka.persistence.journal.{ EventAdapter, EventSeq }
 import akka.serialization.{ SerializationExtension, SerializerWithStringManifest }
@@ -14,9 +13,11 @@ import akka.testkit.TestKit
 import com.typesafe.config._
 import org.scalatest.wordspec.AnyWordSpec
 import spray.json.JsObject
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import docs.persistence.proto.FlightAppModels
+
+import scala.annotation.nowarn
 
 class PersistenceSchemaEvolutionDocSpec extends AnyWordSpec {
 
@@ -356,6 +357,7 @@ class DetachedModelsAdapter extends EventAdapter {
 //#detach-models-adapter
 
 // act as-if JSON library
+@nowarn("msg=never used")
 class ExampleJsonMarshaller {
   def toJson(any: Any): JsObject = JsObject()
   def fromJson(json: JsObject): Any = new Object

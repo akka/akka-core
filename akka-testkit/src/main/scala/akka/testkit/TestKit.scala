@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.testkit
@@ -8,7 +8,6 @@ import java.util.concurrent._
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.concurrent.Await
@@ -133,7 +132,7 @@ class TestActor(queue: BlockingDeque[TestActor.Message]) extends Actor {
   }
 
   override def postStop() = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     queue.asScala.foreach { m =>
       context.system.deadLetters.tell(DeadLetter(m.msg, m.sender, self), m.sender)
     }
@@ -951,7 +950,6 @@ trait TestKitBase {
  *
  * @since 1.1
  */
-@nowarn // 'early initializers' are deprecated on 2.13 and will be replaced with trait parameters on 2.14. https://github.com/akka/akka/issues/26753
 class TestKit(_system: ActorSystem) extends TestKitBase {
   implicit val system: ActorSystem = _system
 }

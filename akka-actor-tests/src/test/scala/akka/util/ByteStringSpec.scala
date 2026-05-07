@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -22,6 +22,7 @@ import org.scalatestplus.scalacheck.Checkers
 
 import akka.util.ByteString.{ ByteString1, ByteString1C, ByteStrings }
 
+@nowarn("cat=lint-infer-any")
 class ByteStringSpec extends AnyWordSpec with Matchers with Checkers {
 
   implicit val betterGeneratorDrivenConfig: PropertyCheckConfiguration =
@@ -829,7 +830,7 @@ class ByteStringSpec extends AnyWordSpec with Matchers with Checkers {
           a.asByteBuffers.forall(_.isReadOnly)
         }
         check { (a: ByteString) =>
-          import akka.util.ccompat.JavaConverters._
+          import scala.jdk.CollectionConverters._
           a.asByteBuffers.zip(a.getByteBuffers().asScala).forall(x => x._1 == x._2)
         }
       }
@@ -989,16 +990,6 @@ class ByteStringSpec extends AnyWordSpec with Matchers with Checkers {
     "serialize correctly" when {
       // note that this is serialization with Java serialization
       // real serialization is in akka-remote
-      if (util.Properties.versionNumberString.startsWith("2.12")) {
-        "parsing regular ByteString1C as compat" in {
-          val oldSerd =
-            "aced000573720021616b6b612e7574696c2e42797465537472696e672442797465537472696e67314336e9eed0afcfe4a40200015b000562797465737400025b427872001b616b6b612e7574696c2e436f6d7061637442797465537472696e67fa2925150f93468f0200007870757200025b42acf317f8060854e002000078700000000a74657374737472696e67"
-          val bs = ByteString("teststring", "UTF8")
-          val str = hexFromSer(bs)
-
-          str should be(oldSerd)
-        }
-      }
 
       "given all types of ByteString" in {
         check { (bs: ByteString) =>

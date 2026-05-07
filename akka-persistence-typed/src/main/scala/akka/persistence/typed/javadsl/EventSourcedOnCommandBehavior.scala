@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.javadsl
@@ -19,10 +19,10 @@ import akka.persistence.typed.internal
 import akka.persistence.typed.internal.EffectImpl
 import akka.persistence.typed.internal.NoOpSnapshotAdapter
 import akka.persistence.typed.scaladsl
-import akka.util.unused
 
 import java.util.Collections
 import java.util.Optional
+import scala.annotation.nowarn
 
 /**
  * Event sourced behavior for projects built with Java 17 or newer where message handling can be done
@@ -67,6 +67,9 @@ abstract class EventSourcedOnCommandBehavior[Command, Event, State](
    * This object will be passed into this behaviors handlers, until a new state replaces it.
    *
    * Also known as "zero state" or "neutral state".
+   *
+   * If the state is mutable, it is important that this creates a new State instance each time it is called
+   * to ensure that the state is recreated in case of failure restarts.
    */
   protected def emptyState: State
 
@@ -145,7 +148,7 @@ abstract class EventSourcedOnCommandBehavior[Command, Event, State](
    * @return `true` if snapshot should be saved at the given `state`, `event` and `sequenceNr` when the event has
    *         been successfully persisted
    */
-  def shouldSnapshot(@unused state: State, @unused event: Event, @unused sequenceNr: Long): Boolean = false
+  def shouldSnapshot(state: State, event: Event, sequenceNr: Long): Boolean = false
 
   /**
    * Can be used to delete events after `shouldSnapshot`.
@@ -167,21 +170,21 @@ abstract class EventSourcedOnCommandBehavior[Command, Event, State](
    * Override to change the strategy for recovery of snapshots and events.
    * By default, snapshots and events are recovered.
    */
-  def recovery: Recovery = Recovery.default
+  def recovery: Recovery = Recovery.enabled
 
   /**
    * Return tags to store for the given event, the tags can then be used in persistence query.
    *
    * If [[tagsFor(Event, State)]] is overriden this method is ignored.
    */
-  def tagsFor(@unused event: Event): java.util.Set[String] = Collections.emptySet()
+  def tagsFor(@nowarn("msg=never used") event: Event): java.util.Set[String] = Collections.emptySet()
 
   /**
    * Return tags to store for the given event and state, the tags can then be used in persistence query.
    * The state passed to the tagger allows for toggling a tag with one event but keep all events after it tagged
    * based on a property or the type of the state.
    */
-  def tagsFor(@unused state: State, event: Event): java.util.Set[String] =
+  def tagsFor(@nowarn("msg=never used") state: State, event: Event): java.util.Set[String] =
     tagsFor(event)
 
   /**
@@ -205,20 +208,19 @@ abstract class EventSourcedOnCommandBehavior[Command, Event, State](
   /**
    * INTERNAL API
    */
-  @InternalApi private[akka] final def createEventSourcedBehavior()
-      : scaladsl.EventSourcedBehavior[Command, Event, State] = {
+  @InternalApi private[akka] def createEventSourcedBehavior(): scaladsl.EventSourcedBehavior[Command, Event, State] = {
     val snapshotWhen: (State, Event, Long) => Boolean = (state, event, seqNr) => shouldSnapshot(state, event, seqNr)
 
     val tagger: (State, Event) => Set[String] = { (state, event) =>
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       val tags = tagsFor(state, event)
       if (tags.isEmpty) Set.empty
       else tags.asScala.toSet
     }
 
-    val behavior = new internal.EventSourcedBehaviorImpl[Command, Event, State](
+    var behavior = new internal.EventSourcedBehaviorImpl[Command, Event, State](
       persistenceId,
-      emptyState,
+      () => emptyState,
       (state, cmd) => this.onCommand(state, cmd).asInstanceOf[EffectImpl[Event, State]],
       this.onEvent,
       getClass)
@@ -232,22 +234,11 @@ abstract class EventSourcedOnCommandBehavior[Command, Event, State](
       .withRecovery(recovery.asScala)
 
     val handler = signalHandler()
-    val behaviorWithSignalHandler =
-      if (handler.isEmpty) behavior
-      else behavior.receiveSignal(handler.handler)
+    if (!handler.isEmpty) behavior = behavior.receiveSignal(handler.handler)
+    onPersistFailure.ifPresent(opf => behavior = behavior.onPersistFailure(opf))
+    stashCapacity.ifPresent(sc => behavior = behavior.withStashCapacity(sc))
 
-    val withSignalHandler =
-      if (onPersistFailure.isPresent)
-        behaviorWithSignalHandler.onPersistFailure(onPersistFailure.get)
-      else
-        behaviorWithSignalHandler
-
-    if (stashCapacity.isPresent) {
-      withSignalHandler.withStashCapacity(stashCapacity.get)
-    } else {
-      withSignalHandler
-    }
-
+    behavior
   }
 
   /**

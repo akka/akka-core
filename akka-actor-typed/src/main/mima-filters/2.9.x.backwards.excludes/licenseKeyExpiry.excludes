@@ -1,0 +1,3 @@
+# DoNotInherit
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.actor.typed.ActorSystem.licenseKeyExpiry")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.actor.typed.ActorSystem.getLicenseKeyExpiry")

@@ -1,0 +1,2 @@
+# Added protected abstract method in class intended to be @DoNotInherit/@InternalApi
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.cluster.sharding.ShardCoordinator.unstashGetShardHomeRequestsForShard")

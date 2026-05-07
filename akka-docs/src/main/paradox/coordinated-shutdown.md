@@ -101,6 +101,11 @@ via `kill SIGTERM` signal (`SIGINT` ctrl-c doesn't work). This behavior can be d
 akka.coordinated-shutdown.run-by-jvm-shutdown-hook=off
 ```
 
+Note that if running in Kubernetes, a SIGKILL will be issued after a set amount of time has passed
+since SIGTERM.  By default this time is 30 seconds ([`terminationGracePeriodSeconds`](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution)):
+it may be worth adjusting the Kubernetes configuration or the phase timeouts to make `CoordinatedShutdown`
+more likely to completely execute before SIGKILL is received.
+
 If you have application specific JVM shutdown hooks it's recommended that you register them via the
 `CoordinatedShutdown` so that they are running before Akka internal shutdown hooks, e.g.
 those shutting down Akka Remoting (Artery).

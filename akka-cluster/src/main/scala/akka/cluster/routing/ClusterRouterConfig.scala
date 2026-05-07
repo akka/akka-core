@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.routing
@@ -31,7 +31,7 @@ import akka.routing.RouterConfig
 import akka.routing.RouterPoolActor
 import akka.routing.RoutingLogic
 import akka.util.HashCode
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object ClusterRouterGroupSettings {
 

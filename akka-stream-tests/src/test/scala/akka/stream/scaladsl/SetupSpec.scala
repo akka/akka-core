@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -9,7 +9,7 @@ import scala.annotation.nowarn
 import akka.NotUsed
 import akka.stream.testkit.StreamSpec
 
-@nowarn("msg=deprecated")
+@nowarn("msg=deprecated") @nowarn("cat=lint-infer-any")
 class SetupSpec extends StreamSpec {
 
   "Source.setup" should {

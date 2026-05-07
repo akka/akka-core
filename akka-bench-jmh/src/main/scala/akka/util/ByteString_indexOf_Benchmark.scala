@@ -1,13 +1,15 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
 
 import java.util.concurrent.TimeUnit
-
 import org.openjdk.jmh.annotations._
 
+import scala.annotation.nowarn
+
+@nowarn("cat=lint-infer-any")
 @State(Scope.Benchmark)
 @Measurement(timeUnit = TimeUnit.MILLISECONDS)
 class ByteString_indexOf_Benchmark {

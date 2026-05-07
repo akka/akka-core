@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -283,7 +283,7 @@ class RetryFlowSpec extends StreamSpec("""
       val timesBetweenRetries = retriedAt
         .sliding(2)
         .collect {
-          case before :: after :: Nil => before - after
+          case before :: foundAfter :: Nil => before - foundAfter
         }
         .toIndexedSeq
 

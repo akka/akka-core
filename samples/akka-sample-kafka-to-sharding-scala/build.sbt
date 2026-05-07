@@ -1,38 +1,33 @@
-val AkkaVersion = "2.9.4"
-val AlpakkaKafkaVersion = "6.0.0"
-val AkkaManagementVersion = "1.5.2"
-val AkkaHttpVersion = "10.6.3"
+val AkkaVersion = "2.10.17"
+val AlpakkaKafkaVersion = "7.0.1"
+val AkkaManagementVersion = "1.6.0"
+val AkkaHttpVersion = "10.7.0"
 val EmbeddedKafkaVersion = "3.7.0"
-val LogbackVersion = "1.2.11"
+val LogbackVersion = "1.5.18"
 
-resolvers += "Akka library repository".at("https://repo.akka.io/maven")
-
-ThisBuild / scalaVersion := "2.13.14"
+ThisBuild / scalaVersion := "2.13.15"
 ThisBuild / organization := "com.lightbend.akka.samples"
-ThisBuild / scalacOptions in Compile ++= Seq(
+ThisBuild / Compile / scalacOptions ++= Seq(
   "-deprecation",
   "-feature",
   "-unchecked",
   "-Xlog-reflective-calls",
   "-Xlint")
-ThisBuild / javacOptions in Compile ++= Seq("-Xlint:unchecked", "-Xlint:deprecation")
-ThisBuild / testOptions in Test += Tests.Argument("-oDF")
+ThisBuild / Test / javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:deprecation")
+ThisBuild / Test / testOptions += Tests.Argument("-oDF")
 ThisBuild / licenses := Seq(("CC0", url("http://creativecommons.org/publicdomain/zero/1.0")))
-ThisBuild / resolvers ++= Seq(
-  "Akka Snapshots".at("https://repo.akka.io/snapshots"),
-  Resolver.bintrayRepo("akka", "snapshots"))
 
-run / fork := true
+ThisBuild / run / fork := true
+ThisBuild / run / connectInput := true
 
 lazy val `akka-sample-kafka-to-sharding` = project.in(file(".")).aggregate(producer, processor, client)
 
 lazy val kafka = project
   .in(file("kafka"))
   .settings(
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "ch.qos.logback" % "logback-classic" % LogbackVersion,
-        "org.slf4j" % "log4j-over-slf4j" % "1.7.26",
+        "org.slf4j" % "log4j-over-slf4j" % "2.0.17",
         "io.github.embeddedkafka" %% "embedded-kafka" % EmbeddedKafkaVersion),
     cancelable := false)
 
@@ -40,16 +35,16 @@ lazy val client = project
   .in(file("client"))
   .enablePlugins(AkkaGrpcPlugin)
   .settings(
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
-        "com.typesafe.akka" %% "akka-discovery" % AkkaVersion))
+        "com.typesafe.akka" %% "akka-pki" % AkkaVersion,
+        "com.typesafe.akka" %% "akka-discovery" % AkkaVersion,
+        "ch.qos.logback" % "logback-classic" % LogbackVersion))
 
 lazy val processor = project
   .in(file("processor"))
   .enablePlugins(AkkaGrpcPlugin)
   .settings(
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-stream-kafka" % AlpakkaKafkaVersion,
         "com.typesafe.akka" %% "akka-stream-kafka-cluster-sharding" % AlpakkaKafkaVersion,
@@ -67,11 +62,10 @@ lazy val processor = project
 
 lazy val producer = project
   .in(file("producer"))
-  .settings(PB.targets in Compile := Seq(scalapb.gen() -> (sourceManaged in Compile).value))
+  .settings(Compile / PB.targets := Seq(scalapb.gen() -> (Compile / sourceManaged).value))
   .settings(
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-stream-kafka" % AlpakkaKafkaVersion,
         "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
-        "ch.qos.logback" % "logback-classic" % "1.2.11",
+        "ch.qos.logback" % "logback-classic" % LogbackVersion,
         "org.scalatest" %% "scalatest" % "3.2.18" % Test))

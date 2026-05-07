@@ -1,6 +1,6 @@
 # Overview of Akka libraries and modules
 
-Before delving into some best practices for writing actors, it will be helpful to preview the most commonly used Akka libraries. This will help you start thinking about the functionality you want to use in your system. All core Akka functionality is source available. Lightbend sponsors Akka development but can also help you with [commercial offerings ](https://www.lightbend.com/lightbend-subscription) such as training, consulting, support, and [Enterprise capabilities](https://www.lightbend.com/why-lightbend#enterprise-capabilities) &#8212; a comprehensive set of tools for managing Akka systems.
+Before delving into some best practices for writing actors, it will be helpful to preview the most commonly used Akka libraries. This will help you start thinking about the functionality you want to use in your system. All core Akka functionality is source available. Lightbend sponsors Akka development but can also help you with [commercial offerings ](https://akka.io) such as training, consulting, support, and [Enterprise capabilities](https://akka.io/pricing/do-it-yourself) &#8212; a comprehensive set of tools for managing Akka systems.
 
 The following capabilities are included with Akka and are introduced later on this page:
 
@@ -16,19 +16,15 @@ The following capabilities are included with Akka and are introduced later on th
 * @ref:[Alpakka](#alpakka)
 * @ref:[HTTP](#http)
 * @ref:[gRPC](#grpc)
-* [Other Akka modules](https://doc.akka.io/docs/akka/current/common/other-modules.html)
+* [Other Akka modules](https://doc.akka.io/libraries/akka-core/current/common/other-modules.html)
 
 This page does not list all available modules, but overviews the main functionality and gives you an idea of the level of sophistication you can reach when you start building systems on top of Akka.
 
 ### Actor library
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -60,13 +56,9 @@ Challenges that actors solve include the following:
 
 ### Remoting
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -96,13 +88,9 @@ Challenges Remoting solves include the following:
 
 ### Cluster
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -132,13 +120,9 @@ Challenges the Cluster module solves include the following:
 
 ### Cluster Sharding
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -164,13 +148,9 @@ Challenges that Sharding solves include the following:
 
 ### Cluster Singleton
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -198,13 +178,9 @@ The Singleton module can be used to solve these challenges:
 
 ### Persistence
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -233,13 +209,9 @@ Persistence tackles the following challenges:
 
 ### Projections
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -263,13 +235,9 @@ Challenges Projections solve include the following:
 
 ### Distributed Data
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -295,13 +263,9 @@ Distributed Data is intended to solve the following challenges:
 
 ### Streams
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -332,11 +296,11 @@ Streams solve the following challenges:
 
 ### Alpakka
 
-[Alpakka](https://doc.akka.io/docs/alpakka/current/) is a separate module from Akka.
+[Alpakka](https://doc.akka.io/libraries/alpakka/current/) is a separate module from Akka.
 
 Alpakka is collection of modules built upon the Streams API to provide Reactive Stream connector
 implementations for a variety of technologies common in the cloud and infrastructure landscape.  
-See the [Alpakka overview page](https://doc.akka.io/docs/alpakka/current/overview.html) for more details on the API and the implementation modules available.
+See the [Alpakka overview page](https://doc.akka.io/libraries/alpakka/current/overview.html) for more details on the API and the implementation modules available.
 
 Alpakka helps solve the following challenges:
 
@@ -345,7 +309,7 @@ Alpakka helps solve the following challenges:
 
 ### HTTP
 
-[Akka HTTP](https://doc.akka.io/docs/akka-http/current/) is a separate module from Akka.
+[Akka HTTP](https://doc.akka.io/libraries/akka-http/current/) is a separate module from Akka.
 
 The de facto standard for providing APIs remotely, internal or external, is [HTTP](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol). Akka provides a library to construct or consume such HTTP services by giving a set of tools to create HTTP services (and serve them) and a client that can be
 used to consume other services. These tools are particularly suited to streaming in and out a large set of data or real-time events by leveraging the underlying model of Akka Streams.
@@ -358,7 +322,7 @@ Some of the challenges that HTTP tackles:
 
 ### gRPC
 
-[Akka gRPC](https://doc.akka.io/docs/akka-grpc/current/index.html) is a separate module from Akka.
+[Akka gRPC](https://doc.akka.io/libraries/akka-grpc/current/index.html) is a separate module from Akka.
 
 This library provides an implementation of gRPC that integrates nicely with the @ref:[HTTP](#http) and @ref:[Streams](#streams) modules.  It is capable of generating both client and server-side artifacts from protobuf service definitions, which can then be exposed using Akka HTTP, and handled using Streams.
 

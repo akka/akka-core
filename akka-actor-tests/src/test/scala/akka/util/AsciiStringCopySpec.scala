@@ -1,28 +1,42 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
-import java.nio.charset.StandardCharsets
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
+import java.lang.reflect.InaccessibleObjectException
+import java.nio.charset.StandardCharsets
 
 class AsciiStringCopySpec extends AnyWordSpec with Matchers {
 
   "The copyUSAsciiStrToBytes optimization" must {
 
-    "select working algorithm" in {
-      if (Unsafe.isIsJavaVersion9Plus) {
+    if (JavaVersion.majorVersion <= 25) {
+      "select working algorithm when stdlib internals accessible through sun.misc.Unsafe" in {
         Unsafe.testUSAsciiStrToBytesAlgorithm0("abc") should ===(true)
         // this is known to fail with JDK 11 on ARM32 (Raspberry Pi),
         // and therefore algorithm 0 is selected on that architecture
         Unsafe.testUSAsciiStrToBytesAlgorithm1("abc") should ===(true)
         Unsafe.testUSAsciiStrToBytesAlgorithm2("abc") should ===(false)
-      } else {
+      }
+    } else if (canAccessStringInternals) {
+      "select working algorithm when stdlib internals accessible through VarHandle" in {
+        // Note: requires --add-opens=java.base/java.lang=ALL-UNNAMED on JDK 26 and later
+        Unsafe.testUSAsciiStrToBytesAlgorithm0("abc") should ===(true)
+        // this is known to fail with JDK 11 on ARM32 (Raspberry Pi),
+        // and therefore algorithm 0 is selected on that architecture
+        Unsafe.testUSAsciiStrToBytesAlgorithm1("abc") should ===(true)
+        Unsafe.testUSAsciiStrToBytesAlgorithm2("abc") should ===(false)
+      }
+    } else {
+      "select working algorithm when stdlib internals not accessible" in {
+        // if the JVM does not allow us stdlib internals access, public API is the way to  go
         Unsafe.testUSAsciiStrToBytesAlgorithm0("abc") should ===(true)
         Unsafe.testUSAsciiStrToBytesAlgorithm1("abc") should ===(false)
-        Unsafe.testUSAsciiStrToBytesAlgorithm2("abc") should ===(true)
+        Unsafe.testUSAsciiStrToBytesAlgorithm2("abc") should ===(false)
       }
     }
 
@@ -40,6 +54,15 @@ class AsciiStringCopySpec extends AnyWordSpec with Matchers {
       Unsafe.fastHash("abcdefghijklmnopqrstuvxyz")
     }
 
+  }
+
+  private def canAccessStringInternals: Boolean = {
+    try {
+      classOf[String].getDeclaredField("value").setAccessible(true)
+      true
+    } catch {
+      case _: InaccessibleObjectException => false
+    }
   }
 
 }

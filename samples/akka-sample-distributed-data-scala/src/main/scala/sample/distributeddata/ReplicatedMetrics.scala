@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2009-2024 Lightbend Inc. <https://www.lightbend.com>
- */
 package sample.distributeddata
 
 import java.lang.management.ManagementFactory
@@ -11,7 +8,6 @@ import akka.actor.Address
 import akka.actor.typed.Behavior
 import akka.actor.typed.eventstream.EventStream
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.cluster.ClusterEvent
 import akka.cluster.ddata.LWWMap
 import akka.cluster.ddata.LWWMapKey
@@ -102,7 +98,7 @@ object ReplicatedMetrics {
                 case (key, value) if maxHeap.contains(key) =>
                   (key -> (value.toDouble / maxHeap(key)) * 100.0)
               })
-              context.log.debug2("Node {} observed:\n{}", node, usedHeapPercent)
+              context.log.debug("Node {} observed:\n{}", node, usedHeapPercent)
               context.system.eventStream ! EventStream.Publish(usedHeapPercent)
               Behaviors.same
 

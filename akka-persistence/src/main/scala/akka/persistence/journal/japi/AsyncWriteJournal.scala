@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal.japi
@@ -11,13 +11,11 @@ import scala.util.Try
 
 import akka.persistence._
 import akka.persistence.journal.{ AsyncWriteJournal => SAsyncWriteJournal }
-import akka.util.ccompat._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Java API: abstract journal, optimized for asynchronous, non-blocking writes.
  */
-@ccompatUsedUntil213
 abstract class AsyncWriteJournal extends AsyncRecovery with SAsyncWriteJournal with AsyncWritePlugin {
   import SAsyncWriteJournal.successUnit
   import context.dispatcher

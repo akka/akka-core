@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.testkit
@@ -7,6 +7,8 @@ package docs.testkit
 import language.postfixOps
 import scala.util.Success
 import akka.testkit._
+
+import scala.annotation.nowarn
 
 //#imports-test-probe
 import scala.concurrent.duration._
@@ -19,6 +21,7 @@ import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+@nowarn("msg=never used") // sample snippets
 object TestKitDocSpec {
   case object Say42
   case object Unknown
@@ -100,6 +103,7 @@ object TestKitDocSpec {
   }
 }
 
+@nowarn("msg=never used") // sample snippets
 class TestKitDocSpec extends AkkaSpec with DefaultTimeout with ImplicitSender {
   import TestKitDocSpec._
 

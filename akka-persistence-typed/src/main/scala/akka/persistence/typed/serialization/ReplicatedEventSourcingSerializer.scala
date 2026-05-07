@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.serialization
@@ -27,7 +27,7 @@ import akka.remote.ByteStringUtils
 import akka.remote.ContainerFormats.Payload
 import akka.remote.serialization.WrappedPayloadSupport
 import akka.serialization.{ BaseSerializer, SerializerWithStringManifest }
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * INTERNAL API
@@ -159,12 +159,15 @@ import akka.util.ccompat.JavaConverters._
 
     impl.replicatedMetaData match {
       case Some(m) =>
-        builder.setMetadata(
+        val replicatedPublishedEventMetaDataBuilder =
           ReplicatedEventSourcing.ReplicatedPublishedEventMetaData
             .newBuilder()
             .setReplicaId(m.replicaId.id)
             .setVersionVector(versionVectorToProto(m.version))
-            .build())
+        m.metadata.foreach { metadataPayload =>
+          replicatedPublishedEventMetaDataBuilder.setMetadata(wrappedSupport.payloadBuilder(metadataPayload))
+        }
+        builder.setMetadata(replicatedPublishedEventMetaDataBuilder)
       case None =>
     }
 
@@ -184,11 +187,18 @@ import akka.util.ccompat.JavaConverters._
       wrappedSupport.deserializePayload(p.getPayload),
       p.getTimestamp,
       if (p.hasMetadata) {
-        val protoMeta = p.getMetadata
+        val protoReplicatedMeta = p.getMetadata
+        val meta =
+          if (protoReplicatedMeta.hasMetadata)
+            Some(wrappedSupport.deserializePayload(protoReplicatedMeta.getMetadata))
+          else
+            None
+
         Some(
           new ReplicatedPublishedEventMetaData(
-            ReplicaId(protoMeta.getReplicaId),
-            versionVectorFromProto(protoMeta.getVersionVector)))
+            ReplicaId(protoReplicatedMeta.getReplicaId),
+            versionVectorFromProto(protoReplicatedMeta.getVersionVector),
+            meta))
       } else None,
       if (!p.hasReplyTo) None
       else Some(resolver.resolveActorRef(p.getReplyTo)))

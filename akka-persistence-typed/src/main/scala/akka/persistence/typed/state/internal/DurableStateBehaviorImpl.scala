@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.internal
@@ -24,7 +24,6 @@ import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.SnapshotAdapter
 import akka.persistence.typed.state.scaladsl._
 import akka.persistence.typed.telemetry.DurableStateBehaviorInstrumentationProvider
-import akka.util.unused
 
 @InternalApi
 private[akka] object DurableStateBehaviorImpl {
@@ -45,7 +44,7 @@ private[akka] object DurableStateBehaviorImpl {
 @InternalApi
 private[akka] final case class DurableStateBehaviorImpl[Command, State](
     persistenceId: PersistenceId,
-    emptyState: State,
+    emptyState: () => State,
     commandHandler: DurableStateBehavior.CommandHandler[Command, State],
     loggerClass: Class[_],
     durableStateStorePluginId: Option[String] = None,
@@ -102,7 +101,7 @@ private[akka] final case class DurableStateBehaviorImpl[Command, State](
           val durableStateSetup = new BehaviorSetup(
             ctx.asInstanceOf[ActorContext[InternalProtocol]],
             persistenceId,
-            emptyState,
+            emptyState(),
             commandHandler,
             actualSignalHandler,
             tag,
@@ -155,7 +154,7 @@ private[akka] final case class DurableStateBehaviorImpl[Command, State](
 
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  private[akka] def initialize(@unused context: ActorContext[_]): Unit = ()
+  private[akka] def initialize(context: ActorContext[_]): Unit = ()
 
   override def receiveSignal(handler: PartialFunction[(State, Signal), Unit]): DurableStateBehavior[Command, State] =
     copy(signalHandler = handler)

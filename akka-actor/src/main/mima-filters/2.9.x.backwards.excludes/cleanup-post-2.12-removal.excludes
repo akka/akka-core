@@ -1,0 +1,6 @@
+# #32515 cleanup for post 2.12 removal
+ProblemFilters.exclude[MissingClassProblem]("akka.dispatch.ExecutionContexts$sameThreadExecutionContext$")
+ProblemFilters.exclude[MissingClassProblem]("akka.dispatch.internal.SameThreadExecutionContext")
+ProblemFilters.exclude[MissingClassProblem]("akka.dispatch.internal.SameThreadExecutionContext$")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.dispatch.ExecutionContexts.parasitic")
+ProblemFilters.exclude[MissingFieldProblem]("akka.dispatch.ExecutionContexts.sameThreadExecutionContext")

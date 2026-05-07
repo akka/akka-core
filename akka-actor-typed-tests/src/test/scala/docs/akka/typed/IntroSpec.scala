@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.typed
 
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.{ ActorRef, ActorSystem, Behavior }
 import akka.NotUsed
 import akka.Done
@@ -134,7 +133,7 @@ object IntroSpec {
             handle ! PostMessage("Hello World!")
             Behaviors.same
           case MessagePosted(screenName, message) =>
-            context.log.info2("message has been posted by '{}': {}", screenName, message)
+            context.log.info("message has been posted by '{}': {}", screenName, message)
             Behaviors.stopped
         }
       }

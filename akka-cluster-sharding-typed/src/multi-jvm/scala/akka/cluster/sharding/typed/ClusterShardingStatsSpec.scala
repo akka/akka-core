@@ -1,8 +1,10 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
+
+import java.util.stream.Collectors
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -94,6 +96,14 @@ abstract class ClusterShardingStatsSpec
       stats.regions.size shouldEqual 3 // 3 nodes
       stats.regions.values.flatMap(_.stats.values).sum shouldEqual 2 // number of entities
       stats.regions.values.forall(_.failed.isEmpty) shouldBe true
+
+      // javadsl
+      stats
+        .getRegions()
+        .values()
+        .stream()
+        .flatMap(_.getStats().values().stream())
+        .collect(Collectors.summingInt((i: Integer) => i.intValue())) shouldEqual 2
 
       enterBarrier("done")
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -24,7 +24,6 @@ import akka.cluster.typed.PrepareForFullClusterShutdown
 import akka.remote.testkit.MultiNodeConfig
 import akka.remote.testkit.MultiNodeSpec
 import akka.serialization.jackson.CborSerializable
-import akka.util.ccompat._
 
 object ClusterShardingPreparingForShutdownSpec extends MultiNodeConfig {
   val first = role("first")
@@ -61,7 +60,6 @@ class ClusterShardingPreparingForShutdownMultiJvmNode1 extends ClusterShardingPr
 class ClusterShardingPreparingForShutdownMultiJvmNode2 extends ClusterShardingPreparingForShutdownSpec
 class ClusterShardingPreparingForShutdownMultiJvmNode3 extends ClusterShardingPreparingForShutdownSpec
 
-@ccompatUsedUntil213
 class ClusterShardingPreparingForShutdownSpec
     extends MultiNodeSpec(ClusterShardingPreparingForShutdownSpec)
     with MultiNodeTypedClusterSpec {

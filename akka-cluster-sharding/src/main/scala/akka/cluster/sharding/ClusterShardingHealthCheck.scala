@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -8,6 +8,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -19,9 +20,8 @@ import akka.cluster.MemberStatus
 import akka.event.Logging
 import akka.pattern.AskTimeoutException
 import akka.pattern.ask
-import akka.util.JavaDurationConverters._
 import akka.util.Timeout
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Internal API
@@ -31,8 +31,8 @@ private[akka] object ClusterShardingHealthCheckSettings {
   def apply(config: Config): ClusterShardingHealthCheckSettings =
     new ClusterShardingHealthCheckSettings(
       config.getStringList("names").asScala.toSet,
-      config.getDuration("timeout").asScala,
-      config.getDuration("disabled-after").asScala)
+      config.getDuration("timeout").toScala,
+      config.getDuration("disabled-after").toScala)
 }
 
 final class ClusterShardingHealthCheckSettings(

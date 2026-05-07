@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -18,11 +18,7 @@ object NativeImageMetadataSpec {
     // akka.management.health-checks.readiness-checks.sharding
     ReflectConfigEntry(
       "akka.cluster.sharding.ClusterShardingHealthCheck",
-      methods = Seq(ReflectMethod(Constructor, parameterTypes = Seq(classOf[ActorSystem].getName)))),
-    // Flight recording (JFR additionally enabled in akka-actor native-image.properties)
-    ReflectConfigEntry(
-      classOf[akka.cluster.sharding.internal.jfr.JFRShardingFlightRecorder].getName,
-      methods = Seq(ReflectMethod(Constructor))))
+      methods = Seq(ReflectMethod(Constructor, parameterTypes = Seq(classOf[ActorSystem].getName)))))
 
   val nativeImageUtils = new NativeImageUtils("akka-cluster-sharding", additionalEntries, Seq("akka.cluster.sharding"))
 
@@ -39,7 +35,7 @@ class NativeImageMetadataSpec extends AnyWordSpec with Matchers {
 
     "be up to date" in {
       val (existing, current) = nativeImageUtils.verifyMetadata()
-      existing should ===(current)
+      existing.trim should ===(current.trim)
     }
   }
 

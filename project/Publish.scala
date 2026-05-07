@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -35,14 +35,14 @@ object Publish extends AutoPlugin {
   override lazy val projectSettings = Seq(
       publishRsyncHost := "akkarepo@gustav.akka.io",
       organizationName := "Lightbend Inc.",
-      organizationHomepage := Some(url("https://www.lightbend.com")),
+      organizationHomepage := Some(url("https://akka.io")),
       startYear := Some(2009),
       developers := List(
           Developer(
             "akka-contributors",
             "Akka Contributors",
             "akka.official@gmail.com",
-            url("https://github.com/akka/akka/graphs/contributors"))),
+            url("https://github.com/akka/akka-core/graphs/contributors"))),
       publishMavenStyle := true,
       pomIncludeRepository := { x =>
         false

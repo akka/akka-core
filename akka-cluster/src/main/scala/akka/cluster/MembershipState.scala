@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
 import java.util.concurrent.ThreadLocalRandom
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.SortedSet
 import scala.collection.immutable
@@ -14,12 +15,10 @@ import scala.util.Random
 import akka.annotation.InternalApi
 import akka.cluster.ClusterSettings.DataCenter
 import akka.cluster.MemberStatus._
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
  */
-@ccompatUsedUntil213
 @InternalApi private[akka] object MembershipState {
   import MemberStatus._
   private val leaderMemberStatus = Set[MemberStatus](Up, Leaving, PreparingForShutdown, ReadyForShutdown)
@@ -34,6 +33,7 @@ import akka.util.ccompat._
 /**
  * INTERNAL API
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 @InternalApi private[akka] final case class MembershipState(
     latestGossip: Gossip,
     selfUniqueAddress: UniqueAddress,
@@ -205,11 +205,11 @@ import akka.util.ccompat._
   }
 
   /**
-   * The Exiting change is gossiped to the two oldest nodes for quick dissemination to potential Singleton nodes
+   * The Leaving and Exiting change is gossiped to the two oldest nodes for quick dissemination to potential Singleton nodes
    */
-  def gossipTargetsForExitingMembers(exitingMembers: Set[Member]): Set[Member] = {
-    if (exitingMembers.nonEmpty) {
-      val roles = exitingMembers.flatten(_.roles).filterNot(_.startsWith(ClusterSettings.DcRolePrefix))
+  def gossipTargetsForLeavingAndExitingMembers(changedMembers: Set[Member]): Set[Member] = {
+    if (changedMembers.nonEmpty) {
+      val roles = changedMembers.flatten(_.roles).filterNot(_.startsWith(ClusterSettings.DcRolePrefix))
       val membersSortedByAge = latestGossip.members.toList.filter(_.dataCenter == selfDc).sorted(Member.ageOrdering)
       var targets = Set.empty[Member]
       if (membersSortedByAge.nonEmpty) {
@@ -235,6 +235,7 @@ import akka.util.ccompat._
 /**
  * INTERNAL API
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 @InternalApi private[akka] class GossipTargetSelector(
     reduceGossipDifferentViewProbability: Double,
     crossDcGossipProbability: Double) {

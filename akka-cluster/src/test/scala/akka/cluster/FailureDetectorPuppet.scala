@@ -1,8 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
+
+import scala.annotation.nowarn
 
 import java.util.concurrent.atomic.AtomicReference
 
@@ -10,12 +12,12 @@ import com.typesafe.config.Config
 
 import akka.event.EventStream
 import akka.remote.FailureDetector
-import akka.util.unused
 
 /**
  * User controllable "puppet" failure detector.
  */
-class FailureDetectorPuppet(@unused config: Config, @unused ev: EventStream) extends FailureDetector {
+class FailureDetectorPuppet(@nowarn("msg=never used") config: Config, @nowarn("msg=never used") ev: EventStream)
+    extends FailureDetector {
 
   sealed trait Status
   object Up extends Status

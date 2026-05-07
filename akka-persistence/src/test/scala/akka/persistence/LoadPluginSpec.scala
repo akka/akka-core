@@ -1,15 +1,16 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
+
+import scala.annotation.nowarn
 
 import com.typesafe.config.Config
 
 import akka.actor.Actor
 import akka.persistence.journal.inmem.InmemJournal
 import akka.testkit.ImplicitSender
-import akka.util.unused
 
 object LoadPluginSpec {
 
@@ -24,7 +25,8 @@ object LoadPluginSpec {
   object JournalWithStartupNotification {
     final case class Started(configPath: String)
   }
-  class JournalWithStartupNotification(@unused config: Config, configPath: String) extends InmemJournal {
+  class JournalWithStartupNotification(@nowarn("msg=never used") config: Config, configPath: String)
+      extends InmemJournal {
     context.system.eventStream.publish(JournalWithStartupNotification.Started(configPath))
   }
 }

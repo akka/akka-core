@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
@@ -209,7 +209,7 @@ private[akka] object ActorMaterializerHelper {
 abstract class ActorMaterializer extends Materializer with MaterializerLoggingProvider {
 
   @deprecated(
-    "Use attributes to access settings from stages, see https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use attributes to access settings from stages, see https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     "2.6.0")
   def settings: ActorMaterializerSettings
 
@@ -287,10 +287,10 @@ object ActorMaterializerSettings {
    * Create [[ActorMaterializerSettings]] from individual settings (Scala).
    *
    * Prefer using either config for defaults or attributes for per-stream config.
-   * See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html"
+   * See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html"
    */
   @deprecated(
-    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     "2.6.0")
   def apply(
       initialInputBufferSize: Int,
@@ -326,10 +326,10 @@ object ActorMaterializerSettings {
    * Create [[ActorMaterializerSettings]] from the settings of an [[akka.actor.ActorSystem]] (Scala).
    *
    * Prefer using either config for defaults or attributes for per-stream config.
-   * See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html"
+   * See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html"
    */
   @deprecated(
-    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     "2.6.0")
   def apply(system: ActorSystem): ActorMaterializerSettings =
     apply(system.settings.config.getConfig("akka.stream.materializer"))
@@ -338,10 +338,10 @@ object ActorMaterializerSettings {
    * Create [[ActorMaterializerSettings]] from a Config subsection (Scala).
    *
    * Prefer using either config for defaults or attributes for per-stream config.
-   * See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html"
+   * See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html"
    */
   @deprecated(
-    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     "2.6.0")
   def apply(config: Config): ActorMaterializerSettings =
     new ActorMaterializerSettings(
@@ -364,10 +364,10 @@ object ActorMaterializerSettings {
    * Create [[ActorMaterializerSettings]] from individual settings (Java).
    *
    * Prefer using either config for defaults or attributes for per-stream config.
-   * See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html"
+   * See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html"
    */
   @deprecated(
-    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     "2.6.0")
   def create(
       initialInputBufferSize: Int,
@@ -403,7 +403,7 @@ object ActorMaterializerSettings {
    * Create [[ActorMaterializerSettings]] from the settings of an [[akka.actor.ActorSystem]] (Java).
    */
   @deprecated(
-    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     "2.6.0")
   def create(system: ActorSystem): ActorMaterializerSettings =
     apply(system)
@@ -412,10 +412,10 @@ object ActorMaterializerSettings {
    * Create [[ActorMaterializerSettings]] from a Config subsection (Java).
    *
    * Prefer using either config for defaults or attributes for per-stream config.
-   * See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html"
+   * See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html"
    */
   @deprecated(
-    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use config or attributes to configure the materializer. See migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     "2.6.0")
   def create(config: Config): ActorMaterializerSettings =
     apply(config)
@@ -507,7 +507,7 @@ final class ActorMaterializerSettings @InternalApi private (
   private val asAttributes =
     Attributes(
       Attributes.InputBuffer(initialInputBufferSize, maxInputBufferSize) ::
-      Attributes.CancellationStrategy.Default :: // FIXME: make configurable, see https://github.com/akka/akka/issues/28000
+      Attributes.CancellationStrategy.Default :: // FIXME: make configurable, see https://github.com/akka/akka-core/issues/28000
       Attributes.NestedMaterializationCancellationPolicy.Default ::
       ActorAttributes.Dispatcher(dispatcher) ::
       ActorAttributes.SupervisionStrategy(supervisionDecider) ::

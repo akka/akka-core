@@ -2,13 +2,9 @@
 
 ## Dependency
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Akka Streams, add the module to your project:
 
@@ -27,8 +23,8 @@ This is a collection of patterns to demonstrate various usage of the Akka Stream
 problems in the format of "recipes". The purpose of this page is to give inspiration and ideas how to approach
 various small tasks involving streams. The recipes in this page can be used directly as-is, but they are most powerful as
 starting points: customization of the code snippets is warmly encouraged. The recipes can be extended or can provide a 
-basis for the implementation of other [patterns](https://doc.akka.io/docs/alpakka/current/patterns.html) involving
-[Alpakka](https://doc.akka.io/docs/alpakka/current).
+basis for the implementation of other [patterns](https://doc.akka.io/libraries/alpakka/current/patterns.html) involving
+[Alpakka](https://doc.akka.io/libraries/alpakka/current).
 
 This part also serves as supplementary material for the main body of documentation. It is a good idea to have this page
 open while reading the manual and look for examples demonstrating various streaming concepts

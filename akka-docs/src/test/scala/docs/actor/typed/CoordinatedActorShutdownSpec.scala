@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor.typed
@@ -11,6 +11,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.util.Timeout
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -76,6 +77,7 @@ class CoordinatedActorShutdownSpec {
     //#coordinated-shutdown-jvm-hook
 
     // don't run this
+    @nowarn("msg=never used") // sample snippets
     def dummy(): Unit = {
       //#coordinated-shutdown-run
       // shut down with `ActorSystemTerminateReason`

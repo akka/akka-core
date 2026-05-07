@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -44,7 +44,7 @@ class ReplicatedShardingDirectReplicationSpec extends ScalaTestWithActorTestKit 
         1L,
         "event",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(ReplicaId("ReplicaA"), VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(ReplicaId("ReplicaA"), VersionVector.empty, None)),
         None)
       system.eventStream ! EventStream.Publish(event)
 
@@ -71,7 +71,7 @@ class ReplicatedShardingDirectReplicationSpec extends ScalaTestWithActorTestKit 
         1L,
         "event",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(ReplicaId("ReplicaA"), VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(ReplicaId("ReplicaA"), VersionVector.empty, None)),
         None)
       system.eventStream ! EventStream.Publish(event)
 
@@ -96,7 +96,7 @@ class ReplicatedShardingDirectReplicationSpec extends ScalaTestWithActorTestKit 
         1L,
         "event",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(ReplicaId("ReplicaA"), VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(ReplicaId("ReplicaA"), VersionVector.empty, None)),
         None)
       system.eventStream ! EventStream.Publish(event)
 

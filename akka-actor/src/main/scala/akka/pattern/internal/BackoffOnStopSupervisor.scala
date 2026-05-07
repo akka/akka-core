@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern.internal
@@ -9,6 +9,7 @@ import scala.concurrent.duration.FiniteDuration
 import akka.actor.{ Actor, ActorLogging, OneForOneStrategy, Props, SupervisorStrategy, Terminated }
 import akka.actor.SupervisorStrategy.{ Directive, Escalate }
 import akka.annotation.InternalApi
+import akka.pattern.RetrySupport
 import akka.pattern.{
   BackoffReset,
   BackoffSupervisor,
@@ -71,7 +72,8 @@ import akka.pattern.{
         val nextRestartCount = restartCount + 1
 
         if (maxNrOfRetries == -1 || nextRestartCount <= maxNrOfRetries) {
-          val restartDelay = calculateDelay(restartCount, minBackoff, maxBackoff, randomFactor)
+          val restartDelay =
+            RetrySupport.calculateExponentialBackoffDelay(restartCount, minBackoff, maxBackoff, randomFactor)
           context.system.scheduler.scheduleOnce(restartDelay, self, StartChild)
           restartCount = nextRestartCount
         } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
@@ -7,6 +7,7 @@ package akka.stream
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
 
@@ -60,8 +61,7 @@ object KillSwitches {
         case Some(status) => onSwitch(status)
         case _            =>
           // callback.invoke is a simple actor send, so it is fine to run on the invoking thread
-          terminationSignal.onComplete(getAsyncCallback[Try[Done]](onSwitch).invoke)(
-            akka.dispatch.ExecutionContexts.parasitic)
+          terminationSignal.onComplete(getAsyncCallback[Try[Done]](onSwitch).invoke)(ExecutionContext.parasitic)
       }
     }
 

@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.persistence.query
 
 import akka.persistence.query.{ EventEnvelope, Offset }
 import akka.serialization.SerializationExtension
-import akka.stream.{ ActorAttributes, ActorMaterializer, Attributes, Outlet, SourceShape }
+import akka.stream.{ ActorAttributes, Attributes, Outlet, SourceShape }
 import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler, TimerGraphStageLogic }
 
 import scala.concurrent.duration.FiniteDuration

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.delivery
@@ -7,6 +7,7 @@ package akka.actor.typed.delivery
 import java.time.{ Duration => JavaDuration }
 
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -23,7 +24,6 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.annotation.ApiMayChange
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
-import akka.util.JavaDurationConverters._
 
 /**
  * `ConsumerController` and [[ProducerController]] or [[WorkPullingProducerController]] are used
@@ -203,8 +203,8 @@ object ConsumerController {
     def apply(config: Config): Settings = {
       new Settings(
         flowControlWindow = config.getInt("flow-control-window"),
-        resendIntervalMin = config.getDuration("resend-interval-min").asScala,
-        resendIntervalMax = config.getDuration("resend-interval-max").asScala,
+        resendIntervalMin = config.getDuration("resend-interval-min").toScala,
+        resendIntervalMax = config.getDuration("resend-interval-max").toScala,
         onlyFlowControl = config.getBoolean("only-flow-control"))
     }
 
@@ -248,19 +248,19 @@ object ConsumerController {
      * Java API
      */
     def withResendIntervalMin(newResendIntervalMin: JavaDuration): Settings =
-      copy(resendIntervalMin = newResendIntervalMin.asScala)
+      copy(resendIntervalMin = newResendIntervalMin.toScala)
 
     /**
      * Java API
      */
     def withResendIntervalMax(newResendIntervalMax: JavaDuration): Settings =
-      copy(resendIntervalMax = newResendIntervalMax.asScala)
+      copy(resendIntervalMax = newResendIntervalMax.toScala)
 
     /**
      * Java API
      */
     def getResendIntervalMax(): JavaDuration =
-      resendIntervalMax.asJava
+      resendIntervalMax.toJava
 
     def withOnlyFlowControl(newOnlyFlowControl: Boolean): Settings =
       copy(onlyFlowControl = newOnlyFlowControl)

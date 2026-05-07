@@ -25,7 +25,7 @@ It is not possible to specify a `perPartition` greater or equal to `parallelism`
 
 ## Examples
 
-Imagine you are consuming messages from a broker (for instance, Apache Kafka via [Alpakka Kafka](https://doc.akka.io/docs/alpakka-kafka/current/)). This broker's semantics are such that acknowledging one message implies an acknowledgement of all messages delivered before that message; this in turn means that in order to ensure at-least-once processing of messages from the broker, they must be acknowledged in the order they were received. These messages represent business events produced by some other service(s) and each concerns a particular entity. You may process messages for different entities simultaneously, but can only process one message for a given entity at a time:
+Imagine you are consuming messages from a broker (for instance, Apache Kafka via [Alpakka Kafka](https://doc.akka.io/libraries/alpakka-kafka/current/)). This broker's semantics are such that acknowledging one message implies an acknowledgement of all messages delivered before that message; this in turn means that in order to ensure at-least-once processing of messages from the broker, they must be acknowledged in the order they were received. These messages represent business events produced by some other service(s) and each concerns a particular entity. You may process messages for different entities simultaneously, but can only process one message for a given entity at a time:
 
 Scala
 :   @@snip [MapAsyncs.scala](/akka-docs/src/test/scala/docs/stream/operators/sourceorflow/MapAsyncs.scala) { #mapAsyncPartitioned }

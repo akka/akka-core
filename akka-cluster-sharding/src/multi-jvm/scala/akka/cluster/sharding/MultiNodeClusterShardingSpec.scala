@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -19,9 +19,7 @@ import akka.persistence.journal.leveldb.{ SharedLeveldbJournal, SharedLeveldbSto
 import akka.remote.testconductor.RoleName
 import akka.serialization.jackson.CborSerializable
 import akka.testkit.{ TestActors, TestProbe }
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object MultiNodeClusterShardingSpec {
 
   object EntityActor {

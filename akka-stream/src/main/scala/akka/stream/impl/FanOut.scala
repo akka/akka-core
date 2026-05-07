@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -13,7 +13,6 @@ import akka.annotation.{ DoNotInherit, InternalApi }
 import akka.stream.AbruptTerminationException
 import akka.stream.ActorAttributes
 import akka.stream.Attributes
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -192,7 +191,7 @@ import akka.util.unused
       enqueue(id, elem)
     }
 
-    def onCancel(@unused output: Int): Unit = ()
+    def onCancel(output: Int): Unit = ()
 
     def demandAvailableFor(id: Int) = new TransferState {
       override def isCompleted: Boolean = cancelled(id) || completed(id) || errored(id)

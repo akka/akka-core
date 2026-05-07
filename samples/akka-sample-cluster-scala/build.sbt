@@ -1,10 +1,11 @@
 import com.typesafe.sbt.SbtMultiJvm.multiJvmSettings
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
-val AkkaVersion = "2.9.4"
+val AkkaVersion = "2.10.17"
 val AkkaDiagnosticsVersion = "2.1.1"
-val LogbackClassicVersion = "1.2.11"
+val LogbackClassicVersion = "1.5.18"
 val ScalaTestVersion = "3.2.19"
+
 
 lazy val `akka-sample-cluster-scala` = project
   .in(file("."))
@@ -15,7 +16,6 @@ lazy val `akka-sample-cluster-scala` = project
     Compile / scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
     Compile / javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:deprecation"),
     run / javaOptions ++= Seq("-Xms128m", "-Xmx1024m", "-Djava.library.path=./target/native"),
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
         "com.typesafe.akka" %% "akka-cluster-typed" % AkkaVersion,

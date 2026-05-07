@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.testkit.javadsl
@@ -10,12 +10,12 @@ import java.util.function.{ Supplier, Function => JFunction }
 import scala.annotation.nowarn
 import scala.annotation.varargs
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 
 import akka.actor._
 import akka.annotation.InternalApi
 import akka.testkit.{ TestActor, TestDuration, TestProbe }
-import akka.util.JavaDurationConverters._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Java API: Test kit for testing actors. Inheriting from this class enables
@@ -39,7 +39,6 @@ import akka.util.ccompat.JavaConverters._
  *
  *
  */
-@nowarn("msg=deprecated")
 class TestKit(system: ActorSystem) {
 
   /**
@@ -71,7 +70,7 @@ class TestKit(system: ActorSystem) {
   /**
    * Java timeouts (durations) during tests with the configured
    */
-  def dilated(duration: java.time.Duration): java.time.Duration = duration.asScala.dilated(getSystem).asJava
+  def dilated(duration: java.time.Duration): java.time.Duration = duration.toScala.dilated(getSystem).toJava
 
   /**
    * Query queue status.
@@ -138,20 +137,20 @@ class TestKit(system: ActorSystem) {
    * block or throw an [[AssertionError]] if no `within` block surrounds this
    * call.
    */
-  def getRemaining: java.time.Duration = tp.remaining.asJava
+  def getRemaining: java.time.Duration = tp.remaining.toJava
 
   /**
    * Obtain time remaining for execution of the innermost enclosing `within`
    * block or missing that it returns the given duration.
    */
-  def getRemainingOr(duration: java.time.Duration): java.time.Duration = tp.remainingOr(duration.asScala).asJava
+  def getRemainingOr(duration: java.time.Duration): java.time.Duration = tp.remainingOr(duration.toScala).toJava
 
   /**
    * Obtain time remaining for execution of the innermost enclosing `within`
    * block or missing that it returns the properly dilated default for this
    * case from settings (key "akka.test.single-expect-default").
    */
-  def getRemainingOrDefault: java.time.Duration = tp.remainingOrDefault.asJava
+  def getRemainingOrDefault: java.time.Duration = tp.remainingOrDefault.toJava
 
   /**
    * Execute code block while bounding its execution time between `min` and
@@ -172,7 +171,7 @@ class TestKit(system: ActorSystem) {
    * }}}
    */
   def within[T](min: java.time.Duration, max: java.time.Duration, f: Supplier[T]): T =
-    tp.within(min.asScala, max.asScala)(f.get)
+    tp.within(min.toScala, max.toScala)(f.get)
 
   /**
    * Execute code block while bounding its execution time between `min` and
@@ -192,7 +191,7 @@ class TestKit(system: ActorSystem) {
    *
    * }}}
    */
-  def within[T](max: java.time.Duration, f: Supplier[T]): T = tp.within(max.asScala)(f.get)
+  def within[T](max: java.time.Duration, f: Supplier[T]): T = tp.within(max.toScala)(f.get)
 
   /**
    * Await until the given condition evaluates to `true` or the timeout
@@ -216,7 +215,7 @@ class TestKit(system: ActorSystem) {
    * Note that the timeout is scaled using Duration.dilated,
    * which uses the configuration entry "akka.test.timefactor".
    */
-  def awaitCond(max: java.time.Duration, p: Supplier[Boolean]): Unit = tp.awaitCond(p.get, max.asScala)
+  def awaitCond(max: java.time.Duration, p: Supplier[Boolean]): Unit = tp.awaitCond(p.get, max.toScala)
 
   /**
    * Await until the given condition evaluates to `true` or the timeout
@@ -229,7 +228,7 @@ class TestKit(system: ActorSystem) {
    * which uses the configuration entry "akka.test.timefactor".
    */
   def awaitCond(max: java.time.Duration, interval: java.time.Duration, p: Supplier[Boolean]): Unit =
-    tp.awaitCond(p.get, max.asScala, interval.asScala)
+    tp.awaitCond(p.get, max.toScala, interval.toScala)
 
   /**
    * Await until the given condition evaluates to `true` or the timeout
@@ -242,7 +241,7 @@ class TestKit(system: ActorSystem) {
    * which uses the configuration entry "akka.test.timefactor".
    */
   def awaitCond(max: java.time.Duration, interval: java.time.Duration, message: String, p: Supplier[Boolean]): Unit =
-    tp.awaitCond(p.get, max.asScala, interval.asScala, message)
+    tp.awaitCond(p.get, max.toScala, interval.toScala, message)
 
   /**
    * Evaluate the given assert every `interval` until it does not throw an exception and return the
@@ -270,7 +269,7 @@ class TestKit(system: ActorSystem) {
    * Note that the timeout is scaled using Duration.dilated,
    * which uses the configuration entry "akka.test.timefactor".
    */
-  def awaitAssert[A](max: java.time.Duration, a: Supplier[A]): A = tp.awaitAssert(a.get, max.asScala)
+  def awaitAssert[A](max: java.time.Duration, a: Supplier[A]): A = tp.awaitAssert(a.get, max.toScala)
 
   /**
    * Evaluate the given assert every `interval` until it does not throw an exception.
@@ -282,7 +281,7 @@ class TestKit(system: ActorSystem) {
    * @return an arbitrary value that would be returned from awaitAssert if successful, if not interested in such value you can return null.
    */
   def awaitAssert[A](max: java.time.Duration, interval: java.time.Duration, a: Supplier[A]): A =
-    tp.awaitAssert(a.get, max.asScala, interval.asScala)
+    tp.awaitAssert(a.get, max.toScala, interval.toScala)
 
   /**
    * Same as `expectMsg(remainingOrDefault, obj)`, but correctly treating the timeFactor.
@@ -296,7 +295,7 @@ class TestKit(system: ActorSystem) {
    *
    * @return the received object
    */
-  def expectMsgEquals[T](max: java.time.Duration, obj: T): T = tp.expectMsg(max.asScala, obj)
+  def expectMsgEquals[T](max: java.time.Duration, obj: T): T = tp.expectMsg(max.toScala, obj)
 
   /**
    * Same as `expectMsg(remainingOrDefault, obj)`, but correctly treating the timeFactor.
@@ -308,7 +307,7 @@ class TestKit(system: ActorSystem) {
    * given object. Wait time is bounded by the given duration, with an
    * AssertionFailure being thrown in case of timeout.
    */
-  def expectMsg[T](max: java.time.Duration, obj: T): T = tp.expectMsg(max.asScala, obj)
+  def expectMsg[T](max: java.time.Duration, obj: T): T = tp.expectMsg(max.toScala, obj)
 
   /**
    * Receive one message from the test actor and assert that it equals the
@@ -357,7 +356,7 @@ class TestKit(system: ActorSystem) {
    * processing.
    */
   @nowarn("msg=deprecated")
-  def expectMsgPF[T](max: java.time.Duration, hint: String, f: JFunction[Any, T]): T = expectMsgPF(max.asScala, hint, f)
+  def expectMsgPF[T](max: java.time.Duration, hint: String, f: JFunction[Any, T]): T = expectMsgPF(max.toScala, hint, f)
 
   /**
    * Same as `expectMsgClass(remainingOrDefault, c)`, but correctly treating the timeFactor.
@@ -369,7 +368,7 @@ class TestKit(system: ActorSystem) {
    * the given class. Wait time is bounded by the given duration, with an
    * AssertionFailure being thrown in case of timeout.
    */
-  def expectMsgClass[T](max: java.time.Duration, c: Class[T]): T = tp.expectMsgClass(max.asScala, c)
+  def expectMsgClass[T](max: java.time.Duration, c: Class[T]): T = tp.expectMsgClass(max.toScala, c)
 
   /**
    * Same as `expectMsgAnyOf(remainingOrDefault, obj...)`, but correctly treating the timeFactor.
@@ -383,7 +382,7 @@ class TestKit(system: ActorSystem) {
    * AssertionFailure being thrown in case of timeout.
    */
   @varargs
-  def expectMsgAnyOfWithin[T](max: java.time.Duration, objs: T*): T = tp.expectMsgAnyOf(max.asScala, objs: _*)
+  def expectMsgAnyOfWithin[T](max: java.time.Duration, objs: T*): T = tp.expectMsgAnyOf(max.toScala, objs: _*)
 
   /**
    * Same as `expectMsgAllOf(remainingOrDefault, obj...)`, but correctly treating the timeFactor.
@@ -400,7 +399,7 @@ class TestKit(system: ActorSystem) {
    */
   @varargs
   def expectMsgAllOfWithin[T](max: java.time.Duration, objs: T*): JList[T] =
-    tp.expectMsgAllOf(max.asScala, objs: _*).asJava
+    tp.expectMsgAllOf(max.toScala, objs: _*).asJava
 
   /**
    * Same as `expectMsgAnyClassOf(remainingOrDefault, obj...)`, but correctly treating the timeFactor.
@@ -415,7 +414,7 @@ class TestKit(system: ActorSystem) {
    */
   @varargs
   def expectMsgAnyClassOf[T](max: java.time.Duration, objs: Class[_]*): T =
-    tp.expectMsgAnyClassOf(max.asScala, objs: _*).asInstanceOf[T]
+    tp.expectMsgAnyClassOf(max.toScala, objs: _*).asInstanceOf[T]
 
   /**
    * Assert that no message is received. Waits for the default period configured as
@@ -428,7 +427,7 @@ class TestKit(system: ActorSystem) {
    * Assert that no message is received for the specified time.
    * Supplied value is not dilated.
    */
-  def expectNoMessage(max: java.time.Duration): Unit = tp.expectNoMessage(max.asScala)
+  def expectNoMessage(max: java.time.Duration): Unit = tp.expectNoMessage(max.toScala)
 
   /**
    * Receive one message from the test actor and assert that it is the Terminated message of the given ActorRef.
@@ -451,7 +450,7 @@ class TestKit(system: ActorSystem) {
    * @param target the actor ref expected to be Terminated
    * @return the received Terminated message
    */
-  def expectTerminated(max: java.time.Duration, target: ActorRef): Terminated = tp.expectTerminated(target, max.asScala)
+  def expectTerminated(max: java.time.Duration, target: ActorRef): Terminated = tp.expectTerminated(target, max.toScala)
 
   /**
    * Receive one message from the test actor and assert that it is the Terminated message of the given ActorRef.
@@ -488,7 +487,7 @@ class TestKit(system: ActorSystem) {
    */
   @nowarn("msg=deprecated")
   def fishForMessage(max: java.time.Duration, hint: String, f: JFunction[Any, Boolean]): Any =
-    fishForMessage(max.asScala, hint, f)
+    fishForMessage(max.toScala, hint, f)
 
   /**
    * Same as `fishForMessage`, but gets a different partial function and returns properly typed message.
@@ -506,7 +505,7 @@ class TestKit(system: ActorSystem) {
    */
   @nowarn("msg=deprecated")
   def fishForSpecificMessage[T](max: java.time.Duration, hint: String, f: JFunction[Any, T]): T =
-    fishForSpecificMessage(max.asScala, hint, f)
+    fishForSpecificMessage(max.toScala, hint, f)
 
   /**
    * Same as `receiveN(n, remaining)` but correctly taking into account
@@ -518,7 +517,7 @@ class TestKit(system: ActorSystem) {
   /**
    * Receive N messages in a row before the given deadline.
    */
-  def receiveN(n: Int, max: java.time.Duration): JList[AnyRef] = tp.receiveN(n, max.asScala).asJava
+  def receiveN(n: Int, max: java.time.Duration): JList[AnyRef] = tp.receiveN(n, max.toScala).asJava
 
   /**
    * Receive one message from the internal queue of the TestActor. If the given
@@ -526,7 +525,7 @@ class TestKit(system: ActorSystem) {
    *
    * This method does NOT automatically scale its Duration parameter!
    */
-  def receiveOne(max: java.time.Duration): AnyRef = tp.receiveOne(max.asScala)
+  def receiveOne(max: java.time.Duration): AnyRef = tp.receiveOne(max.toScala)
 
   /**
    * Receive a series of messages until one does not match the given partial
@@ -545,7 +544,7 @@ class TestKit(system: ActorSystem) {
       idle: java.time.Duration,
       messages: Int,
       f: JFunction[AnyRef, T]): JList[T] = {
-    tp.receiveWhile(max.asScala, idle.asScala, messages)(new CachingPartialFunction[AnyRef, T] {
+    tp.receiveWhile(max.toScala, idle.toScala, messages)(new CachingPartialFunction[AnyRef, T] {
         @throws(classOf[Exception])
         override def `match`(x: AnyRef): T = f.apply(x)
       })
@@ -553,7 +552,7 @@ class TestKit(system: ActorSystem) {
   }
 
   def receiveWhile[T](max: java.time.Duration, f: JFunction[AnyRef, T]): JList[T] = {
-    tp.receiveWhile(max = max.asScala)(new CachingPartialFunction[AnyRef, T] {
+    tp.receiveWhile(max = max.toScala)(new CachingPartialFunction[AnyRef, T] {
         @throws(classOf[Exception])
         override def `match`(x: AnyRef): T = f.apply(x)
       })

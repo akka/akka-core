@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-	<!-- Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com> -->
+	<!-- Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com> -->
 
 	<variable name="pattern" value="%date{ISO8601} %-5level %logger %marker - %msg MDC: {%mdc}%n" />
 

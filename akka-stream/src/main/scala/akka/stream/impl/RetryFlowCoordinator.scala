@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -7,7 +7,7 @@ package akka.stream.impl
 import scala.concurrent.duration._
 
 import akka.annotation.InternalApi
-import akka.pattern.BackoffSupervisor
+import akka.pattern.RetrySupport
 import akka.stream.{ Attributes, BidiShape, Inlet, Outlet }
 import akka.stream.SubscriptionWithCancelException.NonFailureCancellation
 import akka.stream.stage._
@@ -133,7 +133,7 @@ import akka.util.OptionVal
     }
 
     private def planRetry(element: In): Unit = {
-      val delay = BackoffSupervisor.calculateDelay(retryNo, minBackoff, maxBackoff, randomFactor)
+      val delay = RetrySupport.calculateExponentialBackoffDelay(retryNo, minBackoff, maxBackoff, randomFactor)
       elementInProgress = OptionVal.Some(element)
       retryNo += 1
       pull(internalIn)

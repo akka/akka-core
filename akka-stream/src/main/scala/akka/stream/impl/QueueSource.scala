@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Future, Promise }
 
 import akka.Done
@@ -40,7 +41,8 @@ import akka.stream.stage._
   val out = Outlet[T]("queueSource.out")
   override val shape: SourceShape[T] = SourceShape.of(out)
 
-  override def createLogicAndMaterializedValue(inheritedAttributes: Attributes) = {
+  override def createLogicAndMaterializedValue(
+      inheritedAttributes: Attributes): (GraphStageLogic, SourceQueueWithComplete[T]) = {
     val completion = Promise[Done]()
     val name = inheritedAttributes.nameOrDefault(getClass.toString)
 
@@ -216,7 +218,7 @@ import akka.stream.stage._
           .onComplete {
             case scala.util.Success(_) =>
             case scala.util.Failure(e) => p.tryFailure(e)
-          }(akka.dispatch.ExecutionContexts.parasitic)
+          }(ExecutionContext.parasitic)
         p.future
       }
       override def complete(): Unit = callback.invoke(Completion)

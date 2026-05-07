@@ -1,20 +1,19 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.stage
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
-
 import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration.FiniteDuration
-
 import akka.{ Done, NotUsed }
 import akka.actor._
+import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
 import akka.japi.function.{ Effect, Procedure }
 import akka.stream._
@@ -25,7 +24,10 @@ import akka.stream.impl.fusing.{ GraphInterpreter, GraphStageModule, SubSink, Su
 import akka.stream.scaladsl.GenericGraphWithChangedAttributes
 import akka.stream.stage.ConcurrentAsyncCallbackState.{ NoPendingEvents, State }
 import akka.util.OptionVal
-import akka.util.unused
+
+import java.util.concurrent.CompletionStage
+
+import scala.jdk.FutureConverters.FutureOps
 
 /**
  * Scala API: A GraphStage represents a reusable graph stream processing operator.
@@ -49,7 +51,8 @@ abstract class GraphStageWithMaterializedValue[+S <: Shape, +M] extends Graph[S,
   @InternalApi
   private[akka] def createLogicAndMaterializedValue(
       inheritedAttributes: Attributes,
-      @unused materializer: Materializer): (GraphStageLogic, M) = createLogicAndMaterializedValue(inheritedAttributes)
+      @nowarn("msg=never used") materializer: Materializer): (GraphStageLogic, M) =
+    createLogicAndMaterializedValue(inheritedAttributes)
 
   @throws(classOf[Exception])
   def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, M)
@@ -820,7 +823,7 @@ abstract class GraphStageLogic private[stream] (val inCount: Int, val outCount: 
       andThen: Procedure[java.util.List[T]],
       onClose: Procedure[java.util.List[T]]): Unit = {
     //FIXME `onClose` is a poor name for `onComplete` rename this at the earliest possible opportunity
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     readN(in, n)(seq => andThen(seq.asJava), seq => onClose(seq.asJava))
   }
 
@@ -930,7 +933,7 @@ abstract class GraphStageLogic private[stream] (val inCount: Int, val outCount: 
    * signal.
    */
   final protected def emitMultiple[T](out: Outlet[T], elems: java.util.Iterator[T]): Unit = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     emitMultiple(out, elems.asScala, DoNothing)
   }
 
@@ -943,7 +946,7 @@ abstract class GraphStageLogic private[stream] (val inCount: Int, val outCount: 
    * signal.
    */
   final protected def emitMultiple[T](out: Outlet[T], elems: java.util.Iterator[T], andThen: Effect): Unit = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     emitMultiple(out, elems.asScala, andThen.apply _)
   }
 
@@ -1240,6 +1243,9 @@ abstract class GraphStageLogic private[stream] (val inCount: Int, val outCount: 
     //external call
     override def invoke(event: T): Unit = invokeWithPromise(event, NoPromise)
 
+    // external call
+    override def invokeWithFeedbackCS(event: T): CompletionStage[Done] = invokeWithFeedback(event).asJava
+
     @tailrec
     private def invokeWithPromise(event: T, promise: Promise[Done]): Unit =
       get() match {
@@ -1360,14 +1366,13 @@ abstract class GraphStageLogic private[stream] (val inCount: Int, val outCount: 
 
   // Internal hooks to avoid reliance on user calling super in postStop
   /** INTERNAL API */
-  @nowarn("msg=JavaConverters in package collection is deprecated")
   protected[stream] def afterPostStop(): Unit = {
     if (_stageActor ne null) {
       _stageActor.stop()
       _stageActor = null
     }
 
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     // make sure any invokeWithFeedback after this fails fast
     // and fail current outstanding invokeWithFeedback promises
     val inProgress =
@@ -1603,7 +1608,10 @@ abstract class GraphStageLogic private[stream] (val inCount: Int, val outCount: 
  *
  * Typical use cases are exchanging messages between stream and substreams or invoking from external world sending
  * event to a stream
+ *
+ * Not for user extension
  */
+@DoNotInherit
 trait AsyncCallback[T] {
 
   /**
@@ -1616,7 +1624,7 @@ trait AsyncCallback[T] {
   def invoke(t: T): Unit
 
   /**
-   * Dispatch an asynchronous notification. This method is thread-safe and
+   * Scala API: Dispatch an asynchronous notification. This method is thread-safe and
    * may be invoked from external execution contexts.
    *
    * The method returns directly and the returned future is then completed once the event
@@ -1628,6 +1636,20 @@ trait AsyncCallback[T] {
    * to the invoking logic see [[AsyncCallback#invoke]]
    */
   def invokeWithFeedback(t: T): Future[Done]
+
+  /**
+   * Java API: Dispatch an asynchronous notification. This method is thread-safe and
+   * may be invoked from external execution contexts.
+   *
+   * The method returns directly and the returned future is then completed once the event
+   * has been handled by the operator, if the event triggers an exception from the handler the future
+   * is failed with that exception and finally if the operator was stopped before the event has been
+   * handled the future is failed with `StreamDetachedException`.
+   *
+   * The handling of the returned future incurs a slight overhead, so for cases where it does not matter
+   * to the invoking logic see [[AsyncCallback#invoke]]
+   */
+  def invokeWithFeedbackCS(t: T): CompletionStage[Done]
 }
 
 /**
@@ -1667,7 +1689,7 @@ abstract class TimerGraphStageLogic(_shape: Shape) extends GraphStageLogic(_shap
    * @param timerKey key of the scheduled timer
    */
   @throws(classOf[Exception])
-  protected def onTimer(@unused timerKey: Any): Unit = ()
+  protected def onTimer(timerKey: Any): Unit = ()
 
   // Internal hooks to avoid reliance on user calling super in postStop
   protected[stream] override def afterPostStop(): Unit = {
@@ -1698,8 +1720,8 @@ abstract class TimerGraphStageLogic(_shape: Shape) extends GraphStageLogic(_shap
    * adding the new timer.
    */
   final protected def scheduleOnce(timerKey: Any, delay: java.time.Duration): Unit = {
-    import akka.util.JavaDurationConverters._
-    scheduleOnce(timerKey, delay.asScala)
+    import scala.jdk.DurationConverters._
+    scheduleOnce(timerKey, delay.toScala)
   }
 
   /**
@@ -1732,8 +1754,8 @@ abstract class TimerGraphStageLogic(_shape: Shape) extends GraphStageLogic(_shap
       timerKey: Any,
       initialDelay: java.time.Duration,
       interval: java.time.Duration): Unit = {
-    import akka.util.JavaDurationConverters._
-    scheduleWithFixedDelay(timerKey, initialDelay.asScala, interval.asScala)
+    import scala.jdk.DurationConverters._
+    scheduleWithFixedDelay(timerKey, initialDelay.toScala, interval.toScala)
   }
 
   /**
@@ -1766,8 +1788,8 @@ abstract class TimerGraphStageLogic(_shape: Shape) extends GraphStageLogic(_shap
       timerKey: Any,
       initialDelay: java.time.Duration,
       interval: java.time.Duration): Unit = {
-    import akka.util.JavaDurationConverters._
-    scheduleAtFixedRate(timerKey, initialDelay.asScala, interval.asScala)
+    import scala.jdk.DurationConverters._
+    scheduleAtFixedRate(timerKey, initialDelay.toScala, interval.toScala)
   }
 
   /**
@@ -1800,8 +1822,8 @@ abstract class TimerGraphStageLogic(_shape: Shape) extends GraphStageLogic(_shap
       timerKey: Any,
       initialDelay: java.time.Duration,
       interval: java.time.Duration): Unit = {
-    import akka.util.JavaDurationConverters._
-    schedulePeriodicallyWithInitialDelay(timerKey, initialDelay.asScala, interval.asScala)
+    import scala.jdk.DurationConverters._
+    schedulePeriodicallyWithInitialDelay(timerKey, initialDelay.toScala, interval.toScala)
   }
 
   /**
@@ -1826,8 +1848,8 @@ abstract class TimerGraphStageLogic(_shape: Shape) extends GraphStageLogic(_shap
     "scheduleAtFixedRate, but scheduleWithFixedDelay is often preferred.",
     since = "2.6.0")
   final protected def schedulePeriodically(timerKey: Any, interval: java.time.Duration): Unit = {
-    import akka.util.JavaDurationConverters._
-    schedulePeriodically(timerKey, interval.asScala)
+    import scala.jdk.DurationConverters._
+    schedulePeriodically(timerKey, interval.toScala)
   }
 
   /**

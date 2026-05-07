@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.testconductor
@@ -17,7 +17,6 @@ import akka.remote.testkit.SetThrottle
 import akka.remote.testkit.TokenBucket
 import akka.remote.testkit.Unthrottled
 import akka.util.Timeout
-import akka.util.ccompat._
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandler.Sharable
@@ -27,7 +26,6 @@ import java.net.ConnectException
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicReference
-import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.Await
@@ -40,7 +38,6 @@ import scala.util.Try
 import scala.util.control.NoStackTrace
 import scala.util.control.NonFatal
 
-@ccompatUsedUntil213
 object Player {
 
   final class Waiter extends Actor with RequiresMessageQueue[UnboundedMessageQueueSemantics] {
@@ -347,7 +344,6 @@ private[akka] class PlayerHandler(
 
   tryConnectToController()
 
-  @nowarn("msg=deprecated")
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {
     log.error("channel {} exception {}", ctx.channel(), cause)
     cause match {

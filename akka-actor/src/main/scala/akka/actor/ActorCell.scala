@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -20,7 +20,6 @@ import akka.dispatch.{ Envelope, MessageDispatcher }
 import akka.dispatch.sysmsg._
 import akka.event.Logging.{ Debug, Error, LogEvent }
 import akka.japi.Procedure
-import akka.util.unused
 
 /**
  * The actor context - the view of the actor cell from the actor.
@@ -230,7 +229,7 @@ trait ActorContext extends ActorRefFactory with ClassicActorContextProvider {
   /**
    * ActorContexts shouldn't be Serializable
    */
-  final protected def writeObject(@unused o: ObjectOutputStream): Unit =
+  final protected def writeObject(o: ObjectOutputStream): Unit =
     throw new NotSerializableException("ActorContext is not serializable!")
 }
 
@@ -404,7 +403,6 @@ private[akka] object ActorCell {
  * INTERNAL API
  */
 @InternalApi
-@nowarn("msg=deprecated")
 private[akka] class ActorCell(
     val system: ActorSystemImpl,
     val self: InternalActorRef,

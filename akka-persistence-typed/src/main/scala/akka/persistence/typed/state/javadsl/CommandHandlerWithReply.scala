@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.javadsl
@@ -10,7 +10,7 @@ import java.util.function.BiFunction
 import java.util.function.Predicate
 import java.util.function.Supplier
 
-import scala.compat.java8.FunctionConverters._
+import scala.jdk.FunctionConverters._
 
 import akka.annotation.InternalApi
 import akka.persistence.typed.state.internal._
@@ -108,7 +108,7 @@ final class CommandHandlerWithReplyBuilder[Command, State]() {
    * @return A new, mutable, CommandHandlerWithReplyBuilderByState
    */
   def forNullState(): CommandHandlerWithReplyBuilderByState[Command, State, State] = {
-    val predicate: Predicate[State] = asJavaPredicate(s => Objects.isNull(s))
+    val predicate: Predicate[State] = enrichAsJavaPredicate[State](s => Objects.isNull(s)).asJava
     val builder = CommandHandlerWithReplyBuilderByState.builder[Command, State](predicate)
     builders = builder :: builders
     builder
@@ -124,7 +124,7 @@ final class CommandHandlerWithReplyBuilder[Command, State]() {
    * @return A new, mutable, CommandHandlerWithReplyBuilderByState
    */
   def forNonNullState(): CommandHandlerWithReplyBuilderByState[Command, State, State] = {
-    val predicate: Predicate[State] = asJavaPredicate(s => Objects.nonNull(s))
+    val predicate: Predicate[State] = enrichAsJavaPredicate[State](s => Objects.nonNull(s)).asJava
     val builder = CommandHandlerWithReplyBuilderByState.builder[Command, State](predicate)
     builders = builder :: builders
     builder
@@ -142,7 +142,7 @@ final class CommandHandlerWithReplyBuilder[Command, State]() {
    * @return A new, mutable, CommandHandlerWithReplyBuilderByState
    */
   def forAnyState(): CommandHandlerWithReplyBuilderByState[Command, State, State] = {
-    val predicate: Predicate[State] = asJavaPredicate(_ => true)
+    val predicate: Predicate[State] = enrichAsJavaPredicate[State](_ => true).asJava
     val builder = CommandHandlerWithReplyBuilderByState.builder[Command, State](predicate)
     builders = builder :: builders
     builder

@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
+import scala.annotation.nowarn
 import scala.collection.immutable.SortedSet
 
 import akka.actor.ActorSelection
@@ -18,6 +19,7 @@ import akka.testkit.ImplicitSender
 import akka.testkit.TestProbe
 import akka.util.Version
 
+@nowarn("msg=Use Akka Distributed Cluster")
 object CrossDcHeartbeatSenderSpec {
   class TestCrossDcHeartbeatSender(heartbeatProbe: TestProbe) extends CrossDcHeartbeatSender {
     // disable register for cluster events

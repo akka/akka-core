@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.{ Failure => ScalaFailure }
 import scala.util.{ Success => ScalaSuccess }
@@ -13,7 +14,6 @@ import scala.util.control.NoStackTrace
 import akka.Done
 import akka.actor.InvalidMessageException
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.pattern.StatusReply.ErrorMessage
 
 /**
@@ -199,5 +199,5 @@ object StatusReply {
             ScalaFailure(new IllegalArgumentException(s"Unexpected status reply success value: ${unexpected}"))
         }
       case fail @ ScalaFailure(_) => fail.asInstanceOf[Try[T]]
-    }(ExecutionContexts.parasitic)
+    }(ExecutionContext.parasitic)
 }

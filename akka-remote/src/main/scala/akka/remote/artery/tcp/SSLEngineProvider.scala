@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -10,9 +10,7 @@ import javax.net.ssl.SSLSession
 
 import akka.actor.ExtendedActorSystem
 import akka.actor.setup.Setup
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 trait SSLEngineProvider {
 
   def createServerSSLEngine(hostname: String, port: Int): SSLEngine

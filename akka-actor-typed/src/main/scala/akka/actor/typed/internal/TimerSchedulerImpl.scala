@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed
@@ -7,14 +7,14 @@ package internal
 
 import java.time.Duration
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 import org.slf4j.Logger
 
 import akka.actor.{ Cancellable, NotInfluenceReceiveTimeout }
-import akka.actor.typed.scaladsl.{ ActorContext, LoggerOps }
+import akka.actor.typed.scaladsl.ActorContext
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.util.OptionVal
 
 /**
@@ -55,27 +55,27 @@ import akka.util.OptionVal
 @InternalApi private[akka] trait TimerSchedulerCrossDslSupport[T]
     extends scaladsl.TimerScheduler[T]
     with javadsl.TimerScheduler[T] {
-  import akka.util.JavaDurationConverters._
+  import scala.jdk.DurationConverters._
 
   override final def startTimerWithFixedDelay(key: Any, msg: T, delay: Duration): Unit =
-    startTimerWithFixedDelay(key, msg, delay.asScala)
+    startTimerWithFixedDelay(key, msg, delay.toScala)
 
   override final def startTimerWithFixedDelay(key: Any, msg: T, initialDelay: Duration, delay: Duration): Unit =
-    startTimerWithFixedDelay(key, msg, initialDelay.asScala, delay.asScala)
+    startTimerWithFixedDelay(key, msg, initialDelay.toScala, delay.toScala)
 
   override final def startTimerAtFixedRate(key: Any, msg: T, interval: Duration): Unit =
-    startTimerAtFixedRate(key, msg, interval.asScala)
+    startTimerAtFixedRate(key, msg, interval.toScala)
 
   override final def startTimerAtFixedRate(key: Any, msg: T, initialDelay: Duration, interval: Duration): Unit =
-    startTimerAtFixedRate(key, msg, initialDelay.asScala, interval.asScala)
+    startTimerAtFixedRate(key, msg, initialDelay.toScala, interval.toScala)
 
   override final def startPeriodicTimer(key: Any, msg: T, interval: Duration): Unit = {
     //this follows the deprecation note in the super class
-    startTimerWithFixedDelay(key, msg, interval.asScala)
+    startTimerWithFixedDelay(key, msg, interval.toScala)
   }
 
   override final def startSingleTimer(key: Any, msg: T, delay: Duration): Unit =
-    startSingleTimer(key, msg, delay.asScala)
+    startSingleTimer(key, msg, delay.toScala)
 }
 
 /**
@@ -122,13 +122,14 @@ import akka.util.OptionVal
 
     val task = mode match {
       case SingleMode =>
-        ctx.system.scheduler.scheduleOnce(delay, () => ctx.self.unsafeUpcast ! timerMsg)(ExecutionContexts.parasitic)
+        ctx.system.scheduler
+          .scheduleOnce(delay, () => ctx.self.unsafeUpcast[Any] ! timerMsg)(ExecutionContext.parasitic)
       case m: FixedDelayMode =>
-        ctx.system.scheduler.scheduleWithFixedDelay(m.initialDelay, delay)(() => ctx.self.unsafeUpcast ! timerMsg)(
-          ExecutionContexts.parasitic)
+        ctx.system.scheduler.scheduleWithFixedDelay(m.initialDelay, delay)(() => ctx.self.unsafeUpcast[Any] ! timerMsg)(
+          ExecutionContext.parasitic)
       case m: FixedRateMode =>
-        ctx.system.scheduler.scheduleAtFixedRate(m.initialDelay, delay)(() => ctx.self.unsafeUpcast ! timerMsg)(
-          ExecutionContexts.parasitic)
+        ctx.system.scheduler.scheduleAtFixedRate(m.initialDelay, delay)(() => ctx.self.unsafeUpcast[Any] ! timerMsg)(
+          ExecutionContext.parasitic)
     }
 
     val nextTimer = Timer(key, msg, mode.repeat, nextGen, task)
@@ -176,7 +177,7 @@ import akka.util.OptionVal
         } else {
           // it was from an old timer that was enqueued in mailbox before canceled
           if (log.isDebugEnabled)
-            log.debugN(
+            log.debug(
               "Received timer [{}] from old generation [{}], expected generation [{}], discarding",
               timerMsg.key,
               timerMsg.generation,

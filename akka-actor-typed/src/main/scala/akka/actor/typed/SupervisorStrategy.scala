@@ -1,17 +1,17 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 
 import org.slf4j.event.Level
 
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
-import akka.util.JavaDurationConverters._
 
 object SupervisorStrategy {
 
@@ -107,7 +107,7 @@ object SupervisorStrategy {
       minBackoff: java.time.Duration,
       maxBackoff: java.time.Duration,
       randomFactor: Double): BackoffSupervisorStrategy =
-    restartWithBackoff(minBackoff.asScala, maxBackoff.asScala, randomFactor)
+    restartWithBackoff(minBackoff.toScala, maxBackoff.toScala, randomFactor)
 
   /**
    * INTERNAL API
@@ -158,7 +158,7 @@ object SupervisorStrategy {
       copy(maxNrOfRetries, withinTimeRange)
 
     override def withLimit(maxNrOfRetries: Int, withinTimeRange: java.time.Duration): RestartSupervisorStrategy =
-      copy(maxNrOfRetries, withinTimeRange.asScala)
+      copy(maxNrOfRetries, withinTimeRange.toScala)
 
     override def withStopChildren(enabled: Boolean): RestartSupervisorStrategy =
       copy(stopChildren = enabled)
@@ -195,9 +195,9 @@ object SupervisorStrategy {
       copy(resetBackoffAfter = timeout)
 
     override def withResetBackoffAfter(timeout: java.time.Duration): BackoffSupervisorStrategy =
-      withResetBackoffAfter(timeout.asScala)
+      withResetBackoffAfter(timeout.toScala)
 
-    override def getResetBackoffAfter: java.time.Duration = resetBackoffAfter.asJava
+    override def getResetBackoffAfter: java.time.Duration = resetBackoffAfter.toJava
 
     override def withMaxRestarts(maxRestarts: Int): BackoffSupervisorStrategy =
       copy(maxRestarts = maxRestarts)

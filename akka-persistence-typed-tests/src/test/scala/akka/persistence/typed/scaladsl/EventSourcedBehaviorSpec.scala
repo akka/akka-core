@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.scaladsl
@@ -7,6 +7,7 @@ package akka.persistence.typed.scaladsl
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -51,6 +52,7 @@ import akka.persistence.typed.SnapshotMetadata
 import akka.persistence.typed.SnapshotSelectionCriteria
 import akka.serialization.jackson.CborSerializable
 import akka.stream.scaladsl.Sink
+import akka.persistence.typed.SnapshotRecovered
 
 object EventSourcedBehaviorSpec {
 
@@ -104,6 +106,9 @@ object EventSourcedBehaviorSpec {
   case object IncrementAfterReceiveTimeout extends Command
   case object IncrementTwiceAndThenLog extends Command
   final case class IncrementWithConfirmation(replyTo: ActorRef[Done]) extends Command
+  final case class AsyncIncrement(when: Future[Done]) extends Command
+  final case class IncrementWithMetadata(meta: AnyRef) extends Command
+  final case class IncrementTwiceWithMetadata(meta: AnyRef) extends Command
   case object DoNothingAndThenLog extends Command
   case object EmptyEventsListAndThenLog extends Command
   final case class GetValue(replyTo: ActorRef[State]) extends Command
@@ -119,7 +124,7 @@ object EventSourcedBehaviorSpec {
   final case class Incremented(delta: Int) extends Event
   case object FilteredEvent extends Event
 
-  final case class State(value: Int, history: Vector[Int]) extends CborSerializable
+  final case class State(value: Int, history: Vector[Int], metadata: Option[String] = None) extends CborSerializable
 
   case object Tick
 
@@ -225,6 +230,10 @@ object EventSourcedBehaviorSpec {
           case DelayFinished =>
             Effect.persist(Incremented(10))
 
+          case AsyncIncrement(when) =>
+            implicit val ec: ExecutionContext = ctx.executionContext
+            Effect.async(when.map(_ => Effect.persist(Incremented(1))))
+
           case IncrementAfterReceiveTimeout =>
             ctx.setReceiveTimeout(10.millis, Timeout)
             Effect.none
@@ -242,6 +251,13 @@ object EventSourcedBehaviorSpec {
               .thenRun { _ =>
                 loggingActor ! secondLogging
               }
+
+          case IncrementWithMetadata(meta: Any) =>
+            Effect.persistWithMetadata(EventWithMetadata(Incremented(1), meta))
+
+          case IncrementTwiceWithMetadata(meta: Any) =>
+            Effect.persistWithMetadata(
+              List(EventWithMetadata(Incremented(1), meta), EventWithMetadata(Incremented(1), meta)))
 
           case EmptyEventsListAndThenLog =>
             Effect
@@ -281,13 +297,16 @@ object EventSourcedBehaviorSpec {
       eventHandler = (state, evt) =>
         evt match {
           case Incremented(delta) =>
+            val metadata = EventSourcedBehavior.currentMetadata[String](ctx)
             probe ! ((state, evt))
-            State(state.value + delta, state.history :+ state.value)
+            State(state.value + delta, state.history :+ state.value, metadata)
           case FilteredEvent =>
             state
 
         })
       .receiveSignal {
+        case (_, SnapshotRecovered(metadata)) =>
+          snapshotProbe ! Success(metadata)
         case (_, RecoveryCompleted) => ()
         case (_, SnapshotCompleted(metadata)) =>
           snapshotProbe ! Success(metadata)
@@ -446,6 +465,7 @@ class EventSourcedBehaviorSpec
           })
 
       val counterSetup = spawn(counterWithSnapshotSelectionCriteria(Recovery.default))
+      snapshotProbe.expectNoMessage(100.millis)
       counterSetup ! Increment
       counterSetup ! Increment
       counterSetup ! Increment
@@ -459,6 +479,7 @@ class EventSourcedBehaviorSpec
       val counterWithSnapshotSelectionCriteriaNone = spawn(
         counterWithSnapshotSelectionCriteria(Recovery.withSnapshotSelectionCriteria(SnapshotSelectionCriteria.none)))
       // replay all events, no snapshot
+      snapshotProbe.expectNoMessage(100.millis)
       eventProbe.expectMessage(State(0, Vector.empty) -> Incremented(1))
       eventProbe.expectMessage(State(1, Vector(0)) -> Incremented(1))
       eventProbe.expectMessage(State(2, Vector(0, 1)) -> Incremented(1))
@@ -469,10 +490,12 @@ class EventSourcedBehaviorSpec
 
       counterWithSnapshotSelectionCriteriaNone ! StopIt
       commandProbe.expectTerminated(counterWithSnapshotSelectionCriteriaNone)
+      snapshotProbe.receiveMessage()
 
       val counterWithSnapshotSelectionCriteriaLatest = spawn(
         counterWithSnapshotSelectionCriteria(Recovery.withSnapshotSelectionCriteria(SnapshotSelectionCriteria.latest)))
       // replay no events, only latest snapshot
+      snapshotProbe.receiveMessage().get.sequenceNr shouldBe 4
       eventProbe.expectNoMessage()
       counterWithSnapshotSelectionCriteriaLatest ! Increment
       counterWithSnapshotSelectionCriteriaLatest ! GetValue(commandProbe.ref)
@@ -554,6 +577,61 @@ class EventSourcedBehaviorSpec
       loggingProbe.expectMessage(firstLogging)
     }
 
+    "handle async effect" in {
+      val c = spawn(counter(nextPid()))
+      val probe = TestProbe[State]()
+      c ! AsyncIncrement(Future.successful(Done))
+      probe.expectNoMessage()
+      c ! GetValue(probe.ref)
+      probe.expectMessage(State(1, Vector(0)))
+    }
+
+    "handle async effect and stash incoming commands while waiting" in {
+      val c = spawn(counter(nextPid()))
+      val probe = TestProbe[State]()
+      val later = Promise[Done]()
+      c ! AsyncIncrement(later.future)
+      c ! Increment
+      c ! GetValue(probe.ref)
+      probe.expectNoMessage()
+      later.success(Done)
+      probe.expectMessage(State(2, Vector(0, 1)))
+
+      c ! Increment
+      c ! GetValue(probe.ref)
+      probe.expectMessage(State(3, Vector(0, 1, 2)))
+    }
+
+    "handle async effect from stashed command" in {
+      val c = spawn(counter(nextPid()))
+      val probe = TestProbe[State]()
+      c ! Increment
+      c ! Increment
+      c ! Increment
+      // not guaranteed that the AsyncIncrement is stashed here,
+      // but likely, and test outcome should be the same
+      c ! AsyncIncrement(Future.successful(Done))
+      probe.expectNoMessage()
+      c ! GetValue(probe.ref)
+      probe.expectMessage(State(4, Vector(0, 1, 2, 3)))
+    }
+
+    "handle async effect failure" in {
+      val c = spawn(counter(nextPid()))
+      val probe = TestProbe[State]()
+      val later = Promise[Done]()
+      c ! AsyncIncrement(later.future)
+      c ! Increment
+      c ! GetValue(probe.ref)
+      probe.expectNoMessage()
+      later.failure(TestException("async boom"))
+      // stashed Increment and GetValue are discarded, but that is the case
+      // for stashing when persisting too
+      probe.expectNoMessage()
+
+      probe.expectTerminated(c)
+    }
+
     "work when wrapped in other behavior" in {
       val probe = TestProbe[State]()
       val behavior = Behaviors
@@ -619,6 +697,34 @@ class EventSourcedBehaviorSpec
       val events = queries.currentEventsByTag("higher-than-one", Offset.noOffset).runWith(Sink.seq).futureValue
       events should have size 1
       events.head shouldEqual EventEnvelope(Sequence(2), pid.id, 2, Incremented(1), 0L)
+    }
+
+    "persist metadata" in {
+      val pid = nextPid()
+      val c = spawn(counter(pid))
+      val probe = TestProbe[State]()
+      c ! IncrementWithMetadata("meta1")
+      c ! IncrementWithMetadata("meta2")
+      c ! GetValue(probe.ref)
+      probe.expectMessage(State(2, Vector(0, 1), Some("meta2")))
+
+      val c2 = spawn(counter(pid))
+      c2 ! GetValue(probe.ref)
+      probe.expectMessage(State(2, Vector(0, 1), Some("meta2")))
+    }
+
+    "persist metadata for several events" in {
+      val pid = nextPid()
+      val c = spawn(counter(pid))
+      val probe = TestProbe[State]()
+      c ! IncrementTwiceWithMetadata("meta1")
+      c ! IncrementTwiceWithMetadata("meta2")
+      c ! GetValue(probe.ref)
+      probe.expectMessage(State(4, Vector(0, 1, 2, 3), Some("meta2")))
+
+      val c2 = spawn(counter(pid))
+      c2 ! GetValue(probe.ref)
+      probe.expectMessage(State(4, Vector(0, 1, 2, 3), Some("meta2")))
     }
 
     "handle scheduled message arriving before recovery completed " in {

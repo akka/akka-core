@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns.internal
@@ -9,7 +9,7 @@ import java.nio.file.Files
 
 import scala.util.Try
 
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 private[dns] case class ResolvConf(search: List[String], ndots: Int)
 

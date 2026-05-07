@@ -1,15 +1,16 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.query
+
+import scala.annotation.nowarn
 
 import com.typesafe.config.{ Config, ConfigFactory }
 
 import akka.NotUsed
 import akka.actor.ExtendedActorSystem
 import akka.stream.scaladsl.Source
-import akka.util.unused
 
 /**
  * Use for tests only!
@@ -67,13 +68,20 @@ class DummyReadJournalProvider(dummyValue: String) extends ReadJournalProvider {
     javaReadJournal
 }
 
-class DummyReadJournalProvider2(@unused sys: ExtendedActorSystem) extends DummyReadJournalProvider
+class DummyReadJournalProvider2(@nowarn("msg=never used") sys: ExtendedActorSystem) extends DummyReadJournalProvider
 
-class DummyReadJournalProvider3(@unused sys: ExtendedActorSystem, @unused conf: Config) extends DummyReadJournalProvider
-
-class DummyReadJournalProvider4(@unused sys: ExtendedActorSystem, @unused conf: Config, @unused confPath: String)
+class DummyReadJournalProvider3(
+    @nowarn("msg=never used") sys: ExtendedActorSystem,
+    @nowarn("msg=never used") conf: Config)
     extends DummyReadJournalProvider
 
-class DummyReadJournalProvider5(@unused sys: ExtendedActorSystem) extends DummyReadJournalProvider
+class DummyReadJournalProvider4(
+    @nowarn("msg=never used") sys: ExtendedActorSystem,
+    @nowarn("msg=never used") conf: Config,
+    @nowarn("msg=never used") confPath: String)
+    extends DummyReadJournalProvider
 
-class CustomDummyReadJournalProvider5(@unused sys: ExtendedActorSystem) extends DummyReadJournalProvider("custom")
+class DummyReadJournalProvider5(@nowarn("msg=never used") sys: ExtendedActorSystem) extends DummyReadJournalProvider
+
+class CustomDummyReadJournalProvider5(@nowarn("msg=never used") sys: ExtendedActorSystem)
+    extends DummyReadJournalProvider("custom")

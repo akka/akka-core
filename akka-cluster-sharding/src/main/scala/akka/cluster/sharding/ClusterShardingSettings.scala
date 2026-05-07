@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
 
 import scala.collection.immutable
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -17,7 +18,6 @@ import akka.cluster.singleton.ClusterSingletonManagerSettings
 import akka.coordination.lease.LeaseUsageSettings
 import akka.japi.Util.immutableSeq
 import akka.util.Helpers.toRootLowerCase
-import akka.util.JavaDurationConverters._
 
 object ClusterShardingSettings {
 
@@ -100,7 +100,7 @@ object ClusterShardingSettings {
         Some(
           new LeaseUsageSettings(
             other,
-            config.getDuration("lease-retry-interval").asScala,
+            config.getDuration("lease-retry-interval").toScala,
             leaseName = "" // intentionally not in config because would be high risk of not using unique names
           ))
     }
@@ -269,11 +269,11 @@ object ClusterShardingSettings {
 
       def withTimeout(timeout: FiniteDuration): IdleSettings = copy(timeout = timeout)
 
-      def withTimeout(timeout: java.time.Duration): IdleSettings = withTimeout(timeout.asScala)
+      def withTimeout(timeout: java.time.Duration): IdleSettings = withTimeout(timeout.toScala)
 
       def withInterval(interval: FiniteDuration): IdleSettings = copy(interval = Some(interval))
 
-      def withInterval(interval: java.time.Duration): IdleSettings = withInterval(interval.asScala)
+      def withInterval(interval: java.time.Duration): IdleSettings = withInterval(interval.toScala)
 
       private def copy(timeout: FiniteDuration = timeout, interval: Option[FiniteDuration] = interval): IdleSettings =
         new IdleSettings(timeout, interval)
@@ -1356,7 +1356,7 @@ final class ClusterShardingSettings(
 
   @deprecated("Use withPassivationStrategy instead", since = "2.6.18")
   def withPassivateIdleAfter(duration: java.time.Duration): ClusterShardingSettings =
-    copy(passivationStrategySettings = passivationStrategySettings.withOldIdleStrategy(duration.asScala))
+    copy(passivationStrategySettings = passivationStrategySettings.withOldIdleStrategy(duration.toScala))
 
   /**
    * API MAY CHANGE: Settings for passivation strategies may change after additional testing and feedback.
@@ -1372,7 +1372,7 @@ final class ClusterShardingSettings(
     copy(shardRegionQueryTimeout = duration)
 
   def withShardRegionQueryTimeout(duration: java.time.Duration): ClusterShardingSettings =
-    copy(shardRegionQueryTimeout = duration.asScala)
+    copy(shardRegionQueryTimeout = duration.toScala)
 
   /**
    * Note that if you define a custom lease name and have several sharding entity types each one must have a unique

@@ -7,13 +7,9 @@ You are viewing the documentation for the new actor APIs, to view the Akka Class
 The distributed publish subscribe topic API is available and usable with the core `akka-actor-typed` module, however it will only be distributed
 when used in a clustered application.
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -105,6 +101,6 @@ for the topic will not be sent to it.
 As in @ref:[Message Delivery Reliability](../general/message-delivery-reliability.md) of Akka, message delivery guarantee in distributed pub sub modes is **at-most-once delivery**. In other words, messages can be lost over the wire. In addition to that the registry of nodes which have subscribers is eventually consistent
 meaning that subscribing an actor on one node will have a short delay before it is known on other nodes and published to.
 
-If you are looking for at-least-once delivery guarantee, we recommend [Alpakka Kafka](https://doc.akka.io/docs/alpakka-kafka/current/).
+If you are looking for at-least-once delivery guarantee, we recommend [Alpakka Kafka](https://doc.akka.io/libraries/alpakka-kafka/current/).
 
 

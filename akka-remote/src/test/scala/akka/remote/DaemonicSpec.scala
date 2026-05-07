@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote
@@ -10,10 +10,8 @@ import com.typesafe.config.ConfigFactory
 
 import akka.actor.{ ActorSystem, Address }
 import akka.testkit._
-import akka.util.ccompat._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
-@ccompatUsedUntil213
 class DaemonicSpec extends AkkaSpec {
 
   "Remoting configured with daemonic = on" must {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators.sourceorflow
@@ -9,6 +9,9 @@ import akka.actor.ActorRef
 import akka.stream.WatchedActorTerminatedException
 import akka.stream.scaladsl.Flow
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 object Watch {
 
   def someActor(): ActorRef = ???

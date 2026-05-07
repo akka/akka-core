@@ -1,13 +1,16 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.scaladsl
 
 import scala.collection.{ immutable => im }
+import scala.concurrent.Future
+import scala.reflect.ClassTag
 
 import akka.actor.typed.ActorRef
 import akka.annotation.DoNotInherit
+import akka.persistence.CompositeMetadata
 import akka.persistence.typed.internal._
 import akka.persistence.typed.internal.SideEffect
 
@@ -21,7 +24,7 @@ object Effect {
    *
    * Side effects can be chained with `thenRun`
    */
-  def persist[Event, State](event: Event): EffectBuilder[Event, State] = Persist(event)
+  def persist[Event, State](event: Event): EffectBuilder[Event, State] = Persist(event, Nil)
 
   /**
    * Persist multiple events
@@ -37,7 +40,24 @@ object Effect {
    * Side effects can be chained with `thenRun`
    */
   def persist[Event, State](events: im.Seq[Event]): EffectBuilder[Event, State] =
-    PersistAll(events)
+    PersistAll(events.map(EventWithMetadata(_, Nil)))
+
+  /**
+   * Persist a single event and additional metadata together with the event.
+   *
+   * Side effects can be chained with `thenRun`
+   */
+  def persistWithMetadata[Event, State](eventWithMetadata: EventWithMetadata[Event]): EffectBuilder[Event, State] =
+    Persist(eventWithMetadata.event, eventWithMetadata.metadataEntries)
+
+  /**
+   * Persist multiple events and additional metadata together with the events.
+   *
+   * Side effects can be chained with `thenRun`
+   */
+  def persistWithMetadata[Event, State](
+      eventsWithMetadata: im.Seq[EventWithMetadata[Event]]): EffectBuilder[Event, State] =
+    PersistAll(eventsWithMetadata)
 
   /**
    * Do not persist anything
@@ -108,6 +128,23 @@ object Effect {
    */
   def noReply[Event, State]: ReplyEffect[Event, State] =
     none.thenNoReply()
+
+  /**
+   * Asynchronous command handling. The effect is run when the `Future` has been completed.
+   * Any incoming commands are stashed and processed later, after current command, when the `Future` has
+   * been completed.
+   *
+   * This can for example be used for retrieval of external information before validating the command.
+   */
+  def async[Event, State](effect: Future[Effect[Event, State]]): Effect[Event, State] =
+    AsyncEffect(effect)
+
+  /**
+   * Same as [[Effect.async]] when the `EventSourcedBehavior` is created with
+   * [[EventSourcedBehavior.withEnforcedReplies]].
+   */
+  def asyncReply[Event, State](effect: Future[ReplyEffect[Event, State]]): ReplyEffect[Event, State] =
+    AsyncEffect(effect)
 
 }
 
@@ -193,4 +230,25 @@ trait EffectBuilder[+Event, State] extends Effect[Event, State] {
    * by another `unstashAll`.
    */
   def thenUnstashAll(): ReplyEffect[Event, State]
+
+  /** Stops the actor as a side effect */
+  def thenStop(): ReplyEffect[Event, State]
+}
+
+object EventWithMetadata {
+  def apply[E](event: E, metadata: Any) =
+    new EventWithMetadata(event, metadata :: Nil)
+
+  def apply[E](event: E, metadataEntries: Seq[Any]) =
+    new EventWithMetadata(event, metadataEntries)
+}
+
+final class EventWithMetadata[E](val event: E, val metadataEntries: Seq[Any]) {
+
+  /**
+   * The metadata of a given type that is associated with the event.
+   */
+  def metadata[M: ClassTag]: Option[M] =
+    CompositeMetadata.extract[M](metadataEntries)
+
 }

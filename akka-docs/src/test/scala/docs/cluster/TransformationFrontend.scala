@@ -1,11 +1,9 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package scala.docs.cluster
 
-import language.postfixOps
-import scala.util.Success
 import scala.concurrent.duration._
 import akka.actor.Actor
 import akka.actor.ActorRef

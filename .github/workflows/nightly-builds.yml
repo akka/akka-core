@@ -2,7 +2,7 @@ name: Nightly Builds
 
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 */2 * *"
   workflow_dispatch:
 
 permissions:
@@ -15,26 +15,34 @@ jobs:
 
   akka-cluster-metrics-sigar:
     name: Akka Cluster Metrics Test with Sigar
-    runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    runs-on: Akka-Default
+    if: github.event.repository.fork == false
     steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v6
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
 
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Cache Coursier cache
         # https://github.com/coursier/cache-action/releases
-        # v6.4.5
-        uses: coursier/cache-action@1ff273bff02a8787bc9f1877d347948af647956d
+        uses: coursier/cache-action@v8.1.0
 
       - name: Set up JDK 11
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.11
 
@@ -54,14 +62,14 @@ jobs:
             -Dmultinode.Xmx256M \
             -Dmultinode.Xlog:gc \
             -Dmultinode.XX:+AlwaysActAsServerClassMachine \
+            -Dakka.warn-on-no-license-key=false \
             clean akka-cluster-metrics/test
 
       - name: Test Reports
         # Makes it easier to spot failures instead of looking at the logs.
         if: ${{ failure() }}
         # https://github.com/ScaCap/action-surefire-report/releases/
-        # v1.0.13
-        uses: scacap/action-surefire-report@482f012643ed0560e23ef605a79e8e87ca081648
+        uses: scacap/action-surefire-report@v1.9.1
         with:
           report_paths: '**/target/test-reports/TEST-*.xml'
           fail_if_no_tests: false
@@ -69,7 +77,7 @@ jobs:
 
       - name: Email on failure
         if: ${{ failure() }}
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2
+        uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -78,15 +86,16 @@ jobs:
           password: ${{secrets.MAIL_PASSWORD}}
           subject: "Failed: ${{ github.workflow }} / ${{ github.job }}"
           to: ${{secrets.MAIL_SEND_TO}}
-          from: Akka CI
+          from: "Akka CI <no-reply@akka.io>"
+
           body: |
             Job ${{ github.job }} in workflow ${{ github.workflow }} of ${{github.repository}} failed!
             https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
 
   jdk-nightly-build:
     name: JDK ${{ matrix.jdkVersion }} / Scala ${{ matrix.scalaVersion }}
-    runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    runs-on: Akka-Default
+    if: github.event.repository.fork == false
     strategy:
       fail-fast: false
       matrix:
@@ -95,26 +104,37 @@ jobs:
           - { scalaVersion: "2.13", jdkVersion: "1.11.0", jvmName: "temurin:1.11.0", extraOpts: '' }
           - { scalaVersion: "2.13", jdkVersion: "1.17.0", jvmName: "temurin:1.17.0", extraOpts: '' }
           - { scalaVersion: "2.13", jdkVersion: "1.21.0", jvmName: "temurin:1.21", extraOpts: '' }
+          - { scalaVersion: "2.13", jdkVersion: "1.25.0", jvmName: "temurin:1.25", extraOpts: '' }
 
           # { scalaVersion: "3.3",  jdkVersion: "1.11.0", jvmName: "temurin:1.11.0", extraOpts: '' }
           - { scalaVersion: "3.3",  jdkVersion: "1.17.0", jvmName: "temurin:1.17.0", extraOpts: '' }
+          - { scalaVersion: "3.3",  jdkVersion: "1.25.0", jvmName: "temurin:1.25", extraOpts: '' }
     steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v6
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
+
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Cache Coursier cache
         # https://github.com/coursier/cache-action/releases
-        # v6.4.5
-        uses: coursier/cache-action@1ff273bff02a8787bc9f1877d347948af647956d
+        uses: coursier/cache-action@v8.1.0
 
       - name: Set up JDK ${{ matrix.jdkVersion }}
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: ${{ matrix.jvmName }}
 
@@ -136,15 +156,14 @@ jobs:
         # Makes it easier to spot failures instead of looking at the logs.
         if: ${{ failure() }}
         # https://github.com/ScaCap/action-surefire-report/releases/
-        # v1.0.13
-        uses: scacap/action-surefire-report@482f012643ed0560e23ef605a79e8e87ca081648
+        uses: scacap/action-surefire-report@v1.9.1
         with:
           report_paths: '**/target/test-reports/TEST-*.xml'
           fail_if_no_tests: false
 
       # Archive test results so we can do some diagnostics later
       - name: Upload test results
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v7
         if: success() || failure()        # run this step even if previous step failed
         with:
           name: 'test-results-${{ matrix.jdkVersion }}-${{ matrix.scalaVersion }}'
@@ -174,7 +193,7 @@ jobs:
 
       - name: Email on failure
         if: ${{ failure() }}
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2
+        uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -183,15 +202,16 @@ jobs:
           password: ${{secrets.MAIL_PASSWORD}}
           subject: "Failed: ${{ github.workflow }} / ${{ github.job }}"
           to: ${{secrets.MAIL_SEND_TO}}
-          from: Akka CI
+          from: "Akka CI <no-reply@akka.io>"
+
           body: |
             Job ${{ github.job }} in workflow ${{ github.workflow }} of ${{github.repository}} failed!
             https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
 
   akka-artery-aeron-tests:
     name: Akka Artery Aeron Tests
-    runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    runs-on: Akka-Default
+    if: github.event.repository.fork == false
     strategy:
       fail-fast: false
       matrix:
@@ -199,23 +219,32 @@ jobs:
           - akka-remote/test akka-remote-tests/test
           - akka-cluster/test akka-cluster-typed/test
     steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v6
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
+
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           # we don't know what commit the last tag was it's safer to get entire repo so previousStableVersion resolves
           fetch-depth: 0
 
       - name: Cache Coursier cache
         # https://github.com/coursier/cache-action/releases
-        # v6.4.5
-        uses: coursier/cache-action@1ff273bff02a8787bc9f1877d347948af647956d
+        uses: coursier/cache-action@v8.1.0
 
       - name: Set up JDK 11
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.11
 
@@ -235,7 +264,7 @@ jobs:
 
       - name: Email on failure
         if: ${{ failure() }}
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2
+        uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -244,7 +273,8 @@ jobs:
           password: ${{secrets.MAIL_PASSWORD}}
           subject: "Failed: ${{ github.workflow }} / ${{ github.job }}"
           to: ${{secrets.MAIL_SEND_TO}}
-          from: Akka CI
+          from: "Akka CI <no-reply@akka.io>"
+
           body: |
             Job ${{ github.job }} in workflow ${{ github.workflow }} of ${{github.repository}} failed!
             https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}

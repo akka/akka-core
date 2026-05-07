@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.event
 
+import scala.annotation.tailrec
 import scala.concurrent.duration.Deadline
 import scala.concurrent.duration.FiniteDuration
 
@@ -112,7 +113,10 @@ class DeadLetterListener extends Actor {
     val unwrapped = WrappedMessage.unwrap(d.message)
     val messageStr = unwrapped.getClass.getName
     val wrappedIn = if (d.message.isInstanceOf[WrappedMessage]) s" wrapped in [${d.message.getClass.getName}]" else ""
-    val logMessage = d match {
+
+    @tailrec def logMessage(msg: Any): String = msg match {
+      case dl: DeadLetter =>
+        logMessage(dl.message) // unwrap DeadLetter, e.g. DeadLetter(Dropped)
       case dropped: Dropped =>
         val destination = if (isReal(d.recipient)) s" to ${d.recipient}" else ""
         s"Message [$messageStr]$wrappedIn$origin$destination was dropped. ${dropped.reason}. " +
@@ -126,11 +130,12 @@ class DeadLetterListener extends Actor {
         s"[$count] dead letters encountered$doneMsg. " +
         s"If this is not an expected behavior then ${d.recipient} may have terminated unexpectedly. "
     }
+
     eventStream.publish(
       Info(
         d.recipient.path.toString,
         d.recipient.getClass,
-        logMessage +
+        logMessage(d) +
         "This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' " +
         "and 'akka.log-dead-letters-during-shutdown'.",
         Logging.emptyMDC,

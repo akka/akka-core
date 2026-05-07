@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.internal.routing
@@ -86,7 +86,7 @@ private final class PoolRouterImpl[T](
 
   def onMessage(msg: T): Behavior[T] = {
     if ((broadcastPredicate ne ConstantFun.anyToFalse) && broadcastPredicate(msg)) {
-      ctx.children.foreach(_.unsafeUpcast ! msg)
+      ctx.children.foreach(_.unsafeUpcast[Any] ! msg)
     } else {
       logic.selectRoutee(msg) ! msg
     }

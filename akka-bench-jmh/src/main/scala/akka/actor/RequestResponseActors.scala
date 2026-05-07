@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -76,7 +76,7 @@ object RequestResponseActors {
     val fullPathToDispatcher = "akka.actor." + dispatcher
     val latch = new CountDownLatch(numActors)
     val actorsPairs = for {
-      i <- (1 to (numActors / 2)).toVector
+      _ <- (1 to (numActors / 2)).toVector
       userQueryActor = system.actorOf(
         UserQueryActor.props(latch, numQueriesPerActor, numUsersInDBPerActor).withDispatcher(fullPathToDispatcher))
       userServiceActor = system.actorOf(

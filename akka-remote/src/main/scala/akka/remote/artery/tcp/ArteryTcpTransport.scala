@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -23,7 +23,6 @@ import akka.Done
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.actor.ExtendedActorSystem
-import akka.dispatch.ExecutionContexts
 import akka.event.Logging
 import akka.remote.RemoteActorRefProvider
 import akka.remote.RemoteLogMarker
@@ -49,7 +48,6 @@ import akka.stream.scaladsl.Source
 import akka.stream.scaladsl.Tcp
 import akka.stream.scaladsl.Tcp.ServerBinding
 import akka.util.{ ByteString, OptionVal }
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
@@ -67,7 +65,6 @@ private[remote] object ArteryTcpTransport {
 /**
  * INTERNAL API
  */
-@ccompatUsedUntil213
 private[remote] class ArteryTcpTransport(
     _system: ExtendedActorSystem,
     _provider: RemoteActorRefProvider,
@@ -141,7 +138,7 @@ private[remote] class ArteryTcpTransport(
         Tcp(system).outgoingConnection(
           remoteAddress,
           localAddress,
-          halfClose = true, // issue https://github.com/akka/akka/issues/24392 if set to false
+          halfClose = true, // issue https://github.com/akka/akka-core/issues/24392 if set to false
           connectTimeout = settings.Advanced.Tcp.ConnectionTimeout)
       }
     }
@@ -177,7 +174,7 @@ private[remote] class ArteryTcpTransport(
             .via(Flow.lazyFlow(() => {
               // only open the actual connection if any new messages are sent
               logConnect()
-              flightRecorder.tcpOutboundConnected(outboundContext.remoteAddress, streamName(streamId))
+              RemotingFlightRecorder.tcpOutboundConnected(outboundContext.remoteAddress, streamName(streamId))
               if (controlIdleKillSwitch.isDefined)
                 outboundContext.asInstanceOf[Association].setControlIdleKillSwitch(controlIdleKillSwitch)
 
@@ -218,7 +215,7 @@ private[remote] class ArteryTcpTransport(
     Flow[EnvelopeBuffer]
       .map { env =>
         val size = env.byteBuffer.limit()
-        flightRecorder.tcpOutboundSent(size)
+        RemotingFlightRecorder.tcpOutboundSent(size)
 
         // TODO Possible performance improvement, could we reduce the copying of bytes?
         val bytes = ByteString(env.byteBuffer)
@@ -260,7 +257,7 @@ private[remote] class ArteryTcpTransport(
       case None =>
         val binding = connectionSource
           .to(Sink.foreach { connection =>
-            flightRecorder.tcpInboundConnected(connection.remoteAddress)
+            RemotingFlightRecorder.tcpInboundConnected(connection.remoteAddress)
             inboundConnectionFlow.map(connection.handleWith(_))(sys.dispatcher)
           })
           .run()
@@ -271,11 +268,11 @@ private[remote] class ArteryTcpTransport(
                   s"Failed to bind TCP to [$bindHost:$bindPort] due to: " +
                   e.getMessage,
                   e))
-          }(ExecutionContexts.parasitic)
+          }(ExecutionContext.parasitic)
 
         // only on initial startup, when ActorSystem is starting
         val b = Await.result(binding, settings.Bind.BindTimeout)
-        flightRecorder.tcpInboundBound(bindHost, b.localAddress)
+        RemotingFlightRecorder.tcpInboundBound(bindHost, b.localAddress)
         b
       case Some(binding) =>
         // already bound, when restarting
@@ -340,13 +337,18 @@ private[remote] class ArteryTcpTransport(
       SinkShape(partition.in)
     })
 
-    // If something in the inboundConnectionFlow fails, e.g. framing, the connection will be teared down,
-    // but other parts of the inbound streams don't have to restarted.
+    // If something in the inboundConnectionFlow fails, e.g. framing, the connection will be torn down,
+    // but other parts of the inbound streams don't have to be restarted.
+    val maxFrameLength =
+      if (largeMessageChannelEnabled)
+        math.max(settings.Advanced.MaximumFrameSize, settings.Advanced.MaximumLargeFrameSize)
+      else
+        settings.Advanced.MaximumFrameSize
     val newInboundConnectionFlow = {
       Flow[ByteString]
         .via(inboundKillSwitch.flow)
         // must create new FlightRecorder event sink for each connection because they can't be shared
-        .via(new TcpFraming(flightRecorder))
+        .via(new TcpFraming(maxFrameLength))
         .alsoTo(inboundStream)
         .filter(_ => false) // don't send back anything in this TCP socket
         .map(_ => ByteString.empty) // make it a Flow[ByteString] again
@@ -486,7 +488,7 @@ private[remote] class ArteryTcpTransport(
     implicit val ec = system.dispatchers.internalDispatcher
     inboundKillSwitch.shutdown()
     unbind().map { _ =>
-      flightRecorder.transportStopped()
+      RemotingFlightRecorder.transportStopped()
       Done
     }
   }
@@ -498,7 +500,7 @@ private[remote] class ArteryTcpTransport(
         for {
           _ <- binding.unbind()
         } yield {
-          flightRecorder.tcpInboundUnbound(localAddress)
+          RemotingFlightRecorder.tcpInboundUnbound(localAddress)
           Done
         }
       case None =>

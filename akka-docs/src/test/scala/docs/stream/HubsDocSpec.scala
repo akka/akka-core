@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -11,8 +11,10 @@ import akka.testkit.AkkaSpec
 import docs.CompileOnlySpec
 
 import scala.concurrent.duration._
-import akka.stream.ThrottleMode
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 class HubsDocSpec extends AkkaSpec with CompileOnlySpec {
 
   "Hubs" must {

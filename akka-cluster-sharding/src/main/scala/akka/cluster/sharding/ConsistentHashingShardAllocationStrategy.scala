@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
 
-import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.Future
 
@@ -69,7 +68,6 @@ class ConsistentHashingShardAllocationStrategy(rebalanceLimit: Int)
   override protected def clusterState: CurrentClusterState = cluster.state
   override protected def selfMember: Member = cluster.selfMember
 
-  @nowarn("msg=never used")
   override def allocateShard(
       requester: ActorRef,
       shardId: ShardId,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.javadsl
@@ -10,7 +10,7 @@ import akka.actor.testkit.typed.internal.TestInboxImpl
 import akka.actor.typed.ActorRef
 import akka.annotation.{ ApiMayChange, DoNotInherit }
 import akka.pattern.StatusReply
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object TestInbox {
   def create[T](name: String): TestInbox[T] = TestInboxImpl(name)

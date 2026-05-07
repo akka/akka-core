@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package typed.tutorial_4
@@ -11,7 +11,6 @@ import akka.actor.typed.Signal
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 
 //#device-group-full
 //#device-group-register
@@ -56,7 +55,7 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
         this
 
       case RequestTrackDevice(gId, _, _) =>
-        context.log.warn2("Ignoring TrackDevice request for {}. This actor is responsible for {}.", gId, groupId)
+        context.log.warn("Ignoring TrackDevice request for {}. This actor is responsible for {}.", gId, groupId)
         this
       //#device-group-register
       //#device-group-remove

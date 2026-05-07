@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -14,7 +14,6 @@ import akka.actor.testkit.typed.scaladsl.TestProbe
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.cluster.MultiNodeClusterSpec
 import akka.cluster.sharding.typed.ReplicatedShardingSpec.TestRES.GetState
 import akka.cluster.sharding.typed.ReplicatedShardingSpec.TestRES.State
@@ -83,11 +82,11 @@ object ReplicatedShardingSpec extends MultiNodeConfig {
                   replyTo ! state
                   Effect.none
                 case StoreMe(evt, ack) =>
-                  ctx.log.infoN("StoreMe {} {}", evt, replicationContext.replicationId)
+                  ctx.log.info("StoreMe {} {}", evt, replicationContext.replicationId)
                   Effect.persist(evt).thenRun(_ => ack ! Done)
               },
             (state, event) => {
-              ctx.log.infoN(
+              ctx.log.info(
                 "EventHandler [{}] origin [{}] at [{}]",
                 event,
                 replicationContext.origin,

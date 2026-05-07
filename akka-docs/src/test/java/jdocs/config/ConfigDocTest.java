@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package jdocs.config;
@@ -13,6 +13,14 @@ import com.typesafe.config.ConfigFactory;
 
 // #imports
 import akka.actor.testkit.typed.javadsl.ActorTestKit;
+
+//#check-is-key-valid
+import java.time.LocalDate;
+import java.util.Optional;
+
+//#check-is-key-valid
+
+import static org.junit.Assert.*;
 
 public class ConfigDocTest {
 
@@ -66,5 +74,19 @@ public class ConfigDocTest {
     ActorSystem system = ActorSystem.create(rootBehavior, "myname", complete);
     // #custom-config-2
     return system;
+  }
+
+  public void compileOnlyIsLicenseKeyValid() {
+    //#check-is-key-valid
+    ActorSystem<Void> system = ActorSystem.create(rootBehavior, "name");
+    Optional<LocalDate> licenseKey = system.getLicenseKeyExpiry();
+
+    assertFalse(licenseKey.isEmpty());
+
+    LocalDate nextMonth = LocalDate.now().plusMonths(1);
+    assertTrue(licenseKey.get().isAfter(nextMonth));
+
+    system.terminate();
+    //#check-is-key-valid
   }
 }

@@ -1,13 +1,14 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.delivery
 
 import java.util.Optional
 
-import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
+import scala.jdk.OptionConverters._
 import scala.reflect.ClassTag
 
 import com.typesafe.config.Config
@@ -20,7 +21,6 @@ import akka.actor.typed.delivery.internal.WorkPullingProducerControllerImpl
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.Behaviors
 import akka.annotation.ApiMayChange
-import akka.util.JavaDurationConverters._
 
 /**
  * Work pulling is a pattern where several worker actors pull tasks in their own pace from
@@ -154,7 +154,7 @@ object WorkPullingProducerController {
     def apply(config: Config): Settings = {
       new Settings(
         bufferSize = config.getInt("buffer-size"),
-        config.getDuration("internal-ask-timeout").asScala,
+        config.getDuration("internal-ask-timeout").toScala,
         ProducerController.Settings(config))
     }
 
@@ -188,7 +188,7 @@ object WorkPullingProducerController {
       copy(internalAskTimeout = newInternalAskTimeout)
 
     def withInternalAskTimeout(newInternalAskTimeout: java.time.Duration): Settings =
-      copy(internalAskTimeout = newInternalAskTimeout.asScala)
+      copy(internalAskTimeout = newInternalAskTimeout.toScala)
 
     def withProducerControllerSettings(newProducerControllerSettings: ProducerController.Settings): Settings =
       copy(producerControllerSettings = newProducerControllerSettings)
@@ -231,7 +231,7 @@ object WorkPullingProducerController {
       producerId: String,
       workerServiceKey: ServiceKey[ConsumerController.Command[A]],
       durableQueueBehavior: Optional[Behavior[DurableProducerQueue.Command[A]]]): Behavior[Command[A]] = {
-    apply(producerId, workerServiceKey, durableQueueBehavior.asScala)(ClassTag(messageClass))
+    apply(producerId, workerServiceKey, durableQueueBehavior.toScala)(ClassTag(messageClass))
   }
 
   /**
@@ -243,6 +243,6 @@ object WorkPullingProducerController {
       workerServiceKey: ServiceKey[ConsumerController.Command[A]],
       durableQueueBehavior: Optional[Behavior[DurableProducerQueue.Command[A]]],
       settings: Settings): Behavior[Command[A]] = {
-    apply(producerId, workerServiceKey, durableQueueBehavior.asScala, settings)(ClassTag(messageClass))
+    apply(producerId, workerServiceKey, durableQueueBehavior.toScala, settings)(ClassTag(messageClass))
   }
 }

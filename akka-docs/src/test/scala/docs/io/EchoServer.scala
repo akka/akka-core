@@ -1,16 +1,16 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.io
 
 import java.net.InetSocketAddress
-
 import com.typesafe.config.ConfigFactory
 import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props, SupervisorStrategy }
 import akka.io.{ IO, Tcp }
 import akka.util.ByteString
 
+import scala.annotation.nowarn
 import scala.io.StdIn
 
 object EchoServer extends App {
@@ -26,6 +26,8 @@ object EchoServer extends App {
   system.terminate()
 }
 
+@nowarn("msg=deprecated")
+@nowarn("msg=never used") // sample snippets
 class EchoManager(handlerClass: Class[_]) extends Actor with ActorLogging {
 
   import Tcp._

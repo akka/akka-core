@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.internal
@@ -12,7 +12,6 @@ import akka.actor.typed.internal.PoisonPill
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.annotation.InternalApi
 import akka.annotation.InternalStableApi
 import akka.persistence._
@@ -23,7 +22,6 @@ import akka.persistence.typed.state.internal.DurableStateBehaviorImpl.GetState
 import akka.persistence.typed.state.internal.Running.WithRevisionAccessible
 import akka.persistence.typed.telemetry.DurableStateBehaviorInstrumentation
 import akka.util.PrettyDuration._
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -130,13 +128,13 @@ private[akka] class Recovering[C, S](
 
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  def onRecoveryStart(@unused context: ActorContext[_]): Unit = ()
+  def onRecoveryStart(context: ActorContext[_]): Unit = ()
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  def onRecoveryComplete(@unused context: ActorContext[_]): Unit = ()
+  def onRecoveryComplete(context: ActorContext[_]): Unit = ()
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  def onRecoveryFailed(@unused context: ActorContext[_], @unused reason: Throwable): Unit = ()
+  def onRecoveryFailed(context: ActorContext[_], reason: Throwable): Unit = ()
 
   private def onRecoveryTimeout(): Behavior[InternalProtocol] = {
     val ex = new RecoveryTimedOut(s"Recovery timed out, didn't get state within ${setup.settings.recoveryTimeout}")
@@ -169,7 +167,7 @@ private[akka] class Recovering[C, S](
       onRecoveryComplete(setup.context)
       tryReturnRecoveryPermit("recovery completed successfully")
       if (setup.internalLogger.isDebugEnabled) {
-        setup.internalLogger.debug2(
+        setup.internalLogger.debug(
           "Recovery for persistenceId [{}] took {}",
           setup.persistenceId,
           (System.nanoTime() - state.recoveryStartTime).nanos.pretty)

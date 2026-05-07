@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit.javadsl
@@ -7,12 +7,12 @@ package akka.persistence.testkit.javadsl
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 
-import scala.compat.java8.FutureConverters._
+import scala.jdk.DurationConverters._
+import scala.jdk.FutureConverters._
 
 import akka.Done
 import akka.actor.ClassicActorSystemProvider
 import akka.persistence.testkit.scaladsl
-import akka.util.JavaDurationConverters._
 
 /**
  * Test utility to initialize persistence plugins. Useful when initialization order or coordination
@@ -40,6 +40,6 @@ object PersistenceInit {
       journalPluginId: String,
       snapshotPluginId: String,
       timeout: Duration): CompletionStage[Done] =
-    scaladsl.PersistenceInit.initializePlugins(system, journalPluginId, snapshotPluginId, timeout.asScala).toJava
+    scaladsl.PersistenceInit.initializePlugins(system, journalPluginId, snapshotPluginId, timeout.toScala).asJava
 
 }

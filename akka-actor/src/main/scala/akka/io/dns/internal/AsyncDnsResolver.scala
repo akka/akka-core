@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns.internal
@@ -8,13 +8,13 @@ import java.net.{ Inet4Address, Inet6Address, InetAddress, InetSocketAddress }
 
 import scala.collection.immutable
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, ActorRefFactory, Props, Status }
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.io.SimpleDnsCache
 import akka.io.dns._
 import akka.io.dns.CachePolicy.{ CachePolicy, Never, Ttl }
@@ -229,7 +229,7 @@ private[akka] object AsyncDnsResolver {
                   case _ => DidntDrop(question.id)
                 }
                 .pipeTo(self)
-          }(ExecutionContexts.parasitic)
+          }(ExecutionContext.parasitic)
         } catch {
           case NonFatal(ex) =>
             log.warning(ex, "Not forwarding DNS question to resolver [{}]", resolver)
@@ -405,13 +405,13 @@ private[akka] object AsyncDnsResolver {
           ipv4Recs.flatMap { v4 =>
             ipv6Recs.map { v6 =>
               DnsProtocol.Resolved(searchName, v4.rrs ++ v6.rrs, v4.additionalRecs ++ v6.additionalRecs)
-            }(ExecutionContexts.parasitic)
-          }(ExecutionContexts.parasitic)
+            }(ExecutionContext.parasitic)
+          }(ExecutionContext.parasitic)
 
         case Srv =>
           sendQuestion(resolver, requestId => SrvQuestion(requestId, searchName)).map { answer =>
             DnsProtocol.Resolved(searchName, answer.rrs, answer.additionalRecs)
-          }(ExecutionContexts.parasitic)
+          }(ExecutionContext.parasitic)
       }
   }
 }

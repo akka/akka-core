@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
@@ -68,7 +68,6 @@ object IOResult {
  * while there was still IO operations in progress.
  */
 @deprecated("use IOOperationIncompleteException", "2.6.0")
-@nowarn("msg=deprecated")
 final case class AbruptIOTerminationException(ioResult: IOResult, cause: Throwable)
     extends RuntimeException("Stream terminated without completing IO operation.", cause)
     with NoStackTrace

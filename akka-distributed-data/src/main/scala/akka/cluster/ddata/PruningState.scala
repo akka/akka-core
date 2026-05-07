@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.ddata
@@ -8,7 +8,6 @@ import akka.actor.Address
 import akka.annotation.InternalApi
 import akka.cluster.Member
 import akka.cluster.UniqueAddress
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -23,7 +22,7 @@ import akka.util.unused
   }
   final case class PruningPerformed(obsoleteTime: Long) extends PruningState {
     def isObsolete(currentTime: Long): Boolean = obsoleteTime <= currentTime
-    def addSeen(@unused node: Address): PruningState = this
+    def addSeen(node: Address): PruningState = this
     def estimatedSize: Int = EstimatedSize.LongValue
   }
 }

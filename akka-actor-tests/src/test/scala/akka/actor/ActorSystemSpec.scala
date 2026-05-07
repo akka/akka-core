@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -7,7 +7,6 @@ package akka.actor
 import java.util.concurrent.{ ConcurrentLinkedQueue, RejectedExecutionException }
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.annotation.nowarn
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -66,7 +65,6 @@ object ActorSystemSpec {
     }
   }
 
-  @nowarn
   final case class FastActor(latch: TestLatch, testActor: ActorRef) extends Actor {
     val ref1 = context.actorOf(Props.empty)
     context.actorSelection(ref1.path.toString).tell(Identify(ref1), testActor)
@@ -79,7 +77,7 @@ object ActorSystemSpec {
 
   class SlowDispatcher(_config: Config, _prerequisites: DispatcherPrerequisites)
       extends MessageDispatcherConfigurator(_config, _prerequisites) {
-    private val instance = new Dispatcher(
+    private val instance: Dispatcher = new Dispatcher(
       this,
       this.config.getString("id"),
       this.config.getInt("throughput"),
@@ -116,7 +114,6 @@ object ActorSystemSpec {
 
 }
 
-@nowarn
 class ActorSystemSpec extends AkkaSpec(ActorSystemSpec.config) with ImplicitSender with ScalaCheckPropertyChecks {
 
   import ActorSystemSpec.FastActor

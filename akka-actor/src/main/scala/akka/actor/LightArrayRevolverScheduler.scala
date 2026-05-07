@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -7,19 +7,17 @@ package akka.actor
 import java.io.Closeable
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.{ AtomicLong, AtomicReference }
-
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-
 import com.typesafe.config.Config
-
 import akka.dispatch.AbstractNodeQueue
 import akka.event.LoggingAdapter
 import akka.util.Helpers
-import akka.util.Unsafe.{ instance => unsafe }
+
+import java.lang.invoke.MethodHandles
 
 /**
  * This scheduler implementation is based on a revolving wheel of buckets,
@@ -337,7 +335,10 @@ class LightArrayRevolverScheduler(config: Config, log: LoggingAdapter, threadFac
 }
 
 object LightArrayRevolverScheduler {
-  private[this] val taskOffset = unsafe.objectFieldOffset(classOf[TaskHolder].getDeclaredField("task"))
+  private[this] val taskHandle =
+    MethodHandles
+      .privateLookupIn(classOf[TaskHolder], MethodHandles.lookup())
+      .unreflectVarHandle(classOf[TaskHolder].getDeclaredField("task"))
 
   private class TaskQueue extends AbstractNodeQueue[TaskHolder]
 
@@ -356,7 +357,7 @@ object LightArrayRevolverScheduler {
     private final def extractTask(replaceWith: Runnable): Runnable =
       task match {
         case t @ (ExecutedTask | CancelledTask) => t
-        case x                                  => if (unsafe.compareAndSwapObject(this, taskOffset, x, replaceWith)) x else extractTask(replaceWith)
+        case x                                  => if (taskHandle.compareAndSet(this, x, replaceWith)) x else extractTask(replaceWith)
       }
 
     private[akka] final def executeTask(): Boolean = extractTask(ExecutedTask) match {

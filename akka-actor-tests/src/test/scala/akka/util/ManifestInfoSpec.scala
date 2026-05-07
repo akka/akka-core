@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -19,7 +19,7 @@ class ManifestInfoSpec extends AkkaSpec {
         "You are using version 2.6.4 of Akka, but it appears you (perhaps indirectly) also depend on older versions of related artifacts. " +
         "You can solve this by adding an explicit dependency on version 2.6.4 of the [akka-persistence, akka-cluster] artifacts to your project. " +
         "Here's a complete collection of detected artifacts: (2.5.3, [akka-cluster, akka-persistence]), (2.6.4, [akka-actor]). " +
-        "See also: https://doc.akka.io/docs/akka/current/common/binary-compatibility-rules.html#mixed-versioning-is-not-allowed")
+        "See also: https://doc.akka.io/libraries/akka-core/current/common/binary-compatibility-rules.html#mixed-versioning-is-not-allowed")
     }
 
     "support dynver" in {
@@ -31,7 +31,7 @@ class ManifestInfoSpec extends AkkaSpec {
         "You are using version 2.6.4+10-abababef of Akka, but it appears you (perhaps indirectly) also depend on older versions of related artifacts. " +
         "You can solve this by adding an explicit dependency on version 2.6.4+10-abababef of the [akka-actor] artifacts to your project. " +
         "Here's a complete collection of detected artifacts: (2.6.4, [akka-actor]), (2.6.4+10-abababef, [akka-persistence]). " +
-        "See also: https://doc.akka.io/docs/akka/current/common/binary-compatibility-rules.html#mixed-versioning-is-not-allowed")
+        "See also: https://doc.akka.io/libraries/akka-core/current/common/binary-compatibility-rules.html#mixed-versioning-is-not-allowed")
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.typed
@@ -141,8 +141,8 @@ object SetAppVersionLater {
    * then wait for the `appVersion` to be completed.
    */
   def create(appVersion: CompletionStage[Version]): SetAppVersionLater = {
-    import scala.compat.java8.FutureConverters._
-    SetAppVersionLater(appVersion.toScala)
+    import scala.jdk.FutureConverters._
+    SetAppVersionLater(appVersion.asScala)
   }
 }
 

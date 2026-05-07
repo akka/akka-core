@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.internal.receptionist
@@ -10,7 +10,6 @@ import akka.actor.typed.receptionist.Receptionist._
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.annotation.InternalApi
 import akka.util.TypedMultiMap
 
@@ -173,7 +172,7 @@ private[akka] object LocalReceptionist extends ReceptionistBehaviorProvider {
     def onCommand(ctx: ActorContext[Any], cmd: Command): Behavior[Any] = cmd match {
 
       case ReceptionistMessages.Register(key, serviceInstance, maybeReplyTo) =>
-        ctx.log.debug2("Actor was registered: {} {}", key, serviceInstance)
+        ctx.log.debug("Actor was registered: {} {}", key, serviceInstance)
         if (!state.servicesPerActor.contains(serviceInstance))
           ctx.watchWith(serviceInstance, RegisteredActorTerminated(serviceInstance))
         maybeReplyTo match {
@@ -188,7 +187,7 @@ private[akka] object LocalReceptionist extends ReceptionistBehaviorProvider {
           // actor deregistered but we saw a terminate message before we got the deregistration
           Behaviors.same
         } else {
-          ctx.log.debug2("Actor was deregistered: {} {}", key, serviceInstance)
+          ctx.log.debug("Actor was deregistered: {} {}", key, serviceInstance)
           if ((servicesForActor - key).isEmpty)
             ctx.unwatch(serviceInstance)
 
@@ -231,13 +230,13 @@ private[akka] object LocalReceptionist extends ReceptionistBehaviorProvider {
           // actor terminated but had deregistered all registrations before we could process the termination
           Behaviors.same
         } else {
-          ctx.log.debug2("Registered actor terminated: [{}] {}", keys.mkString(","), serviceInstance)
+          ctx.log.debug("Registered actor terminated: [{}] {}", keys.mkString(","), serviceInstance)
           updateServices(keys, _.serviceInstanceRemoved(serviceInstance))
         }
       case SubscriberTerminated(subscriber) =>
         if (ctx.log.isDebugEnabled) {
           val keys = state.subscriptionsPerActor.getOrElse(subscriber, Set.empty)
-          ctx.log.debug2("Subscribed actor terminated: [{}] {}", keys.mkString(","), subscriber)
+          ctx.log.debug("Subscribed actor terminated: [{}] {}", keys.mkString(","), subscriber)
         }
         behavior(state.subscriberRemoved(subscriber))
     }

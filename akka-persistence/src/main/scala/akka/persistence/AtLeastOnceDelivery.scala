@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
@@ -12,9 +12,7 @@ import akka.actor.Cancellable
 import akka.actor.DeadLetterSuppression
 import akka.annotation.InternalApi
 import akka.persistence.serialization.Message
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object AtLeastOnceDelivery {
 
   /**
@@ -33,7 +31,7 @@ object AtLeastOnceDelivery {
      * Java API
      */
     def getUnconfirmedDeliveries: java.util.List[UnconfirmedDelivery] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       unconfirmedDeliveries.asJava
     }
 
@@ -49,7 +47,7 @@ object AtLeastOnceDelivery {
      * Java API
      */
     def getUnconfirmedDeliveries: java.util.List[UnconfirmedDelivery] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       unconfirmedDeliveries.asJava
     }
   }

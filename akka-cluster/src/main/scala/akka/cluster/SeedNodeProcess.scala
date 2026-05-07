@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -9,7 +9,6 @@ import scala.concurrent.duration.{ Deadline, _ }
 
 import akka.actor.{ Actor, ActorRef, Address, CoordinatedShutdown, ReceiveTimeout }
 import akka.annotation.{ InternalApi, InternalStableApi }
-import akka.util.unused
 
 /**
  * INTERNAL API.
@@ -294,7 +293,7 @@ private[cluster] final class JoinSeedNodeProcess(
   }
 
   @InternalStableApi
-  private[akka] def onReceiveTimeout(@unused seedNodes: immutable.IndexedSeq[Address], @unused attempt: Int): Unit = {}
+  private[akka] def onReceiveTimeout(seedNodes: immutable.IndexedSeq[Address], attempt: Int): Unit = {}
 
   def done: Actor.Receive = {
     case InitJoinAck(_, _) => // already received one, skip rest

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.scaladsl
@@ -140,7 +140,6 @@ trait StatusReplyInbox[T] {
    * Assert that the successful value of the status reply is [[akka.Done]].  Subsequent calls to any `receive` or
    * `expect` method will fail and `hasReply` will be false after calling this method.
    */
-  @annotation.nowarn("msg=never used")
   def expectDone()(implicit ev: T =:= Done): Unit = expectValue(Done.asInstanceOf[T])
 
   /**

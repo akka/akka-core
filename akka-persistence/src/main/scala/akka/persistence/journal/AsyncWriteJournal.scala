@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal
@@ -7,13 +7,9 @@ package akka.persistence.journal
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
-
 import akka.actor._
-import akka.dispatch.ExecutionContexts
-import akka.pattern.CircuitBreaker
 import akka.pattern.CircuitBreakersRegistry
 import akka.pattern.pipe
 import akka.persistence._
@@ -31,12 +27,8 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
   private val config = extension.configFor(self)
 
   private val breaker = {
-    val maxFailures = config.getInt("circuit-breaker.max-failures")
-    val callTimeout = config.getDuration("circuit-breaker.call-timeout", MILLISECONDS).millis
-    val resetTimeout = config.getDuration("circuit-breaker.reset-timeout", MILLISECONDS).millis
     val id = extension.extensionIdFor(self)
-    CircuitBreakersRegistry(context.system).getOrCreate(id)(() =>
-      CircuitBreaker(context.system.scheduler, maxFailures, callTimeout, resetTimeout))
+    CircuitBreakersRegistry(context.system).getOrCreate(id, config.getConfig("circuit-breaker"))
   }
 
   private val replayFilterMode: ReplayFilter.Mode =
@@ -183,7 +175,7 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
                         adaptFromJournal(p).foreach { adaptedPersistentRepr =>
                           replyTo.tell(ReplayedMessage(adaptedPersistentRepr), Actor.noSender)
                         }
-                    }.map(_ => highSeqNr)(ExecutionContexts.parasitic)
+                    }.map(_ => highSeqNr)(ExecutionContext.parasitic)
                   }
               }
           }
@@ -191,7 +183,7 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
         replay
           .map { highSeqNr =>
             RecoverySuccess(highSeqNr)
-          }(ExecutionContexts.parasitic)
+          }(ExecutionContext.parasitic)
           .recover {
             case e => ReplayMessagesFailure(e)
           }

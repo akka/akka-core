@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.serialization
 
+import akka.persistence.CompositeMetadata
 import akka.persistence.FilteredPayload
 import akka.persistence.SerializedEvent
 import akka.serialization.SerializationExtension
@@ -46,6 +47,20 @@ class PayloadSerializerSpec extends AkkaSpec {
       val deserializiedEvent =
         serialization.deserialize(deserializied.bytes, deserializied.serializerId, deserializied.serializerManifest).get
       deserializiedEvent shouldBe event
+    }
+
+    "serialize CompositeMetadata" in {
+      val meta = CompositeMetadata(List("a", 17L))
+      val serializer = serialization.findSerializerFor(meta).asInstanceOf[SerializerWithStringManifest]
+      serializer.getClass shouldBe classOf[PayloadSerializer]
+      val bytes = serializer.toBinary(meta)
+      val manifest = serializer.manifest(meta)
+      val serializerId = serializer.identifier
+
+      val deserialized = serialization.deserialize(bytes, serializerId, manifest).get.asInstanceOf[CompositeMetadata]
+      deserialized.entries.size shouldBe 2
+      deserialized.entries.head shouldBe "a"
+      deserialized.entries(1) shouldBe 17L
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.setup
@@ -7,7 +7,7 @@ package akka.actor.setup
 import java.util.Optional
 
 import scala.annotation.varargs
-import scala.compat.java8.OptionConverters._
+import scala.jdk.OptionConverters._
 import scala.reflect.ClassTag
 
 import akka.annotation.InternalApi
@@ -57,7 +57,7 @@ final class ActorSystemSetup private[akka] (@InternalApi private[akka] val setup
    * Java API: Extract a concrete [[Setup]] of type `T` if it is defined in the settings.
    */
   def get[T <: Setup](clazz: Class[T]): Optional[T] = {
-    setups.get(clazz).map(_.asInstanceOf[T]).asJava
+    setups.get(clazz).map(_.asInstanceOf[T]).toJava
   }
 
   /**

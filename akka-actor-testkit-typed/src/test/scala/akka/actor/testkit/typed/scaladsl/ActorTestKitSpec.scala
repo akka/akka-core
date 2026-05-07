@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.scaladsl
@@ -129,7 +129,7 @@ class ActorTestKitSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike wi
 
     "allow subscriptions for dead letters" in {
       val probe = testKit.createDeadLetterProbe()
-      system.deadLetters ! "message"
+      system.deadLetters[String] ! "message"
       probe.receiveMessage().message should ===("message")
     }
 

@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.serialization
 
+import scala.annotation.nowarn
 import scala.reflect.ClassTag
-
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.ClassicActorSystemProvider
@@ -19,7 +19,6 @@ import akka.remote.RemoteActorRef
 import akka.remote.RemoteActorRefProvider
 import akka.remote.artery.LruBoundedCache
 import akka.util.Unsafe
-import akka.util.unused
 
 /**
  * INTERNAL API: Thread local cache per actor system
@@ -54,7 +53,7 @@ private[akka] class ActorRefResolveThreadLocalCache(val system: ExtendedActorSys
     override def initialValue: ActorRefResolveCache = new ActorRefResolveCache(provider)
   }
 
-  def threadLocalCache(@unused provider: RemoteActorRefProvider): ActorRefResolveCache =
+  def threadLocalCache(@nowarn("msg=never used") provider: RemoteActorRefProvider): ActorRefResolveCache =
     current.get
 
 }

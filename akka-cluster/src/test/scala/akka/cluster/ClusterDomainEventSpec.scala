@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
+import scala.annotation.nowarn
 import scala.collection.immutable.SortedSet
 
 import org.scalatest.BeforeAndAfterAll
@@ -12,6 +13,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import akka.actor.Address
 
+@nowarn("msg=Use Akka Distributed Cluster")
 class ClusterDomainEventSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   import ClusterEvent._

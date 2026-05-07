@@ -20,7 +20,7 @@ Java deserialization is [known to be vulnerable](https://community.microfocus.co
 Akka Remoting uses Java serializer as default configuration which makes it vulnerable in its default form. The documentation of how to disable Java serializer was not complete. The documentation of how to enable mutual authentication was missing (only described in reference.conf).
 
 To protect against such attacks the system should be updated to Akka *2.4.17* or later and be configured with 
-[disabled Java serializer](https://doc.akka.io/docs/akka/2.5/remoting.html#disable-java-serializer). Additional protection can be achieved when running in an
+[disabled Java serializer](https://doc.akka.io/libraries/akka-core/2.5/remoting.html#disable-java-serializer). Additional protection can be achieved when running in an
 untrusted network by enabling @ref:[TLS with mutual authentication](../remote-security.md#remote-tls).
 
 Please subscribe to the [akka-security](https://groups.google.com/forum/#!forum/akka-security) mailing list to be notified promptly about future security issues.

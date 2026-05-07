@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.javadsl
@@ -90,8 +90,8 @@ object StreamConverters {
    * @param readTimeout the max time the read operation on the materialized InputStream should block
    */
   def asInputStream(readTimeout: java.time.Duration): Sink[ByteString, InputStream] = {
-    import akka.util.JavaDurationConverters._
-    new Sink(scaladsl.StreamConverters.asInputStream(readTimeout.asScala))
+    import scala.jdk.DurationConverters._
+    new Sink(scaladsl.StreamConverters.asInputStream(readTimeout.toScala))
   }
 
   /**
@@ -148,8 +148,8 @@ object StreamConverters {
    * @param writeTimeout the max time the write operation on the materialized OutputStream should block
    */
   def asOutputStream(writeTimeout: java.time.Duration): javadsl.Source[ByteString, OutputStream] = {
-    import akka.util.JavaDurationConverters._
-    new Source(scaladsl.StreamConverters.asOutputStream(writeTimeout.asScala))
+    import scala.jdk.DurationConverters._
+    new Source(scaladsl.StreamConverters.asOutputStream(writeTimeout.toScala))
   }
 
   /**

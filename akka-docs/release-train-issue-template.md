@@ -11,57 +11,55 @@ Variables to be expanded in this template:
 - $VERSION$=???
 
 Key links:
-  - akka/akka milestone: https://github.com/akka/akka/milestone/?
+  - akka/akka-core milestone: https://github.com/akka/akka-core/milestone/?
 -->
 
 ### Cutting the release
 
-- [ ] Check that open PRs and issues assigned to the milestone are reasonable
-- [ ] If PRs were merged after EU midnight, trigger the [native-image tests](https://github.com/akka/akka/actions/workflows/native-image-tests.yml) and see that they are green.
-- [ ] Update the version and change date in the LICENSE file.
-- [ ] Update the Akka version in the samples to $VERSION$, otherwise the published zip files of the samples will have the old version.
-- [ ] Create a new milestone for the [next version](https://github.com/akka/akka/milestones)
-- [ ] Close the [$VERSION$ milestone](https://github.com/akka/akka/milestones?direction=asc&sort=due_date)
+- [ ] Check that [open PRs](https://github.com/akka/akka-core/pulls) and [issues assigned to the milestone](https://github.com/akka/akka-core/issues?q=milestone%3A%22$VERSION$%22) are reasonable
+- [ ] If PRs related to clustering were merged after the previous multi-node test run, trigger the [multi-node tests](https://github.com/akka/akka-core/actions/workflows/multi-node.yml) and see that they are green.
+- [ ] If PRs were merged after EU midnight, trigger the [native-image tests](https://github.com/akka/akka-core/actions/workflows/native-image-tests.yml) and see that they are green.
+- [ ] If PRs were merged after the last nightly, trigger nightlies [nightly-builds](https://github.com/akka/akka-core/actions/workflows/nightly-builds.yml) and see that they are green.
+- [ ] Run the release-prep script to update LICENSE (version, copyright year, change date + 3y) and bump the akka version in every sample build file. With `--commit-and-pr` it pushes a `wip-release-prep-$VERSION$` branch and opens a PR:
+      ```
+      ./scripts/release-prep.sh --commit-and-pr $VERSION$
+      ```
+- [ ] Create a new milestone for the [next version](https://github.com/akka/akka-core/milestones)
+- [ ] Close the [$VERSION$ milestone](https://github.com/akka/akka-core/milestones?direction=asc&sort=due_date)
 - [ ] Make sure all important PRs have been merged
-- [ ] Update the revision in Fossa in the Akka Group for the Akka umbrella version, e.g. `22.10`. Note that the revisions for the release is udpated by Akka Group > Projects > Edit. For recent dependency updates the Fossa validation can be triggered from the GitHub actions "Dependency License Scanning".
-- [ ] Wait until [main build finished](https://github.com/akka/akka/actions) after merging the latest PR
-- [ ] Update the [draft release](https://github.com/akka/akka/releases) with the next tag version `v$VERSION$`, title and release description. Use the `Publish release` button, which will create the tag.
-- [ ] Check that GitHub Actions release build has executed successfully (GitHub Actions will start a [CI build](https://github.com/akka/akka/actions) for the new tag and publish artifacts to https://repo.akka.io/maven)
+- [ ] Wait until [main build finished](https://github.com/akka/akka-core/actions) after merging the latest PR
+- [ ] Create the [draft release](https://github.com/akka/akka-core/releases/new?tag=v$VERSION$), click `Generate release notes` to get a title and release description. Use the `Publish release` button, which will create the tag.
+- [ ] Check that GitHub Actions release build has executed successfully (GitHub Actions will start a [CI build](https://github.com/akka/akka-core/actions) for the new tag and publish artifacts to https://repo.akka.io/TOKEN/secure)
 
 ### Check availability
 
-- [ ] Check [API](https://doc.akka.io/api/akka/$VERSION$/) documentation
-- [ ] Check [reference](https://doc.akka.io/docs/akka/$VERSION$/) documentation. Check that the reference docs were deployed and show a version warning (see section below on how to fix the version warning).
-- [ ] Check the release on https://repo.akka.io/maven/com/typesafe/akka/akka-actor_2.13/$VERSION$/akka-actor_2.13-$VERSION$.pom
+- [ ] Check [API](https://doc.akka.io/api/akka-core/$VERSION$/) documentation
+- [ ] Check [reference](https://doc.akka.io/libraries/akka-core/$VERSION$/) documentation. Check that the reference docs were deployed and show a version warning (see section below on how to fix the version warning).
+- [ ] Check the release `mvn dependency:get -Dartifact=com.typesafe.akka:akka-actor_2.13:$VERSION$` 
 
-### When everything is on https://repo.akka.io/maven
+### When everything is on https://repo.akka.io/TOKEN/secure
   - [ ] Log into `gustav.akka.io` as `akkarepo` 
     - [ ] If this updates the `current` version, run `./update-akka-current-version.sh $VERSION$`
     - [ ] otherwise check changes and commit the new version to the local git repository
          ```
          cd ~/www
          git status
-         git add docs/akka/current docs/akka/$VERSION$
-         git add api/akka/current api/akka/$VERSION$
-         git add japi/akka/current japi/akka/$VERSION$
-         git commit -m "Akka $VERSION$"
+         git add libraries/akka-core/current libraries/akka-core/$VERSION$
+         git add api/akka-core/current api/akka-core/$VERSION$
+         git add japi/akka-core/current japi/akka-core/$VERSION$
+         git commit -m "Akka core $VERSION$"
          ```
     - [ ] push changes to the [remote git repository](https://github.com/akka/doc.akka.io)
          ```
          cd ~/www
          git push origin master
          ```
-  - [ ] If this updated 'current' docs - trigger a re-index of the docs for search through [Run workflow for the scraper](https://github.com/akka/akka/actions/workflows/algolia-doc-site-scrape.yml)
-  - [ ] Update version in _config.yml in https://github.com/akka/akka.io    
+  - [ ] If this updated 'current' docs - trigger a re-index of the docs for search through [Run workflow for the scraper](https://github.com/akka/akka-core/actions/workflows/algolia-doc-site-scrape.yml)
   
 
 ### Announcements
 
-For important patch releases, and only if critical issues have been fixed:
-
-- [ ] Send a release notification to [Lightbend discuss](https://discuss.akka.io)
-- [ ] Tweet using the [@akkateam](https://twitter.com/akkateam/) account (or ask someone to) about the new release
-- [ ] Announce internally (with links to Tweet, discuss)
+- Add a summary of relevant changes into [release notes](https://github.com/akka/akka-sdk/blob/main/docs/src/modules/reference/pages/release-notes.adoc)
 
 For minor or major releases:
 
@@ -70,7 +68,7 @@ For minor or major releases:
 ### Afterwards
 
 - [ ] Update `MiMa.latestPatchOf` and PR that change (`project/MiMa.scala`)
-- [ ] Update [akka-dependencies bom](https://github.com/lightbend/akka-dependencies) and version for [Akka module versions](https://doc.akka.io/docs/akka-dependencies/current/) in [akka-dependencies repo](https://github.com/akka/akka-dependencies)
+- [ ] Update [akka-dependencies bom](https://github.com/lightbend/akka-dependencies) and version for [Akka module versions](https://doc.akka.io/libraries/akka-dependencies/current/) in [akka-dependencies repo](https://github.com/akka/akka-dependencies)
 - [ ] Update [Akka Guide samples](https://github.com/akka/akka-guide)
 - [ ] Update sbt new templates:
   - [ ] [Akka Scala](https://github.com/akka/akka-quickstart-scala.g8/blob/main/src/main/g8/default.properties)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -10,7 +10,9 @@ import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 
-import scala.compat.java8.FutureConverters._
+import scala.annotation.nowarn
+import scala.jdk.DurationConverters._
+import scala.jdk.FutureConverters._
 import scala.concurrent.Future
 
 import akka.actor.ActorRefProvider
@@ -41,8 +43,7 @@ import akka.japi.function.{ Function => JFunction }
 import akka.pattern.AskTimeoutException
 import akka.pattern.PromiseActorRef
 import akka.pattern.StatusReply
-import akka.util.{ unused, ByteString, Timeout }
-import akka.util.JavaDurationConverters._
+import akka.util.{ ByteString, Timeout }
 
 /**
  * INTERNAL API
@@ -90,6 +91,7 @@ import akka.util.JavaDurationConverters._
 }
 
 /** INTERNAL API */
+@nowarn("msg=Use Akka Distributed Cluster")
 @InternalApi private[akka] final class ClusterShardingImpl(system: ActorSystem[_])
     extends javadsl.ClusterSharding
     with scaladsl.ClusterSharding {
@@ -138,19 +140,19 @@ import akka.util.JavaDurationConverters._
 
   // javadsl impl
   override def init[M, E](entity: javadsl.Entity[M, E]): ActorRef[E] = {
-    import scala.compat.java8.OptionConverters._
+    import scala.jdk.OptionConverters._
     init(
       new scaladsl.Entity(
         createBehavior = (ctx: EntityContext[M]) =>
           entity.createBehavior(new javadsl.EntityContext[M](entity.typeKey, ctx.entityId, ctx.shard)),
         typeKey = entity.typeKey.asScala,
-        stopMessage = entity.stopMessage.asScala,
+        stopMessage = entity.stopMessage.toScala,
         entityProps = entity.entityProps,
-        settings = entity.settings.asScala,
-        messageExtractor = entity.messageExtractor.asScala,
-        allocationStrategy = entity.allocationStrategy.asScala,
-        role = entity.role.asScala,
-        dataCenter = entity.dataCenter.asScala))
+        settings = entity.settings.toScala,
+        messageExtractor = entity.messageExtractor.toScala,
+        allocationStrategy = entity.allocationStrategy.toScala,
+        role = entity.role.toScala,
+        dataCenter = entity.dataCenter.toScala))
   }
 
   private def internalInit[M, E](
@@ -241,6 +243,18 @@ import akka.util.JavaDurationConverters._
     ActorRefAdapter(ref)
   }
 
+  override def shard(typeKey: scaladsl.EntityTypeKey[_]): ActorRef[scaladsl.ClusterSharding.ShardCommand] =
+    shardCommandActors.get(typeKey.name) match {
+      case null  => throw new IllegalStateException(s"Entity type [${typeKey.name}] must first be initialized")
+      case shard => shard
+    }
+
+  override def shard(typeKey: javadsl.EntityTypeKey[_]): ActorRef[javadsl.ClusterSharding.ShardCommand] =
+    shardCommandActors.get(typeKey.name) match {
+      case null  => throw new IllegalStateException(s"Entity type [${typeKey.name}] must first be initialized")
+      case shard => shard
+    }
+
   override def entityRefFor[M](typeKey: scaladsl.EntityTypeKey[M], entityId: String): scaladsl.EntityRef[M] = {
     new EntityRefImpl[M](
       classicSharding.shardRegion(typeKey.name),
@@ -248,6 +262,7 @@ import akka.util.JavaDurationConverters._
       typeKey.asInstanceOf[EntityTypeKeyImpl[M]])
   }
 
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   override def entityRefFor[M](
       typeKey: scaladsl.EntityTypeKey[M],
       entityId: String,
@@ -269,6 +284,7 @@ import akka.util.JavaDurationConverters._
       typeKey.asInstanceOf[EntityTypeKeyImpl[M]])
   }
 
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   override def entityRefFor[M](
       typeKey: javadsl.EntityTypeKey[M],
       entityId: String,
@@ -343,13 +359,13 @@ import akka.util.JavaDurationConverters._
   }
 
   override def ask[U](message: JFunction[ActorRef[U], M], timeout: Duration): CompletionStage[U] =
-    ask[U](replyTo => message.apply(replyTo))(timeout.asScala).toJava
+    ask[U](replyTo => message.apply(replyTo))(timeout.toScala).asJava
 
   override def askWithStatus[Res](f: ActorRef[StatusReply[Res]] => M)(implicit timeout: Timeout): Future[Res] =
     StatusReply.flattenStatusFuture(ask[StatusReply[Res]](f))
 
   override def askWithStatus[Res](f: ActorRef[StatusReply[Res]] => M, timeout: Duration): CompletionStage[Res] =
-    askWithStatus(f.apply)(timeout.asScala).toJava
+    askWithStatus(f.apply)(timeout.toScala).asJava
 
   /** Similar to [[akka.actor.typed.scaladsl.AskPattern.PromiseRef]] but for an `EntityRef` target. */
   @InternalApi
@@ -393,7 +409,7 @@ import akka.util.JavaDurationConverters._
         shardRegion: akka.actor.ActorRef,
         entityId: String,
         message: T,
-        @unused timeout: Timeout): Future[U] = {
+        @nowarn("msg=never used") timeout: Timeout): Future[U] = {
       shardRegion ! ShardingEnvelope(entityId, message)
       future
     }

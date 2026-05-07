@@ -169,3 +169,9 @@ supervisors are remote actor references
 The need to structure the name space for actors like this arises from a central
 and very simple design goal: everything in the hierarchy is an actor, and all
 actors function in the same way. 
+
+@@@note
+
+🎓 For a deeper understanding of the Actor Model, consider the free online course [**Actor Fundamentals**](https://akkademy.akka.io/learn/courses/21/actor-fundamentals) in Akkademy.
+
+@@@

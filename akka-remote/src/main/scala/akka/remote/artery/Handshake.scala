@@ -1,9 +1,11 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
 
+import scala.annotation.nowarn
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
@@ -11,7 +13,6 @@ import scala.util.control.NoStackTrace
 import akka.Done
 import akka.actor.ActorSystem
 import akka.actor.Address
-import akka.dispatch.ExecutionContexts
 import akka.remote.UniqueAddress
 import akka.stream.Attributes
 import akka.stream.FlowShape
@@ -19,7 +20,6 @@ import akka.stream.Inlet
 import akka.stream.Outlet
 import akka.stream.stage._
 import akka.util.OptionVal
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -51,7 +51,7 @@ private[remote] object OutboundHandshake {
  * INTERNAL API
  */
 private[remote] class OutboundHandshake(
-    @unused system: ActorSystem,
+    @nowarn("msg=never used") system: ActorSystem,
     outboundContext: OutboundContext,
     outboundEnvelopePool: ObjectPool[ReusableOutboundEnvelope],
     timeout: FiniteDuration,
@@ -299,7 +299,7 @@ private[remote] class InboundHandshake(inboundContext: InboundContext, inControl
             thenInside(result.isSuccess)
           case None =>
             first.onComplete(result => runInStage.invoke(() => thenInside(result.isSuccess)))(
-              ExecutionContexts.parasitic)
+              ExecutionContext.parasitic)
         }
 
       }

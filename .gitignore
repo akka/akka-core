@@ -102,7 +102,7 @@ native/
 
 .tmp
 
-/fortify-scans/
-
 # attachments created by scripts/prepare-downloads.sh
 akka-docs/src/main/paradox/attachments
+
+.claude

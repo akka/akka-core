@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -40,7 +40,7 @@ final class ChangeNumberOfProcesses(val newNumberOfProcesses: Int, val replyTo: 
   }
 
   override def hashCode(): Int = {
-    val state = Seq(newNumberOfProcesses, replyTo)
+    val state = Array[Any](newNumberOfProcesses, replyTo)
     state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
   }
 }

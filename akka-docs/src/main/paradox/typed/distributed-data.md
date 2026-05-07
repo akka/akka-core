@@ -7,13 +7,9 @@ You are viewing the documentation for the new actor APIs, to view the Akka Class
 
 ## Module info
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Akka Cluster Distributed Data, you must add the following dependency in your project:
 
@@ -313,7 +309,8 @@ at least **N/2 + 1** replicas, where N is the number of nodes in the cluster
    Exiting nodes are excluded using `ReadAll` because those are typically about to be removed and will not be able to respond.
 
 Note that `ReadMajority` and `ReadMajorityPlus` have a `minCap` parameter that is useful to specify to achieve
-better safety for small clusters.
+better safety for small clusters.  Additionally, reads from remote replicas are incorporated into the local
+replica's state.
 
 #### Consistency and response types
 

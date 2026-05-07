@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
@@ -19,7 +19,7 @@ import akka.actor.{ ActorCell, ActorRef, ActorSystem, DeadLetter, InternalActorR
 import akka.annotation.InternalStableApi
 import akka.dispatch.sysmsg._
 import akka.event.Logging.Error
-import akka.util.{ BoundedBlockingQueue, StablePriorityBlockingQueue, StablePriorityQueue, Unsafe }
+import akka.util.{ BoundedBlockingQueue, StablePriorityBlockingQueue, StablePriorityQueue }
 import akka.util.Helpers.ConfigOps
 
 /**
@@ -112,8 +112,7 @@ private[akka] abstract class Mailbox(val messageQueue: MessageQueue)
   protected var _systemQueueDoNotCallMeDirectly: SystemMessage = _ //null by default
 
   @inline
-  final def currentStatus: Mailbox.Status = Unsafe.instance.getIntVolatile(this, AbstractMailbox.mailboxStatusOffset)
-
+  final def currentStatus: Mailbox.Status = AbstractMailbox.volatileGetMailboxStatus(this)
   @inline
   final def shouldProcessMessage: Boolean = (currentStatus & shouldNotProcessMask) == 0
 
@@ -131,11 +130,11 @@ private[akka] abstract class Mailbox(val messageQueue: MessageQueue)
 
   @inline
   protected final def updateStatus(oldStatus: Status, newStatus: Status): Boolean =
-    Unsafe.instance.compareAndSwapInt(this, AbstractMailbox.mailboxStatusOffset, oldStatus, newStatus)
+    AbstractMailbox.compareAndSetMailboxStatus(this, oldStatus, newStatus)
 
   @inline
   protected final def setStatus(newStatus: Status): Unit =
-    Unsafe.instance.putIntVolatile(this, AbstractMailbox.mailboxStatusOffset, newStatus)
+    AbstractMailbox.volatileSetMailboxStatus(this, newStatus)
 
   /**
    * Reduce the suspend count by one. Caller does not need to worry about whether
@@ -207,15 +206,14 @@ private[akka] abstract class Mailbox(val messageQueue: MessageQueue)
   protected final def systemQueueGet: LatestFirstSystemMessageList =
     // Note: contrary how it looks, there is no allocation here, as SystemMessageList is a value class and as such
     // it just exists as a typed view during compile-time. The actual return type is still SystemMessage.
-    new LatestFirstSystemMessageList(
-      Unsafe.instance.getObjectVolatile(this, AbstractMailbox.systemMessageOffset).asInstanceOf[SystemMessage])
+    new LatestFirstSystemMessageList(AbstractMailbox.systemMessageHandle.getVolatile(this).asInstanceOf[SystemMessage])
 
   protected final def systemQueuePut(_old: LatestFirstSystemMessageList, _new: LatestFirstSystemMessageList): Boolean =
     (_old.head eq _new.head) ||
     // Note: calling .head is not actually existing on the bytecode level as the parameters _old and _new
     // are SystemMessage instances hidden during compile time behind the SystemMessageList value class.
     // Without calling .head the parameters would be boxed in SystemMessageList wrapper.
-    Unsafe.instance.compareAndSwapObject(this, AbstractMailbox.systemMessageOffset, _old.head, _new.head)
+    AbstractMailbox.systemMessageHandle.compareAndSet(this, _old.head, _new.head)
 
   final def canBeScheduledForExecution(hasMessageHint: Boolean, hasSystemMessageHint: Boolean): Boolean =
     currentStatus match {

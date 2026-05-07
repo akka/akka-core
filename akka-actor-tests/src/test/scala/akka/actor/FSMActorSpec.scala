@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -12,7 +12,7 @@ import language.postfixOps
 
 import akka.event._
 import akka.testkit._
-import akka.util.{ unused, Timeout }
+import akka.util.Timeout
 
 object FSMActorSpec {
 
@@ -79,7 +79,7 @@ object FSMActorSpec {
     // verify that old-style does still compile
     onTransition(transitionHandler _)
 
-    def transitionHandler(@unused from: LockState, @unused to: LockState) = {
+    def transitionHandler(from: LockState, to: LockState) = {
       // dummy
     }
 
@@ -179,7 +179,7 @@ class FSMActorSpec extends AkkaSpec(Map("akka.actor.debug.fsm" -> true)) with Im
     "run onTermination upon ActorRef.stop()" in {
       val started = TestLatch(1)
 
-      // can't be anonymous class due to https://github.com/akka/akka/issues/32128
+      // can't be anonymous class due to https://github.com/akka/akka-core/issues/32128
       class FsmActor extends Actor with FSM[Int, Null] {
         override def preStart() = {
           started.countDown()
@@ -224,7 +224,7 @@ class FSMActorSpec extends AkkaSpec(Map("akka.actor.debug.fsm" -> true)) with Im
     "cancel all timers when terminated" in {
       val timerNames = List("timer-1", "timer-2", "timer-3")
 
-      // can't be anonymous class due to https://github.com/akka/akka/issues/32128
+      // can't be anonymous class due to https://github.com/akka/akka-core/issues/32128
       class FsmActor extends Actor with FSM[String, Null] {
         startWith("not-started", null)
         when("not-started") {
@@ -264,9 +264,9 @@ class FSMActorSpec extends AkkaSpec(Map("akka.actor.debug.fsm" -> true)) with Im
     }
 
     "log events and transitions if asked to do so" in {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       val config = ConfigFactory
-        .parseMap(Map("akka.loglevel" -> "DEBUG", "akka.actor.debug.fsm" -> true).asJava)
+        .parseMap(Map[String, Any]("akka.loglevel" -> "DEBUG", "akka.actor.debug.fsm" -> true).asJava)
         .withFallback(system.settings.config)
       val fsmEventSystem = ActorSystem("fsmEvent", config)
       try {

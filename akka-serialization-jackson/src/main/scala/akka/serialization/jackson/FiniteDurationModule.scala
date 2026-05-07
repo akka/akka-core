@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.serialization.jackson
 
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
@@ -16,7 +17,6 @@ import com.fasterxml.jackson.datatype.jsr310.deser.DurationDeserializer
 import com.fasterxml.jackson.datatype.jsr310.ser.DurationSerializer
 
 import akka.annotation.InternalApi
-import akka.util.JavaDurationConverters._
 
 /**
  * INTERNAL API: Adds support for serializing and deserializing [[FiniteDuration]].
@@ -41,7 +41,7 @@ import akka.util.JavaDurationConverters._
 @InternalApi private[akka] class FiniteDurationSerializer
     extends StdScalarSerializer[FiniteDuration](classOf[FiniteDuration]) {
   override def serialize(value: FiniteDuration, jgen: JsonGenerator, provider: SerializerProvider): Unit = {
-    DurationSerializer.INSTANCE.serialize(value.asJava, jgen, provider)
+    DurationSerializer.INSTANCE.serialize(value.toJava, jgen, provider)
   }
 }
 
@@ -59,6 +59,6 @@ import akka.util.JavaDurationConverters._
     extends StdScalarDeserializer[FiniteDuration](classOf[FiniteDuration]) {
 
   def deserialize(jp: JsonParser, ctxt: DeserializationContext): FiniteDuration = {
-    DurationDeserializer.INSTANCE.deserialize(jp, ctxt).asScala
+    DurationDeserializer.INSTANCE.deserialize(jp, ctxt).toScala
   }
 }

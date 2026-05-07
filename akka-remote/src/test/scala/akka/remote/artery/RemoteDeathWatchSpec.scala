@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
 
-import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.ConfigFactory
@@ -86,7 +85,6 @@ class RemoteDeathWatchSpec
     val path = RootActorPath(Address("akka", system.name, "unknownhost", 2552)) / "user" / "subject"
 
     system.actorOf(Props(new Actor {
-      @nowarn
       val watchee = RARP(context.system).provider.resolveActorRef(path)
       context.watch(watchee)
 

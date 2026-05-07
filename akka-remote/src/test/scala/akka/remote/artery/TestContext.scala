@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ThreadLocalRandom
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import com.typesafe.config.ConfigFactory
@@ -15,7 +16,6 @@ import com.typesafe.config.ConfigFactory
 import akka.Done
 import akka.actor.ActorRef
 import akka.actor.Address
-import akka.dispatch.ExecutionContexts
 import akka.remote.UniqueAddress
 import akka.remote.artery.InboundControlJunction.ControlMessageObserver
 import akka.remote.artery.InboundControlJunction.ControlMessageSubject
@@ -55,7 +55,7 @@ private[remote] class TestInboundContext(
     val done = a.completeHandshake(peer)
     done.foreach { _ =>
       associationsByUid.put(peer.uid, a)
-    }(ExecutionContexts.parasitic)
+    }(ExecutionContext.parasitic)
     done
   }
 

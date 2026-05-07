@@ -1,2 +1,2 @@
-# FishingOutcomes.continue() cannot be used in Java code due to reserved word, see https://github.com/akka/akka/issues/29951
+# FishingOutcomes.continue() cannot be used in Java code due to reserved word, see https://github.com/akka/akka-core/issues/29951
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.testkit.typed.javadsl.FishingOutcomes.continue")

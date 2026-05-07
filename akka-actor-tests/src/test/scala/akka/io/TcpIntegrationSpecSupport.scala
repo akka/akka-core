@@ -1,17 +1,16 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
 
 import scala.annotation.tailrec
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 
 import Tcp._
-
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
-import akka.dispatch.ExecutionContexts
 import akka.io.Inet.SocketOption
 import akka.testkit.{ AkkaSpec, TestProbe }
 import akka.testkit.SocketUtil.temporaryServerAddress
@@ -25,7 +24,7 @@ trait TcpIntegrationSpecSupport { this: AkkaSpec =>
         // terminate clientSystem after server system
         system.whenTerminated.onComplete { _ =>
           res.terminate()
-        }(ExecutionContexts.parasitic)
+        }(ExecutionContext.parasitic)
         res
       } else system
     val bindHandler = TestProbe()

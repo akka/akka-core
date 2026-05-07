@@ -1,15 +1,15 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl.fusing
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
 
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.stream.{ AbruptStageTerminationException, Attributes, FlowShape, Inlet, NeverMaterializedException, Outlet }
 import akka.stream.Attributes.SourceLocation
 import akka.stream.impl.Stages.DefaultAttributes
@@ -45,7 +45,7 @@ import akka.util.OptionVal
             Initializing.onFuture(tryFlow)
           case None =>
             val cb = getAsyncCallback(Initializing.onFuture)
-            futureFlow.onComplete(cb.invoke)(ExecutionContexts.parasitic)
+            futureFlow.onComplete(cb.invoke)(ExecutionContext.parasitic)
             //in case both ports are closed before future completion
             setKeepGoing(true)
         }

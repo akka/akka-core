@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -10,9 +10,11 @@ import akka.stream.scaladsl._
 import akka.testkit.AkkaSpec
 import docs.CompileOnlySpec
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 import scala.concurrent._
 
+@nowarn("msg=never used") // sample snippets
 class RestartDocSpec extends AkkaSpec with CompileOnlySpec {
   import system.dispatcher
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.internal
@@ -9,6 +9,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 import scala.util.Failure
 import scala.util.Success
 
@@ -19,7 +20,6 @@ import akka.actor.typed.Extension
 import akka.actor.typed.ExtensionId
 import akka.actor.typed.SupervisorStrategy
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.scaladsl.adapter.TypedActorRefOps
 import akka.annotation.InternalStableApi
@@ -30,7 +30,6 @@ import akka.persistence.JournalProtocol
 import akka.persistence.Persistence
 import akka.persistence.PersistentRepr
 import akka.persistence.journal.Tagged
-import akka.util.JavaDurationConverters.JavaDurationOps
 import akka.util.Timeout
 
 /**
@@ -76,7 +75,7 @@ private[akka] object EventWriter {
       val config = system.settings.config.getConfig("akka.persistence.typed.event-writer")
       EventWriterSettings(
         maxBatchSize = config.getInt("max-batch-size"),
-        askTimeout = config.getDuration("ask-timeout").asScala,
+        askTimeout = config.getDuration("ask-timeout").toScala,
         latestSequenceNumberCacheCapacity = config.getInt("latest-sequence-number-cache-capacity"))
     }
 
@@ -161,7 +160,7 @@ private[akka] object EventWriter {
 
         def sendToJournal(transactionId: Int, reprs: Vector[PersistentRepr]): Unit = {
           if (context.log.isTraceEnabled)
-            context.log.traceN(
+            context.log.trace(
               "Writing events persistence id [{}], sequence nrs [{}-{}]",
               reprs.head.persistenceId,
               reprs.head.sequenceNr,
@@ -197,7 +196,7 @@ private[akka] object EventWriter {
                   currentTransactionId = newStateForPid.currentTransactionId + 1)
 
               if (context.log.isTraceEnabled())
-                context.log.traceN(
+                context.log.trace(
                   "Writing batch of {} events for pid [{}], seq nrs [{}-{}], tx id [{}]",
                   newStateForPid.waitingForWrite.size,
                   pid,
@@ -251,7 +250,7 @@ private[akka] object EventWriter {
                   .map { case (pid, _) => pid }
 
               if (context.log.isTraceEnabled)
-                context.log.traceN(
+                context.log.trace(
                   "Evicted cache from [{}] to [{}], persistence ids [{}]",
                   idleEntries.size,
                   idleEntries.size - pidsToRemove.size,
@@ -270,7 +269,7 @@ private[akka] object EventWriter {
               val sequenceNr = message.sequenceNr
               perPidWriteState.get(pid) match {
                 case None =>
-                  context.log.debugN(
+                  context.log.debug(
                     "Got write success reply for event with no previous state for pid, ignoring (pid [{}], seq nr [{}], tx id [{}])",
                     pid,
                     sequenceNr,
@@ -279,13 +278,13 @@ private[akka] object EventWriter {
                   if (transactionId == stateForPid.currentTransactionId) {
                     stateForPid.waitingForReply.get(sequenceNr) match {
                       case None =>
-                        context.log.debugN(
+                        context.log.debug(
                           "Got write reply for event with no waiting request for seq nr, ignoring (pid [{}], seq nr [{}], tx id [{}])",
                           pid,
                           sequenceNr,
                           transactionId)
                       case Some((_, waiting)) =>
-                        context.log.trace2(
+                        context.log.trace(
                           "Successfully wrote event persistence id [{}], sequence nr [{}]",
                           pid,
                           sequenceNr)
@@ -298,7 +297,7 @@ private[akka] object EventWriter {
                     }
                   } else {
                     if (context.log.isTraceEnabled) {
-                      context.log.traceN(
+                      context.log.trace(
                         "Got reply for old tx id [{}] (current [{}]) for pid [{}], ignoring",
                         transactionId,
                         stateForPid.currentTransactionId,
@@ -313,7 +312,7 @@ private[akka] object EventWriter {
               val sequenceNr = message.sequenceNr
               perPidWriteState.get(pid) match {
                 case None =>
-                  context.log.debugN(
+                  context.log.debug(
                     "Got write error reply for event with no previous state for pid, ignoring (pid [{}], seq nr [{}], tx id [{}])",
                     pid,
                     sequenceNr,
@@ -322,7 +321,7 @@ private[akka] object EventWriter {
                   // write failure could be re-delivery, we need to check
                   state.waitingForReply.get(sequenceNr) match {
                     case None =>
-                      context.log.debugN(
+                      context.log.debug(
                         "Got write error reply for event with no waiting request for seq nr, ignoring (pid [{}], seq nr [{}], tx id [{}])",
                         pid,
                         sequenceNr,
@@ -335,7 +334,7 @@ private[akka] object EventWriter {
                           perPidWriteState.updated(pid, state.copy(writeErrorHandlingInProgress = true))
                         askMaxSeqNr(pid, AskMaxSeqNrReason.WriteFailure(error.getMessage))
                       } else {
-                        context.log.traceN(
+                        context.log.trace(
                           "Ignoring failure for pid [{}], seq nr [{}], tx id [{}], since write error handling already in progress or old tx id (current tx id [{}])",
                           pid,
                           sequenceNr,
@@ -388,7 +387,7 @@ private[akka] object EventWriter {
                   else repr.sequenceNr
 
                 if (state.seqNrlookupInProgress) {
-                  context.log.trace2(
+                  context.log.trace(
                     "Seq nr lookup in progress for persistence id [{}], adding sequence nr [{}] to pending",
                     persistenceId,
                     sequenceNumber)
@@ -410,7 +409,7 @@ private[akka] object EventWriter {
                         "the same pid may be in flight at the same time")
                       state
                     } else {
-                      context.log.trace2(
+                      context.log.trace(
                         "Writing event in progress for persistence id [{}], adding sequence nr [{}] to batch",
                         persistenceId,
                         sequenceNumber)
@@ -420,7 +419,7 @@ private[akka] object EventWriter {
                     }
                   }
                 } else if (sequenceNumber < expectedSeqNr) {
-                  context.log.trace2("Duplicate seq nr [{}] for persistence id [{}]", sequenceNumber, persistenceId)
+                  context.log.trace("Duplicate seq nr [{}] for persistence id [{}]", sequenceNumber, persistenceId)
                   replyTo ! StatusReply.success(WriteAck(persistenceId, sequenceNumber)) // duplicate
                   state
                 } else { // sequenceNumber > expectedSeqNr
@@ -441,7 +440,7 @@ private[akka] object EventWriter {
                         writerUuid = writerUuid,
                         sender = akka.actor.ActorRef.noSender)
                     }.toVector
-                    context.log.debugN(
+                    context.log.debug(
                       "Detected sequence nr gap{} [{}-{}] for persistence id [{}]. Filling with FilteredPayload.",
                       if (isSnapshotEvent) " for snapshot event" else "",
                       fillRepr.head.sequenceNr,
@@ -458,7 +457,7 @@ private[akka] object EventWriter {
                         fillSequenceNumberGaps = newFillSequenceNumberGaps)
                     } else {
                       if (context.log.isTraceEnabled)
-                        context.log.traceN(
+                        context.log.trace(
                           "Writing event in progress for persistence id [{}], adding sequence nrs [{}-{}] to batch",
                           persistenceId,
                           fillRepr.head.sequenceNr,
@@ -474,7 +473,7 @@ private[akka] object EventWriter {
                     // on another node might have been taking writes since we retrieved it.
                     val reason = if (isSnapshotEvent) AskMaxSeqNrReason.SnapshotEvent else AskMaxSeqNrReason.FillGaps
                     askMaxSeqNr(persistenceId, reason)
-                    context.log.trace2(
+                    context.log.trace(
                       "Seq nr lookup needed for persistence id [{}], adding sequence nr [{}] to pending",
                       persistenceId,
                       sequenceNumber)
@@ -520,7 +519,7 @@ private[akka] object EventWriter {
             // write failed, so we looked up the maxSeqNr to detect if it was duplicate events, already in journal
             perPidWriteState.get(pid) match {
               case None =>
-                context.log.debug2(
+                context.log.debug(
                   "Got max seq nr with no waiting previous state for pid, ignoring (pid [{}], original error desc: {})",
                   pid,
                   errorDesc)
@@ -533,7 +532,7 @@ private[akka] object EventWriter {
                     case (_, replyTo) =>
                       replyTo ! StatusReply.error("Journal write failed")
                   }
-                  context.log.warnN(
+                  context.log.warn(
                     "Failed writing event batch persistence id [{}], sequence nr [{}-{}]: {}",
                     pid,
                     sortedSeqs.head,
@@ -557,7 +556,7 @@ private[akka] object EventWriter {
                     val reprsToRewrite =
                       stateAfterWritten.waitingForReply.values.map { case (repr, _) => repr }.toVector
                     if (context.log.isDebugEnabled())
-                      context.log.debugN(
+                      context.log.debug(
                         "Partial batch was duplicates, re-triggering write of persistence id [{}], sequence nr [{}-{}]",
                         pid,
                         reprsToRewrite.head.sequenceNr,
@@ -606,7 +605,7 @@ private[akka] object EventWriter {
             }
             perPidWriteState.get(pid) match {
               case None =>
-                context.log.debug2(
+                context.log.debug(
                   "Got max seq nr (failed) with no waiting previous state for persistence id [{}]{}",
                   pid,
                   errorDescInLog)
@@ -616,7 +615,7 @@ private[akka] object EventWriter {
                     replyTo ! StatusReply.error("Journal write failed")
                 }
                 val sortedSeqs = state.waitingForReply.keys.toSeq.sorted
-                context.log.warnN(
+                context.log.warn(
                   "Failed max seq nr, and therefore failed writing event batch persistence id [{}], sequence nr [{}-{}]{}",
                   pid,
                   sortedSeqs.head,

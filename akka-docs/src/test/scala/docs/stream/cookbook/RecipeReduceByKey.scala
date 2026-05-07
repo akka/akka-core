@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.cookbook
 
 import akka.NotUsed
 import akka.stream.scaladsl._
+
+import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+@nowarn("msg=never used") // sample snippets
 class RecipeReduceByKey extends RecipeSpec {
 
   "Reduce by key recipe" must {

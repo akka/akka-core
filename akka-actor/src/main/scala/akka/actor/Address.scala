@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -7,12 +7,12 @@ import java.net.MalformedURLException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.Optional
-
 import scala.annotation.tailrec
 import scala.collection.immutable
-import scala.compat.java8.OptionConverters._
-
+import scala.jdk.OptionConverters._
 import akka.annotation.InternalApi
+
+import scala.annotation.nowarn
 
 /**
  * The address specifies the physical location under which an Actor can be
@@ -46,12 +46,12 @@ final case class Address private[akka] (protocol: String, system: String, host: 
   /**
    * Java API: The hostname if specified or empty optional if not
    */
-  def getHost(): Optional[String] = host.asJava
+  def getHost(): Optional[String] = host.toJava
 
   /**
    * Java API: The port if specified or empty optional if not
    */
-  def getPort(): Optional[Integer] = port.asJava.asInstanceOf[Optional[Integer]]
+  def getPort(): Optional[Integer] = port.toJava.asInstanceOf[Optional[Integer]]
 
   /**
    * Returns true if this Address is only defined locally. It is not safe to send locally scoped addresses to remote
@@ -65,8 +65,8 @@ final case class Address private[akka] (protocol: String, system: String, host: 
    * entity.
    */
   def hasGlobalScope: Boolean = host.isDefined
-
   // store hashCode
+  @nowarn("msg=deprecated")
   @transient override lazy val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
 
   /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -70,7 +70,7 @@ class CodecBenchmark {
     override def publishDropped(inbound: InboundEnvelope, reason: String): Unit = ()
   }
 
-  @nowarn("msg=never used") private var remoteRefB: RemoteActorRef = _
+  private var remoteRefB: RemoteActorRef = _
   @nowarn("msg=never used") private var resolvedRef: InternalActorRef = _
   @nowarn("msg=never used") private var senderStringA: String = _
   @nowarn("msg=never used") private var recipientStringB: String = _

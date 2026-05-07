@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -23,7 +23,6 @@ object AkkaBuild {
   object CliOptions {
     // CI is the env var defined by Github Actions and Travis:
     // - https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
-    // - https://docs.travis-ci.com/user/environment-variables/#default-environment-variables
     val runningOnCi: CliOption[Boolean] = CliOption("akka.ci-server", sys.env.contains("CI"))
   }
 
@@ -81,14 +80,9 @@ object AkkaBuild {
     }
 
   lazy val resolverSettings = Def.settings(
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     // should we be allowed to use artifacts published to the local maven repository
     if (System.getProperty("akka.build.useLocalMavenResolver", "false").toBoolean)
       resolvers += mavenLocalResolver
-    else Seq.empty,
-    // should we be allowed to use artifacts from sonatype snapshots
-    if (System.getProperty("akka.build.useSnapshotSonatypeResolver", "false").toBoolean)
-      resolvers ++= Resolver.sonatypeOssRepos("snapshots")
     else Seq.empty,
     pomIncludeRepository := (_ => false) // do not leak internal repositories during staging
   )
@@ -141,16 +135,6 @@ object AkkaBuild {
     scalafmtOnCompile := !CliOptions.runningOnCi.get && !sys.props.contains("akka.no.discipline") && !scalaVersion.value
         .startsWith("3."),
     crossVersion := CrossVersion.binary,
-    // Adds a `src/main/scala-2.13+` source directory for code shared
-    // between Scala 2.13 and Scala 3
-    Compile / unmanagedSourceDirectories ++= {
-      val sourceDir = (Compile / sourceDirectory).value
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((3, n))            => Seq(sourceDir / "scala-2.13+")
-        case Some((2, n)) if n >= 13 => Seq(sourceDir / "scala-2.13+")
-        case _                       => Nil
-      }
-    },
     // append -SNAPSHOT to version when isSnapshot
     ThisBuild / dynverSonatypeSnapshots := true,
     ThisBuild / ivyLoggingLevel := UpdateLogging.Quiet,
@@ -158,20 +142,20 @@ object AkkaBuild {
       val tagOrBranch =
         if (isSnapshot.value) "main"
         else "v" + version.value
-      Seq(("BUSL-1.1", url(s"https://raw.githubusercontent.com/akka/akka/${tagOrBranch}/LICENSE")))
+      Seq(("BUSL-1.1", url(s"https://raw.githubusercontent.com/akka/akka-core/${tagOrBranch}/LICENSE")))
     },
     homepage := Some(url("https://akka.io/")),
     description := "Akka is a toolkit for building highly concurrent, distributed, and resilient message-driven applications for Java and Scala.",
     scmInfo := Some(
         ScmInfo(
-          url("https://github.com/akka/akka"),
-          "scm:git:https://github.com/akka/akka.git",
-          "scm:git:git@github.com:akka/akka.git")),
+          url("https://github.com/akka/akka-core"),
+          "scm:git:https://github.com/akka/akka-core.git",
+          "scm:git:git@github.com:akka/akka-core.git")),
     releaseNotesURL := (
         if (isSnapshot.value) None
-        else Some(url(s"https://github.com/akka/akka/releases/tag/v${version.value}"))
+        else Some(url(s"https://github.com/akka/akka-core/releases/tag/v${version.value}"))
       ),
-    apiURL := Some(url(s"https://doc.akka.io/api/akka/${version.value}")),
+    apiURL := Some(url(s"https://doc.akka.io/api/akka-core/${version.value}")),
     initialCommands :=
       """|import language.postfixOps
          |import akka.actor._
@@ -252,7 +236,7 @@ object AkkaBuild {
     mavenLocalResolverSettings,
     docLintingSettings,
     JdkOptions.targetJdkSettings,
-    // a workaround for https://github.com/akka/akka/issues/27661
+    // a workaround for https://github.com/akka/akka-core/issues/27661
     // see also project/Protobuf.scala that introduces /../ to make "intellij happy"
     MultiJvm / assembly / fullClasspath := {
       val old = (MultiJvm / assembly / fullClasspath).value.toVector
@@ -289,13 +273,12 @@ object AkkaBuild {
            | > testOnly *.AnySpec         Only run a selected test
            | > verifyCodeStyle            Verify code style
            | > applyCodeStyle             Apply code style
-           | > sortImports                Sort the imports
            | > mimaReportBinaryIssues     Check binary issues
            | > validatePullRequest        Validate pull request
            | > akka-docs/paradox          Build documentation
            | > akka-docs/paradoxBrowse    Browse the generated documentation
            |
-           | Contributing guide: https://github.com/akka/akka/blob/main/CONTRIBUTING.md
+           | Contributing guide: https://github.com/akka/akka-core/blob/main/CONTRIBUTING.md
            | tips: prefix commands with + to run against cross Scala versions.
            |
            |""".stripMargin))
@@ -314,7 +297,7 @@ object AkkaBuild {
     doc / javacOptions ++= Seq("-Xdoclint:none", "--ignore-source-errors"))
 
   def loadSystemProperties(fileName: String): Unit = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val file = new File(fileName)
     if (file.exists()) {
       println("Loading system properties from file `" + fileName + "`")

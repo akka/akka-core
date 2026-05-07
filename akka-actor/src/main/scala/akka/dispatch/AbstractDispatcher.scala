@@ -1,27 +1,26 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
 
 import java.{ util => ju }
 import java.util.concurrent._
-
 import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor }
 import scala.concurrent.duration.{ Duration, FiniteDuration }
 import scala.util.control.NonFatal
-
 import com.typesafe.config.Config
-
 import akka.actor._
+import akka.annotation.InternalApi
 import akka.annotation.InternalStableApi
 import akka.dispatch.affinity.AffinityPoolConfigurator
 import akka.dispatch.sysmsg._
 import akka.event.EventStream
 import akka.event.Logging.{ Debug, Error, LogEventException }
-import akka.util.{ unused, Index, Unsafe }
+import akka.util.JavaVersion
+import akka.util.Index
 
 final case class Envelope private (message: Any, sender: ActorRef) {
 
@@ -62,6 +61,7 @@ private[akka] trait LoadMetrics { self: Executor =>
 /**
  * INTERNAL API
  */
+@InternalApi
 private[akka] object MessageDispatcher {
   val UNSCHEDULED = 0 //WARNING DO NOT CHANGE THE VALUE OF THIS: It relies on the faster init of 0 in AbstractMessageDispatcher
   val SCHEDULED = 1
@@ -98,7 +98,6 @@ abstract class MessageDispatcher(val configurator: MessageDispatcherConfigurator
     with BatchingExecutor
     with ExecutionContextExecutor {
 
-  import AbstractMessageDispatcher.{ inhabitantsOffset, shutdownScheduleOffset }
   import MessageDispatcher._
   import configurator.prerequisites
 
@@ -113,7 +112,7 @@ abstract class MessageDispatcher(val configurator: MessageDispatcherConfigurator
   }
 
   private final def addInhabitants(add: Long): Long = {
-    val old = Unsafe.instance.getAndAddLong(this, inhabitantsOffset, add)
+    val old = getAndAddInhabitants(add)
     val ret = old + add
     if (ret < 0) {
       // We haven't succeeded in decreasing the inhabitants yet but the simple fact that we're trying to
@@ -125,11 +124,11 @@ abstract class MessageDispatcher(val configurator: MessageDispatcherConfigurator
     ret
   }
 
-  final def inhabitants: Long = Unsafe.instance.getLongVolatile(this, inhabitantsOffset)
+  final def inhabitants: Long = volatileGetInhabitants
 
-  private final def shutdownSchedule: Int = Unsafe.instance.getIntVolatile(this, shutdownScheduleOffset)
+  private final def shutdownSchedule: Int = volatileGetShutdownSchedule
   private final def updateShutdownSchedule(expect: Int, update: Int): Boolean =
-    Unsafe.instance.compareAndSwapInt(this, shutdownScheduleOffset, expect, update)
+    compareAndSetShutdownSchedule(expect, update)
 
   /**
    *  Creates and returns a mailbox for the given actor.
@@ -338,7 +337,9 @@ abstract class MessageDispatcher(val configurator: MessageDispatcherConfigurator
 /**
  * An ExecutorServiceConfigurator is a class that given some prerequisites and a configuration can create instances of ExecutorService
  */
-abstract class ExecutorServiceConfigurator(@unused config: Config, @unused prerequisites: DispatcherPrerequisites)
+abstract class ExecutorServiceConfigurator(
+    @nowarn("msg=never used") config: Config,
+    @nowarn("msg=never used") prerequisites: DispatcherPrerequisites)
     extends ExecutorServiceFactoryProvider
 
 /**
@@ -363,6 +364,19 @@ abstract class MessageDispatcherConfigurator(_config: Config, val prerequisites:
         new ThreadPoolExecutorConfigurator(config.getConfig("thread-pool-executor"), prerequisites)
       case "affinity-pool-executor" =>
         new AffinityPoolConfigurator(config.getConfig("affinity-pool-executor"), prerequisites)
+      case "virtual-thread-executor" =>
+        val executorConfig = config.getConfig("virtual-thread-executor")
+        if (VirtualThreadConfigurator.virtualThreadsSupported()) {
+          new VirtualThreadConfigurator(executorConfig, prerequisites)
+        } else {
+          val fallbackExecutorName = executorConfig.getString("fallback")
+          if (fallbackExecutorName.isEmpty)
+            throw new RuntimeException(
+              s"Dispatcher configured to use virtual threads, but JVM version ${JavaVersion.majorVersion} does not support that. " +
+              "Use a newer Java version (21 or later), or configure 'virtual-thread-executor.fallback' for an alternative executor on older Java versions.")
+          else
+            configurator(fallbackExecutorName)
+        }
 
       case fqcn =>
         val args = List(classOf[Config] -> config, classOf[DispatcherPrerequisites] -> prerequisites)
@@ -397,7 +411,7 @@ class ThreadPoolExecutorConfigurator(config: Config, prerequisites: DispatcherPr
 
   protected def createThreadPoolConfigBuilder(
       config: Config,
-      @unused prerequisites: DispatcherPrerequisites): ThreadPoolConfigBuilder = {
+      @nowarn("msg=never used") prerequisites: DispatcherPrerequisites): ThreadPoolConfigBuilder = {
     import akka.util.Helpers.ConfigOps
     val builder =
       ThreadPoolConfigBuilder(ThreadPoolConfig())

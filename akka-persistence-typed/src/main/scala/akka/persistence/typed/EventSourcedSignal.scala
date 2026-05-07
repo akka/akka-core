@@ -1,8 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed
+
+import java.util.Optional
 
 import akka.actor.typed.Signal
 import akka.annotation.DoNotInherit
@@ -16,6 +18,12 @@ import akka.annotation.InternalApi
 @DoNotInherit
 sealed trait EventSourcedSignal extends Signal
 
+final case class SnapshotRecovered(metadata: SnapshotMetadata) extends EventSourcedSignal {
+
+  /** Java API */
+  def getMetadata(): SnapshotMetadata = metadata
+}
+
 @DoNotInherit sealed abstract class RecoveryCompleted extends EventSourcedSignal
 case object RecoveryCompleted extends RecoveryCompleted {
   def instance: RecoveryCompleted = this
@@ -27,6 +35,54 @@ final case class RecoveryFailed(failure: Throwable) extends EventSourcedSignal {
    * Java API
    */
   def getFailure(): Throwable = failure
+}
+
+/**
+ * @param failure the original cause
+ * @param command the command that persisted the event, may be undefined if it is a replicated event
+ */
+final case class PersistFailed[Command, Event](failure: Throwable, command: Option[Command])
+    extends EventSourcedSignal {
+
+  /**
+   * Java API: the original cause
+   */
+  def getFailure(): Throwable = failure
+
+  /**
+   * Java API: the command that persisted the event, may be undefined if it is a replicated event
+   */
+  def getCommand(): Optional[Command] = {
+    import scala.jdk.OptionConverters._
+    command.toJava
+  }
+
+  override def toString: String =
+    s"PersistFailed($failure, ${command.map(_.getClass.getName).getOrElse("replicated")})"
+}
+
+/**
+ * @param failure the original cause
+ * @param command the command that persisted the event, may be undefined if it is a replicated event
+ */
+final case class PersistRejected[Command, Event](failure: Throwable, command: Option[Command])
+    extends EventSourcedSignal {
+
+  /**
+   * Java API: the original cause
+   */
+  def getFailure(): Throwable = failure
+
+  /**
+   * Java API: the command that persisted the event, may be undefined if it is a replicated event
+   */
+  def getCommand(): Optional[Command] = {
+    import scala.jdk.OptionConverters._
+    command.toJava
+  }
+
+  override def toString: String =
+    s"PersistRejected($failure, ${command.map(_.getClass.getName).getOrElse("replicated")})"
 }
 
 final case class SnapshotCompleted(metadata: SnapshotMetadata) extends EventSourcedSignal {

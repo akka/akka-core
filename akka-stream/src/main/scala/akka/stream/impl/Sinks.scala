@@ -1,13 +1,15 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
 
 import java.util.function.BinaryOperator
 
+import scala.collection.Factory
 import scala.collection.immutable
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Failure
@@ -21,7 +23,6 @@ import org.reactivestreams.Subscriber
 import akka.NotUsed
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.event.Logging
 import akka.stream._
 import akka.stream.ActorAttributes.StreamSubscriptionTimeout
@@ -33,7 +34,6 @@ import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.impl.StreamLayout.AtomicModule
 import akka.stream.scaladsl.{ Keep, Sink, SinkQueueWithCancel, Source }
 import akka.stream.stage._
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
@@ -245,7 +245,8 @@ import akka.util.ccompat._
 
   override protected def initialAttributes: Attributes = DefaultAttributes.seqSink
 
-  override def createLogicAndMaterializedValue(inheritedAttributes: Attributes) = {
+  override def createLogicAndMaterializedValue(
+      inheritedAttributes: Attributes): (GraphStageLogic with InHandler, Future[That]) = {
     val p: Promise[That] = Promise()
     val logic = new GraphStageLogic(shape) with InHandler {
       val buf = cbf.newBuilder
@@ -302,7 +303,8 @@ import akka.util.ccompat._
 
   override def toString: String = "QueueSink"
 
-  override def createLogicAndMaterializedValue(inheritedAttributes: Attributes) = {
+  override def createLogicAndMaterializedValue(
+      inheritedAttributes: Attributes): (GraphStageLogic, SinkQueueWithCancel[T]) = {
     val stageLogic = new GraphStageLogic(shape) with InHandler with SinkQueueWithCancel[T] {
 
       val maxBuffer = inheritedAttributes.get[InputBuffer](InputBuffer(16, 16)).max
@@ -375,7 +377,7 @@ import akka.util.ccompat._
           .foreach {
             case NonFatal(e) => p.tryFailure(e)
             case _           => ()
-          }(akka.dispatch.ExecutionContexts.parasitic)
+          }(ExecutionContext.parasitic)
         p.future
       }
       override def cancel(): Unit = {
@@ -551,7 +553,7 @@ import akka.util.ccompat._
               failStage(e)
           }
         try {
-          sinkFactory(element).onComplete(cb.invoke)(ExecutionContexts.parasitic)
+          sinkFactory(element).onComplete(cb.invoke)(ExecutionContext.parasitic)
         } catch {
           case NonFatal(e) =>
             promise.failure(e)

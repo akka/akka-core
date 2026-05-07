@@ -1,7 +1,7 @@
 import com.typesafe.sbt.SbtMultiJvm.multiJvmSettings
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
-val AkkaVersion = "2.9.4"
+val AkkaVersion = "2.10.17"
 val AkkaDiagnosticsVersion = "2.1.0"
 val LogbackClassicVersion = "1.2.11" 
 val ScalaTestVersion = "3.1.1"
@@ -16,7 +16,6 @@ val `akka-sample-distributed-data-java` = project
     Compile / scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
     Compile / javacOptions ++= Seq("-parameters", "-Xlint:unchecked", "-Xlint:deprecation", "-Xdiags:verbose"),
     javaOptions in run ++= Seq("-Xms128m", "-Xmx1024m"),
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-cluster-typed" % AkkaVersion,
       "com.typesafe.akka" %% "akka-serialization-jackson" % AkkaVersion,

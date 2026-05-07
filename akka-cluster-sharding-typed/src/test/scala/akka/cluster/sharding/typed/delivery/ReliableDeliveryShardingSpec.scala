@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed.delivery
@@ -22,7 +22,6 @@ import akka.actor.typed.delivery.ConsumerController.SequencedMessage
 import akka.actor.typed.delivery.TestConsumer
 import akka.actor.typed.delivery.internal.ProducerControllerImpl
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.cluster.sharding.typed.scaladsl.Entity
@@ -72,7 +71,7 @@ object ReliableDeliveryShardingSpec {
           case Tick =>
             val msg = s"msg-$n"
             val entityId = s"entity-${n % 3}"
-            ctx.log.info2("sent {} to {}", msg, entityId)
+            ctx.log.info("sent {} to {}", msg, entityId)
             sendTo ! ShardingEnvelope(entityId, TestConsumer.Job(msg))
             idle(n)
 

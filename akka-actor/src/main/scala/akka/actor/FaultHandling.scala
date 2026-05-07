@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
+import scala.jdk.DurationConverters._
 import scala.language.implicitConversions
 import scala.util.control.NonFatal
 
@@ -18,8 +19,6 @@ import akka.annotation.InternalApi
 import akka.event.Logging
 import akka.event.Logging.{ Error, LogEvent, LogLevel }
 import akka.japi.Util.immutableSeq
-import akka.util.JavaDurationConverters._
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
@@ -37,7 +36,6 @@ private[akka] case object ChildNameReserved extends ChildStats
  * ChildRestartStats is the statistics kept by every parent Actor for every child Actor
  * and is used for SupervisorStrategies to know how to deal with problems that occur for the children.
  */
-@ccompatUsedUntil213
 final case class ChildRestartStats(
     child: ActorRef,
     var maxNrOfRetriesCount: Int = 0,
@@ -482,7 +480,7 @@ case class AllForOneStrategy(
       withinTimeRange: java.time.Duration,
       decider: SupervisorStrategy.JDecider,
       loggingEnabled: Boolean) =
-    this(maxNrOfRetries, withinTimeRange.asScala, loggingEnabled)(SupervisorStrategy.makeDecider(decider))
+    this(maxNrOfRetries, withinTimeRange.toScala, loggingEnabled)(SupervisorStrategy.makeDecider(decider))
 
   /**
    * Java API
@@ -494,7 +492,7 @@ case class AllForOneStrategy(
    * Java API
    */
   def this(maxNrOfRetries: Int, withinTimeRange: java.time.Duration, decider: SupervisorStrategy.JDecider) =
-    this(maxNrOfRetries, withinTimeRange.asScala)(SupervisorStrategy.makeDecider(decider))
+    this(maxNrOfRetries, withinTimeRange.toScala)(SupervisorStrategy.makeDecider(decider))
 
   /**
    * Java API
@@ -506,7 +504,7 @@ case class AllForOneStrategy(
    * Java API
    */
   def this(maxNrOfRetries: Int, withinTimeRange: java.time.Duration, trapExit: JIterable[Class[_ <: Throwable]]) =
-    this(maxNrOfRetries, withinTimeRange.asScala)(SupervisorStrategy.makeDecider(trapExit))
+    this(maxNrOfRetries, withinTimeRange.toScala)(SupervisorStrategy.makeDecider(trapExit))
 
   /**
    * Java API: compatible with lambda expressions
@@ -518,7 +516,7 @@ case class AllForOneStrategy(
    * Java API: compatible with lambda expressions
    */
   def this(maxNrOfRetries: Int, withinTimeRange: java.time.Duration, decider: SupervisorStrategy.Decider) =
-    this(maxNrOfRetries = maxNrOfRetries, withinTimeRange = withinTimeRange.asScala)(decider)
+    this(maxNrOfRetries = maxNrOfRetries, withinTimeRange = withinTimeRange.toScala)(decider)
 
   /**
    * Java API: compatible with lambda expressions
@@ -594,7 +592,7 @@ case class OneForOneStrategy(
       withinTimeRange: java.time.Duration,
       decider: SupervisorStrategy.JDecider,
       loggingEnabled: Boolean) =
-    this(maxNrOfRetries, withinTimeRange.asScala, loggingEnabled)(SupervisorStrategy.makeDecider(decider))
+    this(maxNrOfRetries, withinTimeRange.toScala, loggingEnabled)(SupervisorStrategy.makeDecider(decider))
 
   /**
    * Java API
@@ -606,7 +604,7 @@ case class OneForOneStrategy(
    * Java API
    */
   def this(maxNrOfRetries: Int, withinTimeRange: java.time.Duration, decider: SupervisorStrategy.JDecider) =
-    this(maxNrOfRetries, withinTimeRange.asScala)(SupervisorStrategy.makeDecider(decider))
+    this(maxNrOfRetries, withinTimeRange.toScala)(SupervisorStrategy.makeDecider(decider))
 
   /**
    * Java API
@@ -618,7 +616,7 @@ case class OneForOneStrategy(
    * Java API
    */
   def this(maxNrOfRetries: Int, withinTimeRange: java.time.Duration, trapExit: JIterable[Class[_ <: Throwable]]) =
-    this(maxNrOfRetries, withinTimeRange.asScala)(SupervisorStrategy.makeDecider(trapExit))
+    this(maxNrOfRetries, withinTimeRange.toScala)(SupervisorStrategy.makeDecider(trapExit))
 
   /**
    * Java API: compatible with lambda expressions
@@ -630,7 +628,7 @@ case class OneForOneStrategy(
    * Java API: compatible with lambda expressions
    */
   def this(maxNrOfRetries: Int, withinTimeRange: java.time.Duration, decider: SupervisorStrategy.Decider) =
-    this(maxNrOfRetries = maxNrOfRetries, withinTimeRange = withinTimeRange.asScala)(decider)
+    this(maxNrOfRetries = maxNrOfRetries, withinTimeRange = withinTimeRange.toScala)(decider)
 
   def this(loggingEnabled: Boolean, decider: SupervisorStrategy.Decider) =
     this(loggingEnabled = loggingEnabled)(decider)

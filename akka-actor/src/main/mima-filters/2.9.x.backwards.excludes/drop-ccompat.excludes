@@ -1,0 +1,5 @@
+# #32508 drop ccompat
+ProblemFilters.exclude[MissingClassProblem]("akka.util.ccompat.ccompatUsedUntil213")
+ProblemFilters.exclude[MissingClassProblem]("akka.util.ccompat.package$JavaConverters$")
+ProblemFilters.exclude[MissingClassProblem]("akka.util.ccompat.package")
+ProblemFilters.exclude[MissingClassProblem]("akka.util.ccompat.package$")

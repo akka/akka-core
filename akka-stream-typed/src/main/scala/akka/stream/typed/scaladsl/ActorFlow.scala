@@ -1,15 +1,15 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.typed.scaladsl
 
 import scala.annotation.implicitNotFound
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import akka.NotUsed
 import akka.actor.typed.ActorRef
-import akka.dispatch.ExecutionContexts
 import akka.pattern.{ AskTimeoutException, StatusReply }
 import akka.stream._
 import akka.stream.scaladsl._
@@ -173,7 +173,7 @@ object ActorFlow {
       implicit timeout: Timeout): Flow[(I, Ctx), (A, Ctx), NotUsed] =
     askImpl[(I, Ctx), Q, A, (A, Ctx)](parallelism)(ref)(
       (in, r) => makeMessage(in._1, r),
-      (in, o: Future[A]) => o.map(a => a -> in._2)(ExecutionContexts.parasitic))
+      (in, o: Future[A]) => o.map(a => a -> in._2)(ExecutionContext.parasitic))
 
   /**
    * Use for messages whose response is known to be a [[akka.pattern.StatusReply]]. When a [[akka.pattern.StatusReply#success]] response
@@ -193,7 +193,7 @@ object ActorFlow {
       makeMessage: (I, ActorRef[StatusReply[A]]) => Q)(implicit timeout: Timeout): Flow[(I, Ctx), (A, Ctx), NotUsed] = {
     askImpl[(I, Ctx), Q, StatusReply[A], (StatusReply[A], Ctx)](parallelism)(ref)(
       (in, r) => makeMessage(in._1, r),
-      (in, o: Future[StatusReply[A]]) => o.map(a => a -> in._2)(ExecutionContexts.parasitic)).map {
+      (in, o: Future[StatusReply[A]]) => o.map(a => a -> in._2)(ExecutionContext.parasitic)).map {
       case (StatusReply.Success(a), ctx) => a.asInstanceOf[A] -> ctx
       case (StatusReply.Error(err), _)   => throw err
       case _                             => throw new RuntimeException() // compiler exhaustiveness check pleaser

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.ddata
@@ -33,7 +33,7 @@ import akka.serialization.SerializationExtension
 import akka.serialization.SerializerWithStringManifest
 import akka.util.ByteString
 import akka.util.OptionVal
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * An actor implementing the durable store for the Distributed Data `Replicator`
@@ -319,7 +319,7 @@ final class LmdbDurableStore(config: Config) extends Actor with ActorLogging {
             TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0))
       } catch {
         case NonFatal(e) =>
-          import akka.util.ccompat.JavaConverters._
+          import scala.jdk.CollectionConverters._
           log.error(e, "failed to store [{}]", pending.keySet.asScala.mkString(","))
           tx.abort()
       } finally {
@@ -346,7 +346,7 @@ final class LmdbDurableStore(config: Config) extends Actor with ActorLogging {
           TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0))
     } catch {
       case NonFatal(e) =>
-        import akka.util.ccompat.JavaConverters._
+        import scala.jdk.CollectionConverters._
         log.error(e, "failed to delete [{}]", pending.keySet.asScala.mkString(","))
         tx.abort()
     } finally {

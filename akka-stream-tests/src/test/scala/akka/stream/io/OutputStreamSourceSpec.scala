@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.io
@@ -66,7 +66,7 @@ class OutputStreamSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
       probe.expectComplete()
     }
 
-    // https://github.com/akka/akka/issues/25983
+    // https://github.com/akka/akka-core/issues/25983
     "not truncate the stream on close" in {
       for (_ <- 1 to 10) {
         val (outputStream, result) =

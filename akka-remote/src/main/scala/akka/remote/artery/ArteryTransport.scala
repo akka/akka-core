@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.Future
@@ -284,9 +283,6 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
 
   override val log: MarkerLoggingAdapter = Logging.withMarker(system, classOf[ArteryTransport])
 
-  val flightRecorder: RemotingFlightRecorder = RemotingFlightRecorder(system)
-  log.debug("Using flight recorder {}", flightRecorder)
-
   /**
    * Compression tables must be created once, such that inbound lane restarts don't cause dropping of the tables.
    * However are the InboundCompressions are owned by the Decoder operator, and any call into them must be looped through the Decoder!
@@ -295,7 +291,7 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
    */
   protected val _inboundCompressions = {
     if (settings.Advanced.Compression.Enabled) {
-      new InboundCompressionsImpl(system, this, settings.Advanced.Compression, flightRecorder)
+      new InboundCompressionsImpl(system, this, settings.Advanced.Compression)
     } else NoInboundCompressions
   }
 
@@ -379,7 +375,7 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
       Runtime.getRuntime.addShutdownHook(shutdownHook)
 
     startTransport()
-    flightRecorder.transportStarted()
+    RemotingFlightRecorder.transportStarted()
 
     val systemMaterializer = SystemMaterializer(system)
     materializer =
@@ -389,7 +385,7 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
       settings.Advanced.ControlStreamMaterializerSettings)
 
     messageDispatcher = new MessageDispatcher(system, provider)
-    flightRecorder.transportMaterializerStarted()
+    RemotingFlightRecorder.transportMaterializerStarted()
 
     val (port, boundPort) = bindInboundStreams()
 
@@ -406,11 +402,11 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
     _bindAddress =
       UniqueAddress(Address(ArteryTransport.ProtocolName, system.name, settings.Bind.Hostname, boundPort), uid)
 
-    flightRecorder.transportUniqueAddressSet(_localAddress)
+    RemotingFlightRecorder.transportUniqueAddressSet(_localAddress)
 
     runInboundStreams(port, boundPort)
 
-    flightRecorder.transportStartupFinished()
+    RemotingFlightRecorder.transportStartupFinished()
 
     startRemoveQuarantinedAssociationTask()
 
@@ -572,7 +568,6 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
               // and can result in forming two separate clusters (cluster split).
               // Instead, the downing strategy should act on ThisActorSystemQuarantinedEvent, e.g.
               // use it as a STONITH signal.
-              @nowarn("msg=deprecated")
               val lifecycleEvent = ThisActorSystemQuarantinedEvent(localAddress, from)
               system.eventStream.publish(lifecycleEvent)
 
@@ -603,7 +598,7 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
       case cause =>
         if (restartCounter.restart()) {
           log.warning("{} failed. Restarting it. {}: {}", streamName, cause.getClass.getName, cause.getMessage)
-          flightRecorder.transportRestartInbound(localAddress, streamName)
+          RemotingFlightRecorder.transportRestartInbound(localAddress, streamName)
           restart()
         } else {
           log.error(
@@ -648,7 +643,7 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
     implicit val ec = system.dispatchers.internalDispatcher
 
     killSwitch.abort(ShutdownSignal)
-    flightRecorder.transportKillSwitchPulled()
+    RemotingFlightRecorder.transportKillSwitchPulled()
     for {
       _ <- streamsCompleted.recover { case _    => Done }
       _ <- shutdownTransport().recover { case _ => Done }

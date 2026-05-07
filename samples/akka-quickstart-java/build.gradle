@@ -6,15 +6,12 @@ apply plugin: 'application'
 repositories {
     mavenCentral()
     mavenLocal()
-    maven {
-        url "https://repo.akka.io/maven"
-    }
 }
 
 dependencies {
-  implementation 'com.typesafe.akka:akka-actor-typed_2.13:2.9.3'
+  implementation 'com.typesafe.akka:akka-actor-typed_2.13:2.10.17'
   implementation 'ch.qos.logback:logback-classic:1.2.13'
-  testImplementation 'com.typesafe.akka:akka-actor-testkit-typed_2.13:2.9.3'
+  testImplementation 'com.typesafe.akka:akka-actor-testkit-typed_2.13:2.10.17'
   testImplementation 'junit:junit:4.13.1'
 }
 

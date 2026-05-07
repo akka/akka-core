@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -18,6 +18,7 @@ import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
+import scala.jdk.CollectionConverters._
 
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -95,6 +96,7 @@ class Cluster(val system: ExtendedActorSystem) extends Extension {
   def selfAddress: Address = selfUniqueAddress.address
 
   /** Data center to which this node belongs to (defaults to "default" if not configured explicitly) */
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def selfDataCenter: DataCenter = settings.SelfDataCenter
 
   /**
@@ -105,9 +107,7 @@ class Cluster(val system: ExtendedActorSystem) extends Extension {
   /**
    * Java API: roles that this member has
    */
-  @nowarn("msg=deprecated")
-  def getSelfRoles: java.util.Set[String] =
-    scala.collection.JavaConverters.setAsJavaSetConverter(selfRoles).asJava
+  def getSelfRoles: java.util.Set[String] = selfRoles.asJava
 
   private val _isTerminated = new AtomicBoolean(false)
   private val log = Logging.withMarker(system, ClusterLogClass.ClusterCore)
@@ -145,7 +145,7 @@ class Cluster(val system: ExtendedActorSystem) extends Extension {
           "auto-down-unreachable-after") != "off"))
       logWarning(
         "auto-down has been removed in Akka 2.6.0. See " +
-        "https://doc.akka.io/docs/akka/current/typed/cluster.html#downing for alternatives.")
+        "https://doc.akka.io/libraries/akka-core/current/typed/cluster.html#downing for alternatives.")
   }
 
   // ========================================================
@@ -391,8 +391,8 @@ class Cluster(val system: ExtendedActorSystem) extends Extension {
    * then wait for the `appVersion` to be completed.
    */
   def setAppVersionLater(appVersion: CompletionStage[Version]): Unit = {
-    import scala.compat.java8.FutureConverters._
-    setAppVersionLater(appVersion.toScala)
+    import scala.jdk.FutureConverters._
+    setAppVersionLater(appVersion.asScala)
   }
 
   /**

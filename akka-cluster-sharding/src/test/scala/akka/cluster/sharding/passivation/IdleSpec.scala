@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.passivation
@@ -19,7 +19,7 @@ object IdleSpec {
     """).withFallback(EntityPassivationSpec.config)
 }
 
-class IdleSpec extends AbstractEntityPassivationSpec(StopTimeoutSpec.config, expectedEntities = 2) {
+class IdleSpec extends AbstractEntityPassivationSpec(IdleSpec.config, expectedEntities = 2) {
 
   import EntityPassivationSpec.Entity.Envelope
   import EntityPassivationSpec.Entity.Stop

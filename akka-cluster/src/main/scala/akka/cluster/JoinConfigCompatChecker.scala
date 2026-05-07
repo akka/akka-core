@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -10,8 +10,7 @@ import com.typesafe.config.{ Config, ConfigFactory, ConfigValue }
 
 import akka.actor.ExtendedActorSystem
 import akka.annotation.{ DoNotInherit, InternalApi }
-import akka.util.ccompat._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 abstract class JoinConfigCompatChecker {
 
@@ -97,7 +96,6 @@ object JoinConfigCompatChecker {
    * information that users may have added to their configuration.
    */
   @InternalApi
-  @ccompatUsedUntil213
   private[cluster] def filterWithKeys(requiredKeys: im.Seq[String], config: Config): Config = {
 
     val filtered = for {

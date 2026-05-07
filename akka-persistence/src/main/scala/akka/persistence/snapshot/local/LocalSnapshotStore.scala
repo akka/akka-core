@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.snapshot.local
@@ -21,14 +21,12 @@ import akka.persistence.serialization._
 import akka.persistence.snapshot._
 import akka.serialization.SerializationExtension
 import akka.util.ByteString.UTF_8
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
  *
  * Local filesystem backed snapshot store.
  */
-@ccompatUsedUntil213
 private[persistence] class LocalSnapshotStore(config: Config) extends SnapshotStore with ActorLogging {
   private val FilenamePattern = """^snapshot-(.+)-(\d+)-(\d+)""".r
   private val persistenceIdStartIdx = 9 // Persistence ID starts after the "snapshot-" substring

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2022-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -19,11 +19,12 @@ import akka.actor.ExtensionId
 import akka.actor.ExtensionIdProvider
 import akka.actor.Scheduler
 import akka.annotation.InternalApi
+import akka.annotation.InternalStableApi
 
 /**
  * INTERNAL API
  */
-@InternalApi private[akka] object Clock extends ExtensionId[Clock] with ExtensionIdProvider {
+@InternalStableApi private[akka] object Clock extends ExtensionId[Clock] with ExtensionIdProvider {
   override def get(system: ActorSystem): Clock = super.get(system)
 
   override def get(system: ClassicActorSystemProvider): Clock = super.get(system)
@@ -42,7 +43,7 @@ import akka.annotation.InternalApi
 /**
  * INTERNAL API
  */
-@InternalApi private[akka] trait Clock extends Extension {
+@InternalStableApi private[akka] trait Clock extends Extension {
   def currentTime(): Long
 
   def earlierTime(duration: FiniteDuration): Long

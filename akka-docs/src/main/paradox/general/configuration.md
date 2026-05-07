@@ -52,6 +52,27 @@ one library in a `reference.conf` of another library.
 
 @@@
 
+## License key
+
+Akka requires a license key for use in production. Free keys can be obtained at [https://akka.io/key](https://akka.io/key).
+Add the key to the configuration property `akka.license-key`.
+
+For local development, Akka can be used without a key, but be aware that the `ActorSystem` will terminate after
+a while when a key isn't configured.
+
+If the license key has expired when the `ActorSystem` is started the system will terminate after a while.
+The expiry date is exposed by @scala[@scaladoc[ActorSystem.licenseKeyExpiry](akka.actor.typed.ActorSystem#licenseKeyExpiry)]@java[@javadoc[ActorSystem.getLicenseKeyExpiry](akka.actor.typed.ActorSystem#getLicenseKeyExpiry())] 
+so that you can write a test to remind yourself that it is time for renewal before it has expired.
+
+To verify that your license key is still valid (for example during  CI/CD integration), you can use the following test 
+that will start to fail one month before the license key will expire:
+
+Scala
+: @@snip [ConfigDocSpec.scala](/akka-docs/src/test/scala/docs/config/ConfigDocSpec.scala) { #check-is-key-valid }
+
+Java
+: @@snip [ConfigDocTest.java](/akka-docs/src/test/java/jdocs/config/ConfigDocTest.java) { #check-is-key-valid }
+
 ## When using JarJar, OneJar, Assembly or any jar-bundler
 
 @@@ warning

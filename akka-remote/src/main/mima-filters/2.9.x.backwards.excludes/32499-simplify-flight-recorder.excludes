@@ -1,0 +1,5 @@
+# #32499 chore: Simplify flight recorder interactions
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.artery.NoOpRemotingFlightRecorder")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.artery.NoOpRemotingFlightRecorder$")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.artery.compress.InboundCompressionsImpl$")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.artery.jfr.JFRRemotingFlightRecorder")

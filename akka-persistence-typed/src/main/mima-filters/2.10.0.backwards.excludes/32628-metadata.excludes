@@ -1,0 +1,7 @@
+# Internal
+ProblemFilters.exclude[Problem]("akka.persistence.typed.internal.JournalInteractions#EventToPersist*")
+ProblemFilters.exclude[MissingTypesProblem]("akka.persistence.typed.internal.Running$HandlingCommands")
+ProblemFilters.exclude[MissingClassProblem]("akka.persistence.typed.internal.Running$WithSeqNrAccessible")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.typed.javadsl.EffectBuilder.persistWithMetadata")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.typed.scaladsl.EffectBuilder.persistWithMetadata")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.typed.serialization.ReplicatedEventSourcing#ReplicatedPublishedEventMetaDataOrBuilder*")

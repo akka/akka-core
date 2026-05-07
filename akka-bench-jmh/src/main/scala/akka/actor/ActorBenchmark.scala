@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -45,7 +45,7 @@ class ActorBenchmark {
       "akka.actor.JCToolsMailbox"))
   var mailbox = ""
 
-  @Param(Array("fjp-dispatcher")) //  @Param(Array("fjp-dispatcher", "affinity-dispatcher"))
+  @Param(Array("fjp-dispatcher", "vt-dispatcher")) //  @Param(Array("fjp-dispatcher", "affinity-dispatcher"))
   var dispatcher = ""
 
   implicit var system: ActorSystem = _
@@ -84,6 +84,11 @@ class ActorBenchmark {
             }
             throughput = $tpt
             mailbox-type = "$mailbox"
+         }
+         vt-dispatcher {
+           executor = "virtual-thread-executor"
+           throughput = $tpt
+           mailbox-type = "$mailbox"
          }
        }
       """))

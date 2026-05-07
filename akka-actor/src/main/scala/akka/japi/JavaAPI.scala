@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.japi
@@ -284,7 +284,7 @@ object Util {
   def immutableIndexedSeq[T](iterable: java.lang.Iterable[T]): immutable.IndexedSeq[T] =
     immutableSeq(iterable).toVector
 
-  // TODO in case we decide to pull in scala-java8-compat methods below could be removed - https://github.com/akka/akka/issues/16247
+  // TODO in case we decide to pull in scala-java8-compat methods below could be removed - https://github.com/akka/akka-core/issues/16247
 
   def option[T](jOption: java.util.Optional[T]): scala.Option[T] =
     scala.Option(jOption.orElse(null.asInstanceOf[T]))

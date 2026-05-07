@@ -1,17 +1,15 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.metrics
 
 import java.util.concurrent.ThreadLocalRandom
 
-import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import akka.testkit.{ AkkaSpec, LongRunningTest }
 
-@nowarn
 class EWMASpec extends AkkaSpec(MetricsConfig.defaultEnabled) with MetricsCollectorFactory {
 
   val collector = createMetricsCollector

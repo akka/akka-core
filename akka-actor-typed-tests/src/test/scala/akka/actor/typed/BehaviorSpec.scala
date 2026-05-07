@@ -1,12 +1,10 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed
 
 import java.util.function.{ Function => F1 }
-
-import scala.annotation.nowarn
 
 import org.scalactic.TypeCheckedTripleEquals
 import org.scalatest.matchers.should.Matchers
@@ -23,7 +21,6 @@ import akka.japi.pf.{ FI, PFBuilder }
 
 object BehaviorSpec {
   sealed trait Command {
-    @nowarn
     def expectedResponse(context: TypedActorContext[Command]): Seq[Event] = Nil
   }
   case object GetSelf extends Command {
@@ -74,9 +71,7 @@ object BehaviorSpec {
   trait Common extends AnyWordSpecLike with Matchers with TypeCheckedTripleEquals with LogCapturing {
     type Aux >: Null <: AnyRef
     def behavior(monitor: ActorRef[Event]): (Behavior[Command], Aux)
-    @nowarn("msg=never used")
     def checkAux(signal: Signal, aux: Aux): Unit = ()
-    @nowarn("msg=never used")
     def checkAux(command: Command, aux: Aux): Unit = ()
 
     case class Init(behv: Behavior[Command], inbox: TestInbox[Event], aux: Aux) {

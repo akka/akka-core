@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.query
 
+import scala.annotation.nowarn
 import scala.reflect.ClassTag
 
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -12,7 +13,6 @@ import akka.actor._
 import akka.annotation.InternalApi
 import akka.persistence.{ PersistencePlugin, PluginProvider }
 import akka.persistence.query.scaladsl.ReadJournal
-import akka.util.unused
 
 /**
  * Persistence extension for queries.
@@ -63,7 +63,7 @@ class PersistenceQuery(system: ExtendedActorSystem)
    * read journal configuration entry.
    */
   final def getReadJournalFor[T <: javadsl.ReadJournal](
-      @unused clazz: Class[T],
+      @nowarn("msg=never used") clazz: Class[T],
       readJournalPluginId: String,
       readJournalPluginConfig: Config): T =
     pluginFor(readJournalPluginId, readJournalPluginConfig).javadslPlugin.asInstanceOf[T]

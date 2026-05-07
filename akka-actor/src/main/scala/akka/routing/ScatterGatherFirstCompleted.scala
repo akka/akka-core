@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.routing
@@ -7,9 +7,11 @@ package akka.routing
 import java.util.concurrent.TimeoutException
 
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -17,12 +19,10 @@ import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.SupervisorStrategy
 import akka.dispatch.Dispatchers
-import akka.dispatch.ExecutionContexts
 import akka.japi.Util.immutableSeq
 import akka.pattern.ask
 import akka.pattern.pipe
 import akka.util.Helpers.ConfigOps
-import akka.util.JavaDurationConverters._
 import akka.util.Timeout
 
 /**
@@ -47,7 +47,7 @@ private[akka] final case class ScatterGatherFirstCompletedRoutees(
     extends Routee {
 
   override def send(message: Any, sender: ActorRef): Unit = {
-    implicit val ec = ExecutionContexts.parasitic
+    implicit val ec = ExecutionContext.parasitic
     if (routees.isEmpty) {
       val reply = Future.failed(new TimeoutException("Timeout due to no routees"))
       reply.pipeTo(sender)
@@ -132,7 +132,7 @@ final case class ScatterGatherFirstCompletedPool(
    * @param within expecting at least one reply within this duration, otherwise
    *   it will reply with [[akka.pattern.AskTimeoutException]] in a [[akka.actor.Status.Failure]]
    */
-  def this(nr: Int, within: java.time.Duration) = this(nr, within.asScala)
+  def this(nr: Int, within: java.time.Duration) = this(nr, within.toScala)
 
   override def createRouter(system: ActorSystem): Router = new Router(ScatterGatherFirstCompletedRoutingLogic(within))
 
@@ -208,7 +208,7 @@ final case class ScatterGatherFirstCompletedGroup(
    *   it will reply with [[akka.pattern.AskTimeoutException]] in a [[akka.actor.Status.Failure]]
    */
   def this(routeePaths: java.lang.Iterable[String], within: java.time.Duration) =
-    this(immutableSeq(routeePaths), within.asScala)
+    this(immutableSeq(routeePaths), within.toScala)
 
   override def paths(system: ActorSystem): immutable.Iterable[String] = this.paths
 

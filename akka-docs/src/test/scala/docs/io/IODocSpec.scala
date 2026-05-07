@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.io
@@ -8,7 +8,9 @@ package docs.io
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.io.{ IO, Tcp }
 import akka.util.ByteString
+
 import java.net.InetSocketAddress
+import scala.annotation.nowarn
 //#imports
 
 import akka.testkit.AkkaSpec
@@ -34,14 +36,14 @@ class Server extends Actor {
   IO(Tcp) ! Bind(self, new InetSocketAddress("localhost", 0))
 
   def receive = {
-    case b @ Bound(localAddress) =>
+    case b @ Bound(_) =>
       //#do-some-logging-or-setup
       context.parent ! b
     //#do-some-logging-or-setup
 
     case CommandFailed(_: Bind) => context.stop(self)
 
-    case c @ Connected(remote, local) =>
+    case c @ Connected(_, _) =>
       //#server
       context.parent ! c
       //#server
@@ -69,6 +71,9 @@ object Client {
     Props(classOf[Client], remote, replies)
 }
 
+//#client
+@nowarn("msg=never used") // sample snippets
+//#client
 class Client(remote: InetSocketAddress, listener: ActorRef) extends Actor {
 
   import Tcp._
@@ -88,7 +93,7 @@ class Client(remote: InetSocketAddress, listener: ActorRef) extends Actor {
       context.become {
         case data: ByteString =>
           connection ! Write(data)
-        case CommandFailed(w: Write) =>
+        case CommandFailed(_: Write) =>
           // O/S buffer was full
           listener ! "write failed"
         case Received(data) =>
@@ -113,7 +118,7 @@ class IODocSpec extends AkkaSpec {
   }
 
   "demonstrate connect" in {
-    val server = system.actorOf(Props(classOf[Parent], this), "parent")
+    system.actorOf(Props(classOf[Parent], this), "parent")
     val listen = expectMsgType[Tcp.Bound].localAddress
     val client = system.actorOf(Client.props(listen, testActor), "client1")
 

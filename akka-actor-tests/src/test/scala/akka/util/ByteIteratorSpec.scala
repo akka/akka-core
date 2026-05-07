@@ -1,14 +1,16 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import akka.util.ByteIterator.ByteArrayIterator
 
+import scala.annotation.nowarn
+
+@nowarn("cat=lint-infer-any")
 class ByteIteratorSpec extends AnyWordSpec with Matchers {
   "A ByteIterator" should {
 

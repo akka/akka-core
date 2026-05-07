@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.delivery.internal
@@ -22,7 +22,6 @@ import akka.actor.typed.delivery.ProducerController
 import akka.actor.typed.internal.ActorFlightRecorder
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.scaladsl.TimerScheduler
 import akka.serialization.Serialization
 import akka.serialization.SerializationExtension
@@ -136,7 +135,7 @@ object ProducerControllerImpl {
       settings: ProducerController.Settings): Behavior[Command[A]] = {
     Behaviors
       .setup[InternalCommand] { context =>
-        ActorFlightRecorder(context.system).delivery.producerCreated(producerId, context.self.path)
+        ActorFlightRecorder.producerCreated(producerId, context.self.path)
         Behaviors.withMdc(staticMdc = Map("producerId" -> producerId)) {
           context.setLoggerName("akka.actor.typed.delivery.ProducerController")
           val durableQueue = askLoadState(context, durableQueueBehavior, settings)
@@ -170,7 +169,7 @@ object ProducerControllerImpl {
       send: ConsumerController.SequencedMessage[A] => Unit): Behavior[Command[A]] = {
     Behaviors
       .setup[InternalCommand] { context =>
-        ActorFlightRecorder(context.system).delivery.producerCreated(producerId, context.self.path)
+        ActorFlightRecorder.producerCreated(producerId, context.self.path)
         Behaviors.withMdc(staticMdc = Map("producerId" -> producerId)) {
           context.setLoggerName("akka.actor.typed.delivery.ProducerController")
           val durableQueue = askLoadState(context, durableQueueBehavior, settings)
@@ -313,13 +312,12 @@ object ProducerControllerImpl {
       state: State[A]): Behavior[InternalCommand] = {
 
     Behaviors.setup { context =>
-      val flightRecorder = ActorFlightRecorder(context.system).delivery
-      flightRecorder.producerStarted(producerId, context.self.path)
+      ActorFlightRecorder.producerStarted(producerId, context.self.path)
       Behaviors.withTimers { timers =>
         val msgAdapter: ActorRef[A] = context.messageAdapter(msg => Msg(msg))
         val requested =
           if (state.unconfirmed.isEmpty) {
-            flightRecorder.producerRequestNext(producerId, 1L, 0)
+            ActorFlightRecorder.producerRequestNext(producerId, 1L, 0)
             state.producer ! RequestNext(producerId, 1L, 0L, msgAdapter, context.self)
             true
           } else {
@@ -384,7 +382,6 @@ private class ProducerControllerImpl[A: ClassTag](
   import ProducerController.Start
   import ProducerControllerImpl._
 
-  private val flightRecorder = ActorFlightRecorder(context.system).delivery
   private val traceEnabled = context.log.isTraceEnabled
   // for the durableQueue StoreMessageSent ask
   private implicit val askTimeout: Timeout = settings.durableQueueRequestTimeout
@@ -410,14 +407,14 @@ private class ProducerControllerImpl[A: ClassTag](
       if (s.currentSeqNr == s.firstSeqNr)
         timers.startTimerWithFixedDelay(ResendFirst, delay = settings.durableQueueResendFirstInterval)
 
-      flightRecorder.producerSent(producerId, seqMsg.seqNr)
+      ActorFlightRecorder.producerSent(producerId, seqMsg.seqNr)
       s.send(seqMsg)
       val newRequested =
         if (s.currentSeqNr == s.requestedSeqNr) {
-          flightRecorder.producerWaitingForRequest(producerId, s.currentSeqNr)
+          ActorFlightRecorder.producerWaitingForRequest(producerId, s.currentSeqNr)
           newRemainingChunks.nonEmpty // keep it true until lastChunk
         } else if (seqMsg.isLastChunk) {
-          flightRecorder.producerRequestNext(producerId, s.currentSeqNr + 1, s.confirmedSeqNr)
+          ActorFlightRecorder.producerRequestNext(producerId, s.currentSeqNr + 1, s.confirmedSeqNr)
           s.producer ! RequestNext(producerId, s.currentSeqNr + 1, s.confirmedSeqNr, msgAdapter, context.self)
           true
         } else {
@@ -454,8 +451,8 @@ private class ProducerControllerImpl[A: ClassTag](
         newRequestedSeqNr: SeqNr,
         supportResend: Boolean,
         viaTimeout: Boolean): Behavior[InternalCommand] = {
-      flightRecorder.producerReceivedRequest(producerId, newRequestedSeqNr, newConfirmedSeqNr)
-      context.log.debugN(
+      ActorFlightRecorder.producerReceivedRequest(producerId, newRequestedSeqNr, newConfirmedSeqNr)
+      context.log.debug(
         "Received Request, confirmed [{}], requested [{}], current [{}]",
         newConfirmedSeqNr,
         newRequestedSeqNr,
@@ -479,7 +476,7 @@ private class ProducerControllerImpl[A: ClassTag](
         else
           newRequestedSeqNr
       if (newRequestedSeqNr2 != newRequestedSeqNr)
-        context.log.debugN(
+        context.log.debug(
           "Expanded requestedSeqNr from [{}] to [{}], because current [{}] and all were probably lost",
           newRequestedSeqNr,
           newRequestedSeqNr2,
@@ -493,7 +490,7 @@ private class ProducerControllerImpl[A: ClassTag](
             context.self ! SendChunk
             s.requested
           } else if (!s.requested && (newRequestedSeqNr2 - s.currentSeqNr) > 0) {
-            flightRecorder.producerRequestNext(producerId, s.currentSeqNr, newConfirmedSeqNr)
+            ActorFlightRecorder.producerRequestNext(producerId, s.currentSeqNr, newConfirmedSeqNr)
             s.producer ! RequestNext(producerId, s.currentSeqNr, newConfirmedSeqNr, msgAdapter, context.self)
             true
           } else {
@@ -513,7 +510,7 @@ private class ProducerControllerImpl[A: ClassTag](
 
     def receiveAck(newConfirmedSeqNr: SeqNr): Behavior[InternalCommand] = {
       if (traceEnabled)
-        context.log.trace2("Received Ack, confirmed [{}], current [{}].", newConfirmedSeqNr, s.currentSeqNr)
+        context.log.trace("Received Ack, confirmed [{}], current [{}].", newConfirmedSeqNr, s.currentSeqNr)
       val stateAfterAck = onAck(newConfirmedSeqNr)
       if (newConfirmedSeqNr == s.firstSeqNr && stateAfterAck.unconfirmed.nonEmpty) {
         resendUnconfirmed(stateAfterAck.unconfirmed)
@@ -582,7 +579,7 @@ private class ProducerControllerImpl[A: ClassTag](
           context.log.error(errorMessage)
           throw new TimeoutException(errorMessage)
         } else {
-          context.log.warnN(
+          context.log.warn(
             "StoreMessageSent seqNr [{}] failed, attempt [{}] of [{}], retrying.",
             f.messageSent.seqNr,
             f.attempt,
@@ -632,7 +629,7 @@ private class ProducerControllerImpl[A: ClassTag](
     }
 
     def receiveResend(fromSeqNr: SeqNr): Behavior[InternalCommand] = {
-      flightRecorder.producerReceivedResend(producerId, fromSeqNr)
+      ActorFlightRecorder.producerReceivedResend(producerId, fromSeqNr)
       resendUnconfirmed(s.unconfirmed.dropWhile(_.seqNr < fromSeqNr))
       if (fromSeqNr == 0 && s.unconfirmed.nonEmpty) {
         val newUnconfirmed = s.unconfirmed.head.asFirst +: s.unconfirmed.tail
@@ -645,7 +642,7 @@ private class ProducerControllerImpl[A: ClassTag](
       if (newUnconfirmed.nonEmpty) {
         val fromSeqNr = newUnconfirmed.head.seqNr
         val toSeqNr = newUnconfirmed.last.seqNr
-        flightRecorder.producerResentUnconfirmed(producerId, fromSeqNr, toSeqNr)
+        ActorFlightRecorder.producerResentUnconfirmed(producerId, fromSeqNr, toSeqNr)
         context.log.debug("Resending [{} - {}].", fromSeqNr, toSeqNr)
         newUnconfirmed.foreach(s.send)
       }
@@ -653,7 +650,7 @@ private class ProducerControllerImpl[A: ClassTag](
 
     def receiveResendFirstUnconfirmed(): Behavior[InternalCommand] = {
       if (s.unconfirmed.nonEmpty) {
-        flightRecorder.producerResentFirstUnconfirmed(producerId, s.unconfirmed.head.seqNr)
+        ActorFlightRecorder.producerResentFirstUnconfirmed(producerId, s.unconfirmed.head.seqNr)
         context.log.debug("Resending first unconfirmed [{}].", s.unconfirmed.head.seqNr)
         s.send(s.unconfirmed.head)
       }
@@ -662,7 +659,7 @@ private class ProducerControllerImpl[A: ClassTag](
 
     def receiveResendFirst(): Behavior[InternalCommand] = {
       if (s.unconfirmed.nonEmpty && s.unconfirmed.head.seqNr == s.firstSeqNr) {
-        flightRecorder.producerResentFirst(producerId, s.firstSeqNr)
+        ActorFlightRecorder.producerResentFirst(producerId, s.firstSeqNr)
         context.log.debug("Resending first, [{}].", s.firstSeqNr)
         s.send(s.unconfirmed.head.asFirst)
       } else {
@@ -676,7 +673,7 @@ private class ProducerControllerImpl[A: ClassTag](
       ProducerControllerImpl.enforceLocalProducer(start.producer)
       context.log.debug("Register new Producer [{}], currentSeqNr [{}].", start.producer, s.currentSeqNr)
       if (s.requested && s.remainingChunks.isEmpty) {
-        flightRecorder.producerRequestNext(producerId, s.currentSeqNr, s.confirmedSeqNr)
+        ActorFlightRecorder.producerRequestNext(producerId, s.currentSeqNr, s.confirmedSeqNr)
         start.producer ! RequestNext(producerId, s.currentSeqNr, s.confirmedSeqNr, msgAdapter, context.self)
       }
       active(s.copy(producer = start.producer))
@@ -731,7 +728,7 @@ private class ProducerControllerImpl[A: ClassTag](
               s.currentSeqNr,
               chunkedMessages.head.serialized.size)
           else
-            context.log.traceN(
+            context.log.trace(
               "Chunked seqNr [{}] into [{}] pieces, total size [{} bytes].",
               s.currentSeqNr,
               chunkedMessages.size,
@@ -760,7 +757,7 @@ private class ProducerControllerImpl[A: ClassTag](
     Behaviors.receiveMessage {
       case MessageWithConfirmation(m: A, replyTo) =>
         checkReceiveMessageRemainingChunksState()
-        flightRecorder.producerReceived(producerId, s.currentSeqNr)
+        ActorFlightRecorder.producerReceived(producerId, s.currentSeqNr)
         val chunks = chunk(m, ack = true)
         val newReplyAfterStore = s.replyAfterStore.updated(chunks.last.seqNr, replyTo)
         if (durableQueue.isEmpty) {
@@ -780,7 +777,7 @@ private class ProducerControllerImpl[A: ClassTag](
 
       case Msg(m: A) =>
         checkReceiveMessageRemainingChunksState()
-        flightRecorder.producerReceived(producerId, s.currentSeqNr)
+        ActorFlightRecorder.producerReceived(producerId, s.currentSeqNr)
         val chunks = chunk(m, ack = false)
         if (durableQueue.isEmpty) {
           onMsg(chunks.head, s.replyAfterStore, chunks.tail)

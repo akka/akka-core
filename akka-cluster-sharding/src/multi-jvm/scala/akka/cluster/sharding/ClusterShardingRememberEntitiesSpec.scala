@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -12,9 +12,7 @@ import akka.actor._
 import akka.cluster.{ Cluster, MemberStatus }
 import akka.remote.testkit.MultiNodeSpec
 import akka.testkit._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object ClusterShardingRememberEntitiesSpec {
 
   val extractEntityId: ShardRegion.ExtractEntityId = {

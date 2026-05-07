@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2022-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern.internal
@@ -8,7 +8,7 @@ import java.util.{ List => JList }
 
 import akka.actor.ExtendedActorSystem
 import akka.annotation.{ InternalApi, InternalStableApi }
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Service Provider Interface (SPI) for collecting metrics from Circuit Breaker.

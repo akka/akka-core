@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.persistence.typed
@@ -17,7 +17,6 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.scaladsl.TimerScheduler
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.persistence.testkit.query.scaladsl.PersistenceTestKitReadJournal
@@ -235,7 +234,7 @@ object ReplicatedAuctionExampleSpec {
     def eventHandler(state: AuctionState, event: Event): AuctionState = {
 
       val newState = state.applyEvent(event)
-      context.log.infoN("Applying event {}. New start {}", event, newState)
+      context.log.info("Applying event {}. New start {}", event, newState)
       if (!replicationContext.recoveryRunning) {
         eventTriggers(event, newState)
       }
@@ -251,7 +250,7 @@ object ReplicatedAuctionExampleSpec {
         case finished: AuctionFinished =>
           newState.phase match {
             case Closing(alreadyFinishedAtDc) =>
-              context.log.infoN(
+              context.log.info(
                 "AuctionFinished at {}, already finished at [{}]",
                 finished.atReplica,
                 alreadyFinishedAtDc.mkString(", "))
@@ -273,7 +272,7 @@ object ReplicatedAuctionExampleSpec {
         case Closing(alreadyFinishedAtDc) =>
           val allDone = allReplicas.diff(alreadyFinishedAtDc).isEmpty
           if (!allDone) {
-            context.log.info2(
+            context.log.info(
               s"Not closing auction as not all DCs have reported finished. All DCs: {}. Reported finished {}",
               allReplicas,
               alreadyFinishedAtDc)

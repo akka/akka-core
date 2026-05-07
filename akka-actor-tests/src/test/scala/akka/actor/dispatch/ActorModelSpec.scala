@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.dispatch
@@ -232,7 +232,7 @@ object ActorModelSpec {
           Error(
             e,
             Option(dispatcher).toString,
-            Option(dispatcher).getOrElse(this).getClass,
+            Option[Any](dispatcher).getOrElse(this).getClass,
             "actual: " + stats + ", required: InterceptorStats(susp=" + suspensions +
             ",res=" + resumes + ",reg=" + registers + ",unreg=" + unregisters +
             ",recv=" + msgsReceived + ",proc=" + msgsProcessed + ",restart=" + restarts))
@@ -427,7 +427,7 @@ abstract class ActorModelSpec(config: String) extends AkkaSpec(config) with Defa
         val f6 = a ? Reply("bar2")
 
         val c = system.scheduler.scheduleOnce(2.seconds) {
-          import akka.util.ccompat.JavaConverters._
+          import scala.jdk.CollectionConverters._
           Thread.getAllStackTraces().asScala.foreach {
             case (thread, stack) =>
               println(s"$thread:")
@@ -615,7 +615,6 @@ object BalancingDispatcherModelSpec {
   }
 }
 
-@nowarn
 class BalancingDispatcherModelSpec extends ActorModelSpec(BalancingDispatcherModelSpec.config) {
   import ActorModelSpec._
 

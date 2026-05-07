@@ -1,16 +1,18 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.serialization.jackson
 
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
+
 import scala.annotation.nowarn
 import scala.collection.immutable
-import scala.compat.java8.OptionConverters._
+import scala.jdk.OptionConverters._
 import scala.util.Failure
 import scala.util.Success
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.PropertyAccessor
@@ -41,7 +43,7 @@ import akka.actor.setup.Setup
 import akka.annotation.InternalStableApi
 import akka.event.Logging
 import akka.event.LoggingAdapter
-import akka.util.unused
+
 import com.fasterxml.jackson.databind.cfg.ConstructorDetector
 
 object JacksonObjectMapperProvider extends ExtensionId[JacksonObjectMapperProvider] with ExtensionIdProvider {
@@ -222,7 +224,7 @@ object JacksonObjectMapperProvider extends ExtensionId[JacksonObjectMapperProvid
       dynamicAccess: DynamicAccess,
       log: Option[LoggingAdapter]): Unit = {
 
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     val configuredModules = config.getStringList("jackson-modules").asScala
     val modules1 =
@@ -296,13 +298,13 @@ object JacksonObjectMapperProvider extends ExtensionId[JacksonObjectMapperProvid
     }
 
   private def features(config: Config, section: String): immutable.Seq[(String, Boolean)] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val cfg = config.getConfig(section)
     cfg.root.keySet().asScala.map(key => key -> cfg.getBoolean(key)).toList
   }
 
   private def configPairs(config: Config, section: String): immutable.Seq[(String, String)] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val cfg = config.getConfig(section)
     cfg.root.keySet().asScala.map(key => key -> cfg.getString(key)).toList
   }
@@ -349,7 +351,7 @@ final class JacksonObjectMapperProvider(system: ExtendedActorSystem) extends Ext
    *                    can be used
    */
   def getOrCreate(bindingName: String, jsonFactory: Optional[JsonFactory]): ObjectMapper =
-    getOrCreate(bindingName, jsonFactory.asScala)
+    getOrCreate(bindingName, jsonFactory.toScala)
 
   /**
    * Scala API: Creates a new instance of a Jackson `ObjectMapper` with sensible defaults and modules configured
@@ -386,7 +388,7 @@ final class JacksonObjectMapperProvider(system: ExtendedActorSystem) extends Ext
    * @see [[JacksonObjectMapperProvider#getOrCreate]]
    */
   def create(bindingName: String, jsonFactory: Optional[JsonFactory]): ObjectMapper =
-    create(bindingName, jsonFactory.asScala)
+    create(bindingName, jsonFactory.toScala)
 
 }
 
@@ -429,7 +431,7 @@ class JacksonObjectMapperFactory {
    * @param jsonFactory optional `JsonFactory` such as `CBORFactory`, for plain JSON `None` (defaults)
    *                    can be used
    */
-  def newObjectMapper(@unused bindingName: String, jsonFactory: JsonFactory): ObjectMapper =
+  def newObjectMapper(@nowarn("msg=never used") bindingName: String, jsonFactory: JsonFactory): ObjectMapper =
     JsonMapper.builder(jsonFactory).build()
 
   /**
@@ -445,7 +447,7 @@ class JacksonObjectMapperFactory {
    *                           `akka.serialization.jackson.deserialization-features`
    */
   def overrideConfiguredModules(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredModules: immutable.Seq[Module]): immutable.Seq[Module] =
     configuredModules
 
@@ -462,7 +464,7 @@ class JacksonObjectMapperFactory {
    *                           `akka.serialization.jackson.serialization-features`
    */
   def overrideConfiguredSerializationFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(SerializationFeature, Boolean)])
       : immutable.Seq[(SerializationFeature, Boolean)] =
     configuredFeatures
@@ -480,7 +482,7 @@ class JacksonObjectMapperFactory {
    *                           `akka.serialization.jackson.deserialization-features`
    */
   def overrideConfiguredDeserializationFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(DeserializationFeature, Boolean)])
       : immutable.Seq[(DeserializationFeature, Boolean)] =
     configuredFeatures
@@ -494,7 +496,7 @@ class JacksonObjectMapperFactory {
    * @param configuredFeatures the list of `MapperFeatures` that were configured in `akka.serialization.jackson.mapper-features`
    */
   def overrideConfiguredMapperFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(MapperFeature, Boolean)]): immutable.Seq[(MapperFeature, Boolean)] =
     configuredFeatures
 
@@ -507,7 +509,7 @@ class JacksonObjectMapperFactory {
    * @param configuredFeatures the list of `JsonParser.Feature` that were configured in `akka.serialization.jackson.json-parser-features`
    */
   def overrideConfiguredJsonParserFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(JsonParser.Feature, Boolean)]): immutable.Seq[(JsonParser.Feature, Boolean)] =
     configuredFeatures
 
@@ -520,7 +522,7 @@ class JacksonObjectMapperFactory {
    * @param configuredFeatures the list of `JsonGenerator.Feature` that were configured in `akka.serialization.jackson.json-generator-features`
    */
   def overrideConfiguredJsonGeneratorFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(JsonGenerator.Feature, Boolean)])
       : immutable.Seq[(JsonGenerator.Feature, Boolean)] =
     configuredFeatures
@@ -534,7 +536,7 @@ class JacksonObjectMapperFactory {
    * @param configuredFeatures the list of `StreamReadFeature` that were configured in `akka.serialization.jackson.stream-read-features`
    */
   def overrideConfiguredStreamReadFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(StreamReadFeature, Boolean)]): immutable.Seq[(StreamReadFeature, Boolean)] =
     configuredFeatures
 
@@ -547,7 +549,7 @@ class JacksonObjectMapperFactory {
    * @param configuredFeatures the list of `StreamWriterFeature` that were configured in `akka.serialization.jackson.stream-write-features`
    */
   def overrideConfiguredStreamWriteFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(StreamWriteFeature, Boolean)]): immutable.Seq[(StreamWriteFeature, Boolean)] =
     configuredFeatures
 
@@ -560,7 +562,7 @@ class JacksonObjectMapperFactory {
    * @param configuredFeatures the list of `JsonReadFeature` that were configured in `akka.serialization.jackson.json-read-features`
    */
   def overrideConfiguredJsonReadFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(JsonReadFeature, Boolean)]): immutable.Seq[(JsonReadFeature, Boolean)] =
     configuredFeatures
 
@@ -573,7 +575,7 @@ class JacksonObjectMapperFactory {
    * @param configuredFeatures the list of `JsonWriteFeature` that were configured in `akka.serialization.jackson.json-write-features`
    */
   def overrideConfiguredJsonWriteFeatures(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(JsonWriteFeature, Boolean)]): immutable.Seq[(JsonWriteFeature, Boolean)] =
     configuredFeatures
 
@@ -587,7 +589,7 @@ class JacksonObjectMapperFactory {
    *                           `akka.serialization.jackson.visibility`
    */
   def overrideConfiguredVisibility(
-      @unused bindingName: String,
+      @nowarn("msg=never used") bindingName: String,
       configuredFeatures: immutable.Seq[(PropertyAccessor, JsonAutoDetect.Visibility)])
       : immutable.Seq[(PropertyAccessor, JsonAutoDetect.Visibility)] =
     configuredFeatures

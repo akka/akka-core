@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.discovery.aggregate
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -18,9 +19,8 @@ import akka.actor.{ ActorSystem, ExtendedActorSystem }
 import akka.discovery.{ Discovery, Lookup, ServiceDiscovery }
 import akka.discovery.ServiceDiscovery.{ Resolved, ResolvedTarget }
 import akka.testkit.TestKit
-import akka.util.unused
 
-class StubbedServiceDiscovery(@unused system: ExtendedActorSystem) extends ServiceDiscovery {
+class StubbedServiceDiscovery(@nowarn("msg=never used") system: ExtendedActorSystem) extends ServiceDiscovery {
 
   override def lookup(query: Lookup, resolveTimeout: FiniteDuration): Future[Resolved] = {
     if (query.serviceName == "stubbed") {

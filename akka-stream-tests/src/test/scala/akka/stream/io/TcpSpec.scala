@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.io
@@ -953,7 +953,7 @@ class TcpSpec extends StreamSpec("""
       val engine = sslContext.createSSLEngine()
 
       engine.setUseClientMode(role == akka.stream.Client)
-      engine.setEnabledCipherSuites(Array("TLS_RSA_WITH_AES_128_CBC_SHA"))
+      engine.setEnabledCipherSuites(Array("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"))
       engine.setEnabledProtocols(Array("TLSv1.2"))
 
       engine

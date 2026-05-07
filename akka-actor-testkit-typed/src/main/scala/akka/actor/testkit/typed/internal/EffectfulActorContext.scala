@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.internal
@@ -8,6 +8,7 @@ import java.time.Duration
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 import scala.reflect.ClassTag
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -19,7 +20,6 @@ import akka.actor.typed.{ ActorRef, Behavior, Props }
 import akka.actor.typed.RecipientRef
 import akka.actor.typed.internal.TimerSchedulerCrossDslSupport
 import akka.annotation.InternalApi
-import akka.util.JavaDurationConverters._
 import akka.util.Timeout
 
 /**
@@ -66,7 +66,7 @@ import akka.util.Timeout
         .get
     }
 
-    commonAsk(resClass, scalaCreateRequest, target, responseTimeout.asScala, scalaMapResponse)
+    commonAsk(resClass, scalaCreateRequest, target, responseTimeout.toScala, scalaMapResponse)
   }
 
   private def commonAsk[Req, Res](

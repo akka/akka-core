@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.event
@@ -14,7 +14,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import akka.actor._
 import akka.testkit._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object LoggingReceiveSpec {
   class TestLogActor extends Actor {
@@ -93,7 +93,7 @@ class LoggingReceiveSpec extends AnyWordSpec with BeforeAndAfterAll {
           case null =>
         }
 
-        val actor = TestActorRef(new Actor {
+        val actor: TestActorRef[Actor] = TestActorRef(new Actor {
           def switch: Actor.Receive = { case "becomenull" => context.become(r, false) }
           def receive =
             switch.orElse(LoggingReceive {

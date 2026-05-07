@@ -1,14 +1,15 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.extension
 
 import java.util.concurrent.atomic.AtomicLong
-
 import akka.actor.Actor
 import akka.actor.ClassicActorSystemProvider
 import akka.testkit.AkkaSpec
+
+import scala.annotation.nowarn
 
 //#extension
 import akka.actor.Extension
@@ -48,6 +49,7 @@ object CountExtension extends ExtensionId[CountExtensionImpl] with ExtensionIdPr
 }
 //#extensionid
 
+@nowarn("msg=never used") // sample snippets
 object ExtensionDocSpec {
 
   val config = """

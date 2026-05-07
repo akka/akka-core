@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -8,6 +8,7 @@ import java.net.URLEncoder
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.Await
 import scala.util.control.NonFatal
@@ -41,7 +42,7 @@ import akka.event.Logging
 import akka.pattern.BackoffOpts
 import akka.pattern.ask
 import akka.util.ByteString
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * This extension provides sharding functionality of actors in a cluster.
@@ -170,6 +171,7 @@ object ClusterSharding extends ExtensionId[ClusterSharding] with ExtensionIdProv
 /**
  * @see [[ClusterSharding$ ClusterSharding companion object]]
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 class ClusterSharding(system: ExtendedActorSystem) extends Extension {
   import ClusterShardingGuardian._
   import ShardCoordinator.ShardAllocationStrategy
@@ -539,6 +541,7 @@ class ClusterSharding(system: ExtendedActorSystem) extends Extension {
    *   that passed the `extractEntityId` will be used
    * @return the actor ref of the [[ShardRegion]] that is to be responsible for the shard
    */
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def startProxy(
       typeName: String,
       role: Option[String],
@@ -604,6 +607,7 @@ class ClusterSharding(system: ExtendedActorSystem) extends Extension {
    *   entity from the incoming message
    * @return the actor ref of the [[ShardRegion]] that is to be responsible for the shard
    */
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def startProxy(
       typeName: String,
       role: Optional[String],
@@ -652,6 +656,7 @@ class ClusterSharding(system: ExtendedActorSystem) extends Extension {
    * [[#startProxy]] method before it can be used here. Messages to the entity is always sent
    * via the `ShardRegion`.
    */
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def shardRegionProxy(typeName: String, dataCenter: DataCenter): ActorRef = {
     proxies.get(proxyName(typeName, Some(dataCenter))) match {
       case null =>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.javadsl
@@ -93,8 +93,8 @@ object BidiFlow {
    * the *joint* frequencies of the elements in both directions.
    */
   def bidirectionalIdleTimeout[I, O](timeout: java.time.Duration): BidiFlow[I, I, O, O, NotUsed] = {
-    import akka.util.JavaDurationConverters._
-    new BidiFlow(scaladsl.BidiFlow.bidirectionalIdleTimeout(timeout.asScala))
+    import scala.jdk.DurationConverters._
+    new BidiFlow(scaladsl.BidiFlow.bidirectionalIdleTimeout(timeout.toScala))
   }
 }
 

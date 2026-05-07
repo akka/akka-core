@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.serialization
@@ -22,7 +22,7 @@ import akka.remote.WireFormats.AddressData
 import akka.remote.routing.RemoteRouterConfig
 import akka.routing._
 import akka.serialization.{ BaseSerializer, Serialization, SerializationExtension, SerializerWithStringManifest }
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class MiscMessageSerializer(val system: ExtendedActorSystem) extends SerializerWithStringManifest with BaseSerializer {
 

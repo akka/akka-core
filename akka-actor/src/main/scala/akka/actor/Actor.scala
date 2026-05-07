@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
 
 import java.util.Optional
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.beans.BeanProperty
 import scala.util.control.NoStackTrace
@@ -13,7 +14,6 @@ import scala.util.control.NoStackTrace
 import akka.AkkaException
 import akka.annotation.InternalApi
 import akka.event.LoggingAdapter
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -90,8 +90,8 @@ final case class ActorIdentity(correlationId: Any, ref: Option[ActorRef]) {
    * not defined if no actor matched the request.
    */
   def getActorRef: Optional[ActorRef] = {
-    import scala.compat.java8.OptionConverters._
-    ref.asJava
+    import scala.jdk.OptionConverters._
+    ref.toJava
   }
 }
 
@@ -365,7 +365,7 @@ trait ActorLogging { this: Actor =>
 trait DiagnosticActorLogging extends Actor {
   import akka.event.Logging._
   val log = akka.event.Logging(this)
-  def mdc(@unused currentMessage: Any): MDC = emptyMDC
+  def mdc(@nowarn("msg=never used") currentMessage: Any): MDC = emptyMDC
 
   override protected[akka] def aroundReceive(receive: Actor.Receive, msg: Any): Unit =
     try {
@@ -617,7 +617,7 @@ trait Actor {
    */
   @throws(classOf[Exception]) // when changing this you MUST also change ActorDocTest
   //#lifecycle-hooks
-  def preRestart(@unused reason: Throwable, @unused message: Option[Any]): Unit = {
+  def preRestart(@nowarn("msg=never used") reason: Throwable, @nowarn("msg=never used") message: Option[Any]): Unit = {
     context.children.foreach { child =>
       context.unwatch(child)
       context.stop(child)
@@ -635,7 +635,7 @@ trait Actor {
    */
   @throws(classOf[Exception]) // when changing this you MUST also change ActorDocTest
   //#lifecycle-hooks
-  def postRestart(@unused reason: Throwable): Unit = {
+  def postRestart(@nowarn("msg=never used") reason: Throwable): Unit = {
     preStart()
   }
   //#lifecycle-hooks

@@ -1,15 +1,15 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
+import scala.jdk.DurationConverters._
 
 import akka.actor.{ ActorRef, OneForOneStrategy, Props, SupervisorStrategy }
 import akka.annotation.{ DoNotInherit, InternalApi }
 import akka.pattern.internal.{ BackoffOnRestartSupervisor, BackoffOnStopSupervisor }
-import akka.util.JavaDurationConverters._
 
 /**
  * Backoff options allow to specify a number of properties for backoff supervisors.
@@ -122,7 +122,7 @@ object BackoffOpts {
       minBackoff: java.time.Duration,
       maxBackoff: java.time.Duration,
       randomFactor: Double): BackoffOnFailureOptions =
-    onFailure(childProps, childName, minBackoff.asScala, maxBackoff.asScala, randomFactor)
+    onFailure(childProps, childName, minBackoff.toScala, maxBackoff.toScala, randomFactor)
 
   /**
    * Back-off options for creating a back-off supervisor actor that expects a child actor to stop on failure.
@@ -244,7 +244,7 @@ object BackoffOpts {
       minBackoff: java.time.Duration,
       maxBackoff: java.time.Duration,
       randomFactor: Double): BackoffOnStopOptions =
-    onStop(childProps, childName, minBackoff.asScala, maxBackoff.asScala, randomFactor)
+    onStop(childProps, childName, minBackoff.toScala, maxBackoff.toScala, randomFactor)
 }
 
 /**

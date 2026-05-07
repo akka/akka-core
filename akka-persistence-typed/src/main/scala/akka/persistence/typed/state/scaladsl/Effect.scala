@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.scaladsl
@@ -185,4 +185,7 @@ trait EffectBuilder[+State] extends Effect[State] {
    * by another `unstashAll`.
    */
   def thenUnstashAll(): ReplyEffect[State]
+
+  /** Stops the actor as a side effect */
+  def thenStop(): ReplyEffect[State]
 }

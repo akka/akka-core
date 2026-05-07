@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 syntax = "proto2";
@@ -56,4 +56,8 @@ message PersistentFSMSnapshot {
   required string stateIdentifier = 1;
   required PersistentPayload data = 2;
   optional int64 timeoutNanos = 3;
+}
+
+message CompositeMetadata {
+  repeated PersistentPayload payloads = 1;
 }

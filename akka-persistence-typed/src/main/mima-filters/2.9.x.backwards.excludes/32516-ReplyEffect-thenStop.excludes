@@ -1,0 +1,4 @@
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.typed.scaladsl.ReplyEffect.thenStop")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.typed.javadsl.ReplyEffect.thenStop")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.typed.state.scaladsl.ReplyEffect.thenStop")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.typed.state.javadsl.ReplyEffect.thenStop")

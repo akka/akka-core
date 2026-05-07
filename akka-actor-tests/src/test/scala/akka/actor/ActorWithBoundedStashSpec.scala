@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -15,7 +16,6 @@ import akka.dispatch.BoundedDequeBasedMailbox
 import akka.testkit._
 import akka.testkit.DefaultTimeout
 import akka.testkit.TestEvent._
-import akka.util.unused
 
 object ActorWithBoundedStashSpec {
 
@@ -57,9 +57,11 @@ object ActorWithBoundedStashSpec {
   }
 
   // bounded deque-based mailbox with capacity 10
-  class Bounded10(@unused settings: Settings, @unused config: Config) extends BoundedDequeBasedMailbox(10, 500 millis)
+  class Bounded10(@nowarn("msg=never used") settings: Settings, @nowarn("msg=never used") config: Config)
+      extends BoundedDequeBasedMailbox(10, 500 millis)
 
-  class Bounded100(@unused settings: Settings, @unused config: Config) extends BoundedDequeBasedMailbox(100, 500 millis)
+  class Bounded100(@nowarn("msg=never used") settings: Settings, @nowarn("msg=never used") config: Config)
+      extends BoundedDequeBasedMailbox(100, 500 millis)
 
   val dispatcherId1 = "my-dispatcher-1"
   val dispatcherId2 = "my-dispatcher-2"

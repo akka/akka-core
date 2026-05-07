@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.pubsub.protobuf
@@ -20,13 +20,11 @@ import akka.cluster.pubsub.protobuf.msg.{ DistributedPubSubMessages => dm }
 import akka.protobufv3.internal.{ ByteString, MessageLite }
 import akka.remote.ByteStringUtils
 import akka.serialization._
-import akka.util.ccompat._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * INTERNAL API: Protobuf serializer of DistributedPubSubMediator messages.
  */
-@ccompatUsedUntil213
 private[akka] class DistributedPubSubMessageSerializer(val system: ExtendedActorSystem)
     extends SerializerWithStringManifest
     with BaseSerializer {

@@ -1,11 +1,15 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.typed
 
+import scala.annotation.nowarn
 import scala.concurrent.duration.{ Duration, FiniteDuration, _ }
+import scala.jdk.DurationConverters._
+
 import com.typesafe.config.Config
+
 import akka.actor.typed._
 import akka.annotation.{ DoNotInherit, InternalApi }
 import akka.cluster.ClusterSettings.DataCenter
@@ -15,9 +19,9 @@ import akka.cluster.singleton.{
 }
 import akka.cluster.typed.internal.AdaptedClusterSingletonImpl
 import akka.coordination.lease.LeaseUsageSettings
-import akka.util.JavaDurationConverters._
 import org.slf4j.LoggerFactory
 
+@nowarn("msg=Use Akka Distributed Cluster")
 object ClusterSingletonSettings {
   def apply(system: ActorSystem[_]): ClusterSingletonSettings =
     fromConfig(system.settings.config.getConfig("akka.cluster"))
@@ -43,8 +47,10 @@ object ClusterSingletonSettings {
   }
 }
 
+@nowarn("msg=Use Akka Distributed Cluster")
 final class ClusterSingletonSettings(
     val role: Option[String],
+    @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
     val dataCenter: Option[DataCenter],
     val singletonIdentificationInterval: FiniteDuration,
     val removalMargin: FiniteDuration,
@@ -67,20 +73,22 @@ final class ClusterSingletonSettings(
 
   def withNoRole(): ClusterSingletonSettings = copy(role = None)
 
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def withDataCenter(dataCenter: DataCenter): ClusterSingletonSettings = copy(dataCenter = Some(dataCenter))
 
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def withNoDataCenter(): ClusterSingletonSettings = copy(dataCenter = None)
 
   def withRemovalMargin(removalMargin: FiniteDuration): ClusterSingletonSettings = copy(removalMargin = removalMargin)
 
   def withRemovalMargin(removalMargin: java.time.Duration): ClusterSingletonSettings =
-    withRemovalMargin(removalMargin.asScala)
+    withRemovalMargin(removalMargin.toScala)
 
   def withHandoverRetryInterval(handOverRetryInterval: FiniteDuration): ClusterSingletonSettings =
     copy(handOverRetryInterval = handOverRetryInterval)
 
   def withHandoverRetryInterval(handOverRetryInterval: java.time.Duration): ClusterSingletonSettings =
-    withHandoverRetryInterval(handOverRetryInterval.asScala)
+    withHandoverRetryInterval(handOverRetryInterval.toScala)
 
   def withBufferSize(bufferSize: Int): ClusterSingletonSettings = copy(bufferSize = bufferSize)
 
@@ -332,13 +340,13 @@ final class ClusterSingletonManagerSettings(
     copy(removalMargin = removalMargin)
 
   def withRemovalMargin(removalMargin: java.time.Duration): ClusterSingletonManagerSettings =
-    withRemovalMargin(removalMargin.asScala)
+    withRemovalMargin(removalMargin.toScala)
 
   def withHandOverRetryInterval(retryInterval: FiniteDuration): ClusterSingletonManagerSettings =
     copy(handOverRetryInterval = retryInterval)
 
   def withHandOverRetryInterval(retryInterval: java.time.Duration): ClusterSingletonManagerSettings =
-    withHandOverRetryInterval(retryInterval.asScala)
+    withHandOverRetryInterval(retryInterval.toScala)
 
   /**
    * Note that if you define a custom lease name and have several singletons each one must have a unique

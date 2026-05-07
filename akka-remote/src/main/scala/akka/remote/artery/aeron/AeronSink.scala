@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -94,8 +94,7 @@ private[remote] class AeronSink(
     aeron: Aeron,
     taskRunner: TaskRunner,
     pool: EnvelopeBufferPool,
-    giveUpAfter: Duration,
-    flightRecorder: RemotingFlightRecorder)
+    giveUpAfter: Duration)
     extends GraphStageWithMaterializedValue[SinkShape[EnvelopeBuffer], Future[Done]] {
   import AeronSink._
   import TaskRunner._
@@ -134,17 +133,17 @@ private[remote] class AeronSink(
         setKeepGoing(true)
         pull(in)
         // TODO: Identify different sinks!
-        flightRecorder.aeronSinkStarted(channel, streamId)
+        RemotingFlightRecorder.aeronSinkStarted(channel, streamId)
       }
 
       override def postStop(): Unit = {
         try {
           taskRunner.command(Remove(addOfferTask.task))
-          flightRecorder.aeronSinkTaskRunnerRemoved(channel, streamId)
+          RemotingFlightRecorder.aeronSinkTaskRunnerRemoved(channel, streamId)
           pub.close()
-          flightRecorder.aeronSinkPublicationClosed(channel, streamId)
+          RemotingFlightRecorder.aeronSinkPublicationClosed(channel, streamId)
         } finally {
-          flightRecorder.aeronSinkStopped(channel, streamId)
+          RemotingFlightRecorder.aeronSinkStopped(channel, streamId)
           completed.complete(completedValue)
         }
       }
@@ -154,7 +153,7 @@ private[remote] class AeronSink(
         envelopeInFlight = grab(in)
         backoffCount = spinning
         lastMsgSize = envelopeInFlight.byteBuffer.limit
-        flightRecorder.aeronSinkEnvelopeGrabbed(lastMsgSize)
+        RemotingFlightRecorder.aeronSinkEnvelopeGrabbed(lastMsgSize)
         publish()
       }
 
@@ -187,18 +186,18 @@ private[remote] class AeronSink(
         offerTask.msgSize = lastMsgSize
         delegateTaskStartTime = System.nanoTime()
         taskRunner.command(addOfferTask)
-        flightRecorder.aeronSinkDelegateToTaskRunner(countBeforeDelegate)
+        RemotingFlightRecorder.aeronSinkDelegateToTaskRunner(countBeforeDelegate)
       }
 
       private def taskOnOfferSuccess(): Unit = {
         countBeforeDelegate = 0
         // FIXME does calculation belong here or in impl?
-        flightRecorder.aeronSinkReturnFromTaskRunner(System.nanoTime() - delegateTaskStartTime)
+        RemotingFlightRecorder.aeronSinkReturnFromTaskRunner(System.nanoTime() - delegateTaskStartTime)
         onOfferSuccess()
       }
 
       private def onOfferSuccess(): Unit = {
-        flightRecorder.aeronSinkEnvelopeOffered(lastMsgSize)
+        RemotingFlightRecorder.aeronSinkEnvelopeOffered(lastMsgSize)
         offerTaskInProgress = false
         pool.release(envelopeInFlight)
         offerTask.buffer = null
@@ -213,7 +212,7 @@ private[remote] class AeronSink(
       private def onGiveUp(): Unit = {
         offerTaskInProgress = false
         val cause = new GaveUpMessageException(s"Gave up sending message to $channel after ${giveUpAfter.pretty}.")
-        flightRecorder.aeronSinkGaveUpEnvelope(cause.getMessage)
+        RemotingFlightRecorder.aeronSinkGaveUpEnvelope(cause.getMessage)
         completedValue = Failure(cause)
         failStage(cause)
       }
@@ -222,7 +221,7 @@ private[remote] class AeronSink(
         offerTaskInProgress = false
         val cause = new PublicationClosedException(s"Aeron Publication to [${channel}] was closed.")
         // this is not exepected, since we didn't close the publication ourselves
-        flightRecorder.aeronSinkPublicationClosedUnexpectedly(channel, streamId)
+        RemotingFlightRecorder.aeronSinkPublicationClosedUnexpectedly(channel, streamId)
         completedValue = Failure(cause)
         failStage(cause)
       }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern;
@@ -9,7 +9,6 @@ import static org.junit.Assert.assertEquals;
 import akka.actor.*;
 import akka.testkit.AkkaJUnitActorSystemResource;
 import akka.testkit.AkkaSpec;
-import akka.util.JavaDurationConverters;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -18,8 +17,9 @@ import java.util.function.BiFunction;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.scalatestplus.junit.JUnitSuite;
-import scala.compat.java8.FutureConverters;
 import scala.concurrent.Await;
+import scala.jdk.javaapi.DurationConverters;
+import scala.jdk.javaapi.FutureConverters;
 
 public class CircuitBreakerTest extends JUnitSuite {
 
@@ -42,8 +42,7 @@ public class CircuitBreakerTest extends JUnitSuite {
     final CompletionStage<String> res = breaker.callWithCircuitBreakerCS(() -> f);
     assertEquals(
         "hello",
-        Await.result(
-            FutureConverters.toScala(res), JavaDurationConverters.asFiniteDuration(fiveSeconds)));
+        Await.result(FutureConverters.asScala(res), DurationConverters.toScala(fiveSeconds)));
   }
 
   @Test
@@ -62,8 +61,7 @@ public class CircuitBreakerTest extends JUnitSuite {
     final CompletionStage<String> res = breaker.callWithCircuitBreakerCS(() -> f, fn);
     assertEquals(
         "hello",
-        Await.result(
-            FutureConverters.toScala(res), JavaDurationConverters.asFiniteDuration(fiveSeconds)));
+        Await.result(FutureConverters.asScala(res), DurationConverters.toScala(fiveSeconds)));
     assertEquals(1, breaker.currentFailureCount());
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.scaladsl
@@ -17,7 +17,6 @@ import akka.actor.testkit.typed.scaladsl.TestProbe
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.persistence.{ Recovery => ClassicRecovery }
 import akka.persistence.typed.NoOpEventAdapter
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.RecoveryCompleted
@@ -69,7 +68,7 @@ class EventSourcedBehaviorWatchSpec
       NoOpEventAdapter.instance[String],
       NoOpSnapshotAdapter.instance[String],
       snapshotWhen = SnapshotWhenPredicate.noSnapshot,
-      ClassicRecovery(),
+      Recovery.default,
       RetentionCriteria.disabled,
       holdingRecoveryPermit = false,
       settings = settings,
@@ -78,7 +77,9 @@ class EventSourcedBehaviorWatchSpec
       publishEvents = false,
       internalLoggerFactory = () => logger,
       retentionInProgress = false,
-      EmptyEventSourcedBehaviorInstrumentation)
+      EmptyEventSourcedBehaviorInstrumentation,
+      None,
+      None)
 
   "A typed persistent parent actor watching a child" must {
 

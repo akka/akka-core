@@ -9,11 +9,6 @@
     "name" : "MODULE$"
   } ]
 }, {
-  "name" : "akka.actor.typed.internal.jfr.JFRActorFlightRecorder",
-  "methods" : [ {
-    "name" : "<init>"
-  } ]
-}, {
   "name" : "akka.actor.typed.internal.adapter.ActorSystemAdapter$AdapterExtension$",
   "fields" : [ {
     "name" : "MODULE$"
@@ -48,11 +43,6 @@
   "name" : "akka.actor.typed.internal.receptionist.DefaultServiceKey"
 }, {
   "name" : "akka.actor.typed.ActorRefResolver$",
-  "fields" : [ {
-    "name" : "MODULE$"
-  } ]
-}, {
-  "name" : "akka.actor.typed.internal.ActorFlightRecorder$",
   "fields" : [ {
     "name" : "MODULE$"
   } ]

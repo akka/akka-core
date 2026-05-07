@@ -132,4 +132,8 @@ supervision process is started. Depending on the
 supervisor’s decision the actor is resumed (as if nothing happened), restarted
 (wiping out its internal state and starting from scratch) or terminated.
 
+@@@note
 
+🎓 For a deeper understanding of the Actor Model, consider the free online course [**Actor Fundamentals**](https://akkademy.akka.io/learn/courses/21/actor-fundamentals) in Akkademy.
+
+@@@

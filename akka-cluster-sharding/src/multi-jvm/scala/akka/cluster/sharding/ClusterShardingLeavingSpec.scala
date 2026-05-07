@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -10,9 +10,7 @@ import akka.actor.{ Actor, ActorRef, Props }
 import akka.cluster.MemberStatus
 import akka.serialization.jackson.CborSerializable
 import akka.testkit._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object ClusterShardingLeavingSpec {
   case class Ping(id: String) extends CborSerializable
 
@@ -50,7 +48,7 @@ abstract class ClusterShardingLeavingSpecConfig(mode: String)
       additionalConfig =
         """
         akka.cluster.sharding.verbose-debug-logging = on
-        akka.cluster.sharding.rebalance-interval = 1s # make rebalancing more likely to happen to test for https://github.com/akka/akka/issues/29093
+        akka.cluster.sharding.rebalance-interval = 1s # make rebalancing more likely to happen to test for https://github.com/akka/akka-core/issues/29093
         akka.cluster.sharding.distributed-data.majority-min-cap = 1
         akka.cluster.sharding.coordinator-state.write-majority-plus = 1
         akka.cluster.sharding.coordinator-state.read-majority-plus = 1

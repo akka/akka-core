@@ -1,14 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.snapshot
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import akka.actor._
-import akka.pattern.CircuitBreaker
 import akka.pattern.CircuitBreakersRegistry
 import akka.pattern.pipe
 import akka.persistence._
@@ -23,13 +21,9 @@ trait SnapshotStore extends Actor with ActorLogging {
   private val publish = extension.settings.internal.publishPluginCommands
 
   private val breaker = {
-    val cfg = extension.configFor(self)
-    val maxFailures = cfg.getInt("circuit-breaker.max-failures")
-    val callTimeout = cfg.getDuration("circuit-breaker.call-timeout", MILLISECONDS).millis
-    val resetTimeout = cfg.getDuration("circuit-breaker.reset-timeout", MILLISECONDS).millis
+    val config = extension.configFor(self)
     val id = extension.extensionIdFor(self)
-    CircuitBreakersRegistry(context.system).getOrCreate(id)(() =>
-      CircuitBreaker(context.system.scheduler, maxFailures, callTimeout, resetTimeout))
+    CircuitBreakersRegistry(context.system).getOrCreate(id, config.getConfig("circuit-breaker"))
   }
 
   final def receive = receiveSnapshotStore.orElse[Any, Unit](receivePluginInternal)

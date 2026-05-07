@@ -1,10 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
 
 import java.io.NotSerializableException
+
+import scala.annotation.nowarn
 
 import com.typesafe.config.ConfigFactory
 
@@ -16,7 +18,6 @@ import akka.serialization.SerializerWithStringManifest
 import akka.testkit.AkkaSpec
 import akka.testkit.TestActors
 import akka.testkit.TestKit
-import akka.util.unused
 
 object TransientSerializationErrorSpec {
   object ManifestNotSerializable
@@ -26,7 +27,7 @@ object TransientSerializationErrorSpec {
   object NotDeserializable
   object IllegalOnDeserialize
 
-  class TestSerializer(@unused system: ExtendedActorSystem) extends SerializerWithStringManifest {
+  class TestSerializer(@nowarn("msg=never used") system: ExtendedActorSystem) extends SerializerWithStringManifest {
     def identifier: Int = 666
     def manifest(o: AnyRef): String = o match {
       case ManifestNotSerializable => throw new NotSerializableException()
@@ -96,7 +97,7 @@ class TransientSerializationErrorSpec
       expectMsg("ping")
 
       // none of these should tear down the connection
-      List(
+      List[AnyRef](
         ManifestIllegal,
         ManifestNotSerializable,
         ToBinaryIllegal,

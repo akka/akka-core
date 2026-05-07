@@ -1,0 +1,2 @@
+# Java Integer vs Scala Int in ShardRegionStats
+ProblemFilters.exclude[IncompatibleSignatureProblem]("akka.cluster.sharding.ShardRegion#ShardRegionStats.getStats")

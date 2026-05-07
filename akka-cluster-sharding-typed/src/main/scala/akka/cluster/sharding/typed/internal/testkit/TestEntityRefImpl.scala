@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed.internal.testkit
@@ -7,8 +7,9 @@ package akka.cluster.sharding.typed.internal.testkit
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 
-import scala.compat.java8.FutureConverters._
 import scala.concurrent.Future
+import scala.jdk.DurationConverters._
+import scala.jdk.FutureConverters._
 
 import akka.actor.ActorRefProvider
 import akka.actor.typed.ActorRef
@@ -20,7 +21,6 @@ import akka.cluster.sharding.typed.javadsl.EntityRef
 import akka.cluster.sharding.typed.scaladsl
 import akka.japi.function.{ Function => JFunction }
 import akka.pattern.StatusReply
-import akka.util.JavaDurationConverters._
 import akka.util.Timeout
 
 /**
@@ -48,10 +48,10 @@ import akka.util.Timeout
   }
 
   def ask[U](message: JFunction[ActorRef[U], M], timeout: Duration): CompletionStage[U] =
-    ask[U](replyTo => message.apply(replyTo))(timeout.asScala).toJava
+    ask[U](replyTo => message.apply(replyTo))(timeout.toScala).asJava
 
   override def askWithStatus[Res](f: ActorRef[StatusReply[Res]] => M, timeout: Duration): CompletionStage[Res] =
-    askWithStatus(f)(timeout.asScala).toJava
+    askWithStatus(f)(timeout.toScala).asJava
 
   override def askWithStatus[Res](f: ActorRef[StatusReply[Res]] => M)(implicit timeout: Timeout): Future[Res] =
     StatusReply.flattenStatusFuture(ask(f))

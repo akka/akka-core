@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.io
@@ -72,7 +72,7 @@ class InputStreamSinkSpec extends StreamSpec(UnboundedMailboxConfig) {
 
       val arr = new Array[Byte](byteString.size + 1)
       inputStream.read(arr) should ===(arr.size - 1)
-      ByteString(arr) should ===(byteString :+ 0)
+      ByteString(arr) should ===(byteString :+ (0: Byte))
 
       inputStream.close()
     }

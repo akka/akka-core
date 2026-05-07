@@ -1,0 +1,2 @@
+# Internal API
+ProblemFilters.exclude[MissingFieldProblem]("akka.util.Unsafe.instance")

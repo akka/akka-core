@@ -18,6 +18,10 @@
         <appender-ref ref="FILE" />
     </appender>
 
+    <!-- Give the async appender a chance to output all buffered log entries in the face of JVM shutdown -->
+    <import class="ch.qos.logback.core.hook.DefaultShutdownHook"/>
+    <shutdownHook class="DefaultShutdownHook"/>
+
     <root level="INFO">
         <appender-ref ref="ASYNC"/>
     </root>

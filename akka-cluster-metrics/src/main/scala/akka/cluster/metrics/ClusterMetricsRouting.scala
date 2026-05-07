@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.metrics
@@ -434,7 +434,6 @@ trait MetricsSelector extends Serializable {
  * A MetricsSelector producing weights from remaining capacity.
  * The weights are typically proportional to the remaining capacity.
  */
-@nowarn("msg=deprecated")
 @SerialVersionUID(1L)
 abstract class CapacityMetricsSelector extends MetricsSelector {
 

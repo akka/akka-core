@@ -18,6 +18,8 @@ The throttle operator combines well with the @ref[`queue`](./../Source/queue.md)
 
 See also @ref:[Buffers and working with rate](../../stream-rate.md) for related operators.
 
+It is also possible to use the operator with @apidoc[ThrottleControl], which makes it possible to update the throttle rate from the outside of the stream and share the rate limit between several streams.
+
 ## Example
 
 Imagine the server end of a streaming platform. When a client connects and request a video content, the server 

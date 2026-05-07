@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.testkit.internal
@@ -11,7 +11,7 @@ import akka.actor.Scheduler
 import akka.annotation.InternalApi
 import akka.event.LoggingAdapter
 import akka.serialization.Serializer
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.SerializationFeature

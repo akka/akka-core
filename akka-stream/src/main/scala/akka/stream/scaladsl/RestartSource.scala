@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
 
 import scala.concurrent.duration.FiniteDuration
-
 import akka.NotUsed
 import akka.stream.{ Attributes, Outlet, RestartSettings, SourceShape }
 import akka.stream.stage.{ GraphStage, GraphStageLogic }

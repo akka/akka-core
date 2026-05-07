@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.scaladsl
@@ -39,6 +39,9 @@ object DurableStateBehavior {
   /**
    * Create a `Behavior` for a persistent actor with durable storage of its state.
    *
+   * This can be used when the state is immutable, but if the state is mutable, it is important to use
+   * the `withMutableState` that takes `emptyStateFactory: () => State` parameter.
+   *
    * @param persistenceId stable unique identifier for the `DurableStateBehavior`
    * @param emptyState the intial state for the entity before any state has been stored
    * @param commandHandler map commands to effects e.g. persisting state, replying to commands
@@ -47,21 +50,56 @@ object DurableStateBehavior {
       persistenceId: PersistenceId,
       emptyState: State,
       commandHandler: (State, Command) => Effect[State]): DurableStateBehavior[Command, State] = {
+    withMutableState(persistenceId, () => emptyState, commandHandler)
+  }
+
+  /**
+   * Create a `Behavior` with mutable state for a persistent actor with durable storage of its state.
+   *
+   * When the state is mutable, it is important to use this variant to make sure that the state instance is
+   * recreated in case of failure restarts.
+   *
+   * @param persistenceId stable unique identifier for the `DurableStateBehavior`
+   * @param emptyStateFactory factory function of the intial state for the entity before any state has been stored
+   * @param commandHandler map commands to effects e.g. persisting state, replying to commands
+   */
+  def withMutableState[Command, State](
+      persistenceId: PersistenceId,
+      emptyStateFactory: () => State,
+      commandHandler: (State, Command) => Effect[State]): DurableStateBehavior[Command, State] = {
     val loggerClass = LoggerClass.detectLoggerClassFromStack(classOf[DurableStateBehavior[_, _]], logPrefixSkipList)
-    DurableStateBehaviorImpl(persistenceId, emptyState, commandHandler, loggerClass)
+    DurableStateBehaviorImpl(persistenceId, emptyStateFactory, commandHandler, loggerClass)
   }
 
   /**
    * Create a `Behavior` for a persistent actor that is enforcing that replies to commands are not forgotten.
    * Then there will be compilation errors if the returned effect isn't a [[ReplyEffect]], which can be
    * created with [[Effect.reply]], [[Effect.noReply]], [[EffectBuilder.thenReply]], or [[EffectBuilder.thenNoReply]].
+   *
+   * This can be used when the state is immutable, but if the state is mutable, it is important to use
+   * the `withEnforcedRepliesMutableState` that takes `emptyStateFactory: () => State` parameter.
    */
   def withEnforcedReplies[Command, State](
       persistenceId: PersistenceId,
       emptyState: State,
       commandHandler: (State, Command) => ReplyEffect[State]): DurableStateBehavior[Command, State] = {
+    withEnforcedRepliesMutableState(persistenceId, () => emptyState, commandHandler)
+  }
+
+  /**
+   * Create a `Behavior` with mutable state for a persistent actor that is enforcing that replies to commands are not forgotten.
+   * Then there will be compilation errors if the returned effect isn't a [[ReplyEffect]], which can be
+   * created with [[Effect.reply]], [[Effect.noReply]], [[EffectBuilder.thenReply]], or [[EffectBuilder.thenNoReply]].
+   *
+   * When the state is mutable, it is important to use this variant to make sure that the state instance is
+   * recreated in case of failure restarts.
+   */
+  def withEnforcedRepliesMutableState[Command, State](
+      persistenceId: PersistenceId,
+      emptyStateFactory: () => State,
+      commandHandler: (State, Command) => ReplyEffect[State]): DurableStateBehavior[Command, State] = {
     val loggerClass = LoggerClass.detectLoggerClassFromStack(classOf[DurableStateBehavior[_, _]], logPrefixSkipList)
-    DurableStateBehaviorImpl(persistenceId, emptyState, commandHandler, loggerClass)
+    DurableStateBehaviorImpl(persistenceId, emptyStateFactory, commandHandler, loggerClass)
   }
 
   /**

@@ -14,23 +14,50 @@ permissions:
   contents: read
 
 jobs:
-  sbt:
-    name: sbt publish
-    runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+  changes:
+    name: Detect changes
+    runs-on: Akka-Default
+    outputs:
+      release_prep_only: ${{ steps.filter.outputs.release_prep_only }}
     steps:
       - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect release-prep-only changes
+        id: filter
+        uses: ./.github/actions/release-prep-only
+
+  sbt:
+    name: sbt publish
+    needs: changes
+    runs-on: Akka-Default
+    if: |
+      github.event.repository.fork == false &&
+      needs.changes.outputs.release_prep_only != 'true'
+    steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v6
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
+
+      - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           # we don't know what commit the last tag was it's safer to get entire repo so previousStableVersion resolves
           fetch-depth: 0
 
       - name: Set up JDK 11
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.11.0.17
 
@@ -47,7 +74,7 @@ jobs:
 
       - name: Email on failure
         if: ${{ failure() }}
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2
+        uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -56,7 +83,8 @@ jobs:
           password: ${{secrets.MAIL_PASSWORD}}
           subject: "Failed: ${{ github.workflow }} / ${{ github.job }}"
           to: ${{secrets.MAIL_SEND_TO}}
-          from: Akka CI
+          from: "Akka CI <no-reply@akka.io>"
+
           body: |
             Job ${{ github.job }} in workflow ${{ github.workflow }} of ${{github.repository}} failed!
             https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}

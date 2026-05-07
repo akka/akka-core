@@ -1,0 +1,11 @@
+# #32508 drop ccompat
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.debug2")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.debugN")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.info2")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.infoN")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.warn2")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.debug2$extension")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.debugN$extension")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.info2$extension")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.infoN$extension")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.package#LoggerOps.warn2$extension")

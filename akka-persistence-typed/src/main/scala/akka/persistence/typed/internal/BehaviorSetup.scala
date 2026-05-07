@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.internal
@@ -14,18 +14,19 @@ import akka.actor.{ ActorRef => ClassicActorRef }
 import akka.actor.Cancellable
 import akka.actor.typed.Signal
 import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.annotation.InternalApi
-import akka.persistence._
+import akka.persistence.Persistence
 import akka.persistence.typed.EventAdapter
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.ReplicaId
 import akka.persistence.typed.SnapshotAdapter
 import akka.persistence.typed.scaladsl.EventSourcedBehavior
+import akka.persistence.typed.scaladsl.EventWithMetadata
+import akka.persistence.typed.scaladsl.Recovery
+import akka.persistence.typed.scaladsl.ReplicationInterceptor
 import akka.persistence.typed.scaladsl.RetentionCriteria
 import akka.persistence.typed.telemetry.EventSourcedBehaviorInstrumentation
 import akka.persistence.typed.scaladsl.SnapshotWhenPredicate
-
 import akka.util.OptionVal
 
 /**
@@ -63,7 +64,9 @@ private[akka] final class BehaviorSetup[C, E, S](
     val publishEvents: Boolean,
     private val internalLoggerFactory: () => Logger,
     private var retentionInProgress: Boolean,
-    val instrumentation: EventSourcedBehaviorInstrumentation) {
+    val instrumentation: EventSourcedBehaviorInstrumentation,
+    val replicationInterceptor: Option[ReplicationInterceptor[S, E]],
+    val replicatedEventTransformation: Option[(S, EventWithMetadata[E]) => Seq[EventWithMetadata[E]]]) {
 
   import BehaviorSetup._
   import InternalProtocol.RecoveryTickEvent
@@ -100,6 +103,12 @@ private[akka] final class BehaviorSetup[C, E, S](
   def selfClassic: ClassicActorRef = context.self.toClassic
 
   private var mdcPhase = PersistenceMdc.Initializing
+
+  // Needed for WithSeqNrAccessible
+  var currentSequenceNumber = 0L
+
+  // Needed for WithMetadataAccessible
+  var currentMetadata: Option[Any] = None
 
   if (isOnlyOneSnapshot) {
     retention match {
@@ -227,7 +236,7 @@ private[akka] final class BehaviorSetup[C, E, S](
     retention match {
       case SnapshotCountRetentionCriteriaImpl(_, _, true) if retentionInProgress =>
         if (deleteToSequenceNr > 0) {
-          internalLogger.debug2(
+          internalLogger.debug(
             "Retention at seqNr [{}], deleting events to seqNr [{}].",
             sequenceNr,
             deleteToSequenceNr)
@@ -305,6 +314,8 @@ private[akka] object PersistenceMdc {
   val ReplayingEvents   = "replay-evt"
   val RunningCmds       = "running-cmd"
   val PersistingEvents  = "persist-evt"
+  val WaitingAsyncEffect = "async-effect"
+  val AsyncReplicationIntercept = "repl-intercept"
   val StoringSnapshot   = "storing-snap"
   // format: ON
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.typed
@@ -87,7 +87,7 @@ object ChunkLargeMessageSpec extends MultiNodeConfig {
               }
             }
             .receiveSignal {
-              case (context, PostStop) =>
+              case (_, PostStop) =>
                 if (histogram.getTotalCount > 0) {
                   context.log.info(
                     s"=== Latency for [${context.self.path.name}] " +

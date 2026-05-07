@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -10,7 +10,6 @@ import org.scalatest.concurrent.Eventually
 
 import akka.cluster.MemberStatus.Removed
 import akka.remote.testkit.MultiNodeConfig
-import akka.util.ccompat._
 
 object ClusterShutdownSpec extends MultiNodeConfig {
   val first = role("first")
@@ -26,7 +25,6 @@ class ClusterShutdownSpecMultiJvmNode2 extends ClusterShutdownSpec
 class ClusterShutdownSpecMultiJvmNode3 extends ClusterShutdownSpec
 class ClusterShutdownSpecMultiJvmNode4 extends ClusterShutdownSpec
 
-@ccompatUsedUntil213
 abstract class ClusterShutdownSpec extends MultiNodeClusterSpec(ClusterShutdownSpec) with Eventually {
 
   import ClusterShutdownSpec._

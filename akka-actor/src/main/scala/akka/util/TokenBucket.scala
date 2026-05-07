@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -9,7 +9,9 @@ package akka.util
  */
 private[akka] abstract class TokenBucket(capacity: Long, nanosBetweenTokens: Long) {
   require(capacity >= 0, "Capacity must be non-negative.")
-  require(nanosBetweenTokens > 0, "Time between tokens must be larger than zero nanoseconds.")
+  require(
+    capacity == Long.MaxValue || nanosBetweenTokens > 0,
+    "Time between tokens must be larger than zero nanoseconds.")
 
   private[this] var availableTokens: Long = _
   private[this] var lastUpdate: Long = _
@@ -45,37 +47,41 @@ private[akka] abstract class TokenBucket(capacity: Long, nanosBetweenTokens: Lon
   def offer(cost: Long): Long = {
     if (cost < 0) throw new IllegalArgumentException("Cost must be non-negative")
 
-    val now = currentTime
-    val timeElapsed = now - lastUpdate
-
-    val tokensArrived =
-      // Was there even a tick since last time?
-      if (timeElapsed >= nanosBetweenTokens) {
-        // only one tick elapsed
-        if (timeElapsed < nanosBetweenTokens * 2) {
-          lastUpdate += nanosBetweenTokens
-          1
-        } else {
-          // Ok, no choice, do the slow integer division
-          val tokensArrived = timeElapsed / nanosBetweenTokens
-          lastUpdate += tokensArrived * nanosBetweenTokens
-          tokensArrived
-        }
-      } else 0
-
-    availableTokens = math.min(availableTokens + tokensArrived, capacity)
-
-    if (cost <= availableTokens) {
-      availableTokens -= cost
+    if (capacity == Long.MaxValue) {
       0
     } else {
-      val remainingCost = cost - availableTokens
-      // Tokens always arrive at exact multiples of the token generation period, we must account for that
-      val timeSinceTokenArrival = now - lastUpdate
-      val delay = remainingCost * nanosBetweenTokens - timeSinceTokenArrival
-      availableTokens = 0
-      lastUpdate = now + delay
-      delay
+      val now = currentTime
+      val timeElapsed = now - lastUpdate
+
+      val tokensArrived =
+        // Was there even a tick since last time?
+        if (timeElapsed >= nanosBetweenTokens) {
+          // only one tick elapsed
+          if (timeElapsed < nanosBetweenTokens * 2) {
+            lastUpdate += nanosBetweenTokens
+            1
+          } else {
+            // Ok, no choice, do the slow integer division
+            val tokensArrived = timeElapsed / nanosBetweenTokens
+            lastUpdate += tokensArrived * nanosBetweenTokens
+            tokensArrived
+          }
+        } else 0
+
+      availableTokens = math.min(availableTokens + tokensArrived, capacity)
+
+      if (cost <= availableTokens) {
+        availableTokens -= cost
+        0
+      } else {
+        val remainingCost = cost - availableTokens
+        // Tokens always arrive at exact multiples of the token generation period, we must account for that
+        val timeSinceTokenArrival = now - lastUpdate
+        val delay = remainingCost * nanosBetweenTokens - timeSinceTokenArrival
+        availableTokens = 0
+        lastUpdate = now + delay
+        delay
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.future
@@ -11,9 +11,9 @@ import akka.util.Timeout
 
 import scala.concurrent.duration._
 import java.lang.IllegalStateException
-
 import akka.actor.typed.ActorSystem
 
+import scala.annotation.nowarn
 import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
 import scala.util.{ Failure, Success }
 
@@ -127,6 +127,7 @@ object FutureDocSpec {
 
 }
 
+@nowarn("msg=never used") // sample snippets
 class FutureDocSpec extends AkkaSpec {
   import FutureDocSpec._
   import system.dispatcher
@@ -390,7 +391,7 @@ class FutureDocSpec extends AkkaSpec {
     val msg1 = -1
     //#recover
     val future = akka.pattern.ask(actor, msg1).recover {
-      case e: ArithmeticException => 0
+      case _: ArithmeticException => 0
     }
     future.foreach(println)
     //#recover
@@ -403,8 +404,8 @@ class FutureDocSpec extends AkkaSpec {
     val msg1 = -1
     //#try-recover
     val future = akka.pattern.ask(actor, msg1).recoverWith {
-      case e: ArithmeticException => Future.successful(0)
-      case foo: IllegalArgumentException =>
+      case _: ArithmeticException => Future.successful(0)
+      case _: IllegalArgumentException =>
         Future.failed[Int](new IllegalStateException("All br0ken!"))
     }
     future.foreach(println)

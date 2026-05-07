@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
@@ -9,21 +9,21 @@ import java.util.concurrent.{ Callable, CompletionException, CompletionStage, Co
 import java.util.concurrent.atomic.{ AtomicBoolean, AtomicInteger, AtomicLong }
 import java.util.function.BiFunction
 import java.util.function.Consumer
+
 import scala.annotation.nowarn
-import scala.compat.java8.FutureConverters
+import scala.jdk.FutureConverters._
 import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NoStackTrace
 import scala.util.control.NonFatal
+
 import akka.AkkaException
 import akka.actor.ClassicActorSystemProvider
 import akka.actor.Scheduler
-import akka.dispatch.ExecutionContexts.parasitic
 import akka.pattern.internal.{ CircuitBreakerNoopTelemetry, CircuitBreakerTelemetry }
-import akka.util.JavaDurationConverters._
-import akka.util.Unsafe
 
 /**
  * Companion object providing factory methods for Circuit Breaker which runs callbacks in caller's thread
@@ -47,7 +47,7 @@ object CircuitBreaker {
       maxFailures: Int,
       callTimeout: FiniteDuration,
       resetTimeout: FiniteDuration): CircuitBreaker =
-    new CircuitBreaker(scheduler, maxFailures, callTimeout, resetTimeout)(parasitic)
+    new CircuitBreaker(scheduler, maxFailures, callTimeout, resetTimeout)(ExecutionContext.parasitic)
 
   /**
    * Create or find a CircuitBreaker in registry.
@@ -75,7 +75,7 @@ object CircuitBreaker {
       maxFailures: Int,
       callTimeout: java.time.Duration,
       resetTimeout: java.time.Duration): CircuitBreaker =
-    apply(scheduler, maxFailures, callTimeout.asScala, resetTimeout.asScala)
+    apply(scheduler, maxFailures, callTimeout.toScala, resetTimeout.toScala)
 
   /**
    * Java API: Create or find a CircuitBreaker in registry.
@@ -163,8 +163,8 @@ class CircuitBreaker(
     this(
       scheduler,
       maxFailures,
-      callTimeout.asScala,
-      resetTimeout.asScala,
+      callTimeout.toScala,
+      resetTimeout.toScala,
       maxResetTimeout = 36500.days,
       exponentialBackoffFactor = 1.0,
       randomFactor = 0.0)(executor)
@@ -223,7 +223,7 @@ class CircuitBreaker(
    * @param maxResetTimeout the upper bound of resetTimeout
    */
   def withExponentialBackoff(maxResetTimeout: java.time.Duration): CircuitBreaker = {
-    withExponentialBackoff(maxResetTimeout.asScala)
+    withExponentialBackoff(maxResetTimeout.toScala)
   }
 
   /**
@@ -272,8 +272,9 @@ class CircuitBreaker(
    * @return Whether the previous state matched correctly
    */
   @inline
-  private[this] def swapState(oldState: State, newState: State): Boolean =
-    Unsafe.instance.compareAndSwapObject(this, AbstractCircuitBreaker.stateOffset, oldState, newState)
+  private[this] def swapState(oldState: State, newState: State): Boolean = {
+    AbstractCircuitBreaker.currentStateHandle.compareAndSet(this, oldState, newState)
+  }
 
   /**
    * Helper method for accessing underlying state via Unsafe
@@ -282,25 +283,21 @@ class CircuitBreaker(
    */
   @inline
   private[this] def currentState: State =
-    Unsafe.instance.getObjectVolatile(this, AbstractCircuitBreaker.stateOffset).asInstanceOf[State]
+    AbstractCircuitBreaker.currentStateHandle.getVolatile(this).asInstanceOf[State]
 
   /**
    * Helper method for updating the underlying resetTimeout via Unsafe
    */
   @inline
   private[this] def swapResetTimeout(oldResetTimeout: FiniteDuration, newResetTimeout: FiniteDuration): Boolean =
-    Unsafe.instance.compareAndSwapObject(
-      this,
-      AbstractCircuitBreaker.resetTimeoutOffset,
-      oldResetTimeout,
-      newResetTimeout)
+    AbstractCircuitBreaker.resetTimeoutHandle.compareAndSet(this, oldResetTimeout, newResetTimeout)
 
   /**
    * Helper method for accessing to the underlying resetTimeout via Unsafe
    */
   @inline
   private[this] def currentResetTimeout: FiniteDuration =
-    Unsafe.instance.getObjectVolatile(this, AbstractCircuitBreaker.resetTimeoutOffset).asInstanceOf[FiniteDuration]
+    AbstractCircuitBreaker.resetTimeoutHandle.getVolatile(this).asInstanceOf[FiniteDuration]
 
   /**
    * Wraps invocations of asynchronous calls that need to be protected.
@@ -358,9 +355,9 @@ class CircuitBreaker(
    *   `scala.concurrent.TimeoutException` if the call timed out
    */
   def callWithCircuitBreakerCS[T](body: Callable[CompletionStage[T]]): CompletionStage[T] =
-    FutureConverters.toJava[T](callWithCircuitBreaker(new Callable[Future[T]] {
-      override def call(): Future[T] = FutureConverters.toScala(body.call())
-    }))
+    callWithCircuitBreaker(new Callable[Future[T]] {
+      override def call(): Future[T] = body.call().asScala
+    }).asJava
 
   /**
    * Java API (8) for [[#withCircuitBreaker]].
@@ -373,9 +370,9 @@ class CircuitBreaker(
   def callWithCircuitBreakerCS[T](
       body: Callable[CompletionStage[T]],
       defineFailureFn: BiFunction[Optional[T], Optional[Throwable], java.lang.Boolean]): CompletionStage[T] =
-    FutureConverters.toJava[T](callWithCircuitBreaker(new Callable[Future[T]] {
-      override def call(): Future[T] = FutureConverters.toScala(body.call())
-    }, defineFailureFn))
+    callWithCircuitBreaker(new Callable[Future[T]] {
+      override def call(): Future[T] = body.call().asScala
+    }, defineFailureFn).asJava
 
   /**
    * Wraps invocations of synchronous calls that need to be protected.
@@ -841,13 +838,13 @@ class CircuitBreaker(
             notifyCallSuccessListeners(start)
             callSucceeds()
           }
-        }(parasitic)
+        }(ExecutionContext.parasitic)
 
         val timeout = scheduler.scheduleOnce(callTimeout) {
           if (p.tryFailure(timeoutEx)) {
             notifyCallTimeoutListeners(start)
           }
-        }(parasitic)
+        }(ExecutionContext.parasitic)
 
         materialize(body).onComplete {
           case Success(result) =>
@@ -858,7 +855,7 @@ class CircuitBreaker(
               if (!isIgnoredException(ex)) notifyCallFailureListeners(start)
             }
             timeout.cancel()
-        }(parasitic)
+        }(ExecutionContext.parasitic)
         p.future
       }
     }

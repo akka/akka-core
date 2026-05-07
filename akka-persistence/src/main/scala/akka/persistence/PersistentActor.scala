@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
@@ -56,11 +56,24 @@ final case class Recovery(
 
 object Recovery {
 
+  val default: Recovery = Recovery()
+
+  /**
+   * Convenience method for skipping recovery in [[PersistentActor]].
+   *
+   * It will still retrieve previously highest sequence number so that new events are persisted with
+   * higher sequence numbers rather than starting from 1 and assuming that there are no
+   * previous event with that sequence number.
+   *
+   * @see [[Recovery]]
+   */
+  val none: Recovery = Recovery(toSequenceNr = 0L, fromSnapshot = SnapshotSelectionCriteria.None)
+
   /**
    * Java API
    * @see [[Recovery]]
    */
-  def create() = Recovery()
+  def create() = default
 
   /**
    * Java API
@@ -89,17 +102,6 @@ object Recovery {
    */
   def create(fromSnapshot: SnapshotSelectionCriteria, toSequenceNr: Long, replayMax: Long) =
     Recovery(fromSnapshot, toSequenceNr, replayMax)
-
-  /**
-   * Convenience method for skipping recovery in [[PersistentActor]].
-   *
-   * It will still retrieve previously highest sequence number so that new events are persisted with
-   * higher sequence numbers rather than starting from 1 and assuming that there are no
-   * previous event with that sequence number.
-   *
-   * @see [[Recovery]]
-   */
-  val none: Recovery = Recovery(toSequenceNr = 0L, fromSnapshot = SnapshotSelectionCriteria.None)
 
 }
 

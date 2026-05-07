@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
@@ -74,9 +74,9 @@ class UdpConnectedIntegrationSpec extends AkkaSpec("""
       connectUdp(localAddress = None, serverAddress, testActor) ! UdpConnected.Send(data1)
 
       val clientAddress = expectMsgPF() {
-        case Udp.Received(d, a) =>
-          d should ===(data1)
-          a
+        case Udp.Received(data, s) =>
+          data should ===(data1)
+          s
       }
 
       server ! Udp.Send(data2, clientAddress)
@@ -93,9 +93,9 @@ class UdpConnectedIntegrationSpec extends AkkaSpec("""
       connectUdp(Some(clientAddress), serverAddress, testActor) ! UdpConnected.Send(data1)
 
       expectMsgPF() {
-        case Udp.Received(d, a) =>
-          d should ===(data1)
-          a should ===(clientAddress)
+        case Udp.Received(data, s) =>
+          data should ===(data1)
+          s should ===(clientAddress)
       }
 
       server ! Udp.Send(data2, clientAddress)

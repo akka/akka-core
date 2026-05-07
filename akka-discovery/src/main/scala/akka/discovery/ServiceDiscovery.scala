@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.discovery
@@ -8,16 +8,16 @@ import java.net.InetAddress
 import java.util.Optional
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
-
 import scala.collection.immutable
-import scala.compat.java8.FutureConverters._
-import scala.compat.java8.OptionConverters._
+import scala.jdk.DurationConverters._
+import scala.jdk.FutureConverters._
+import scala.jdk.OptionConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
-
 import akka.actor.{ DeadLetterSuppression, NoSerializationVerificationNeeded }
 import akka.util.HashCode
-import akka.util.JavaDurationConverters._
+
+import scala.annotation.nowarn
 
 object ServiceDiscovery {
 
@@ -46,7 +46,7 @@ object ServiceDiscovery {
      * Java API
      */
     def getAddresses: java.util.List[ResolvedTarget] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       addresses.asJava
     }
 
@@ -100,13 +100,13 @@ object ServiceDiscovery {
      * Java API
      */
     def getPort: Optional[Int] =
-      port.asJava
+      port.toJava
 
     /**
      * Java API
      */
     def getAddress: Optional[InetAddress] =
-      address.asJava
+      address.toJava
 
     override def toString: String = s"ResolvedTarget($host,$port,$address)"
 
@@ -172,19 +172,19 @@ final class Lookup(
    * Java API
    */
   def getPortName: Optional[String] =
-    portName.asJava
+    portName.toJava
 
   /**
    * Java API
    */
   def getProtocol: Optional[String] =
-    protocol.asJava
+    protocol.toJava
 
   private def copy(
       serviceName: String = serviceName,
       portName: Option[String] = portName,
       protocol: Option[String] = protocol,
-      discardCache: Boolean = discardCache): Lookup =
+      @nowarn("cat=unused-params") discardCache: Boolean = discardCache): Lookup =
     new Lookup(serviceName, portName, protocol)
 
   override def toString: String = s"Lookup($serviceName,$portName,$protocol)"
@@ -338,8 +338,8 @@ abstract class ServiceDiscovery {
    *
    */
   def lookup(query: Lookup, resolveTimeout: java.time.Duration): CompletionStage[Resolved] = {
-    import scala.compat.java8.FutureConverters._
-    lookup(query, FiniteDuration(resolveTimeout.toMillis, TimeUnit.MILLISECONDS)).toJava
+    import scala.jdk.FutureConverters._
+    lookup(query, FiniteDuration(resolveTimeout.toMillis, TimeUnit.MILLISECONDS)).asJava
   }
 
   /**
@@ -353,6 +353,6 @@ abstract class ServiceDiscovery {
    *                                [DiscoveryTimeoutException]
    */
   def lookup(serviceName: String, resolveTimeout: java.time.Duration): CompletionStage[Resolved] =
-    lookup(serviceName, resolveTimeout.asScala).toJava
+    lookup(serviceName, resolveTimeout.toScala).asJava
 
 }

@@ -1,10 +1,12 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.scaladsl
 
+import akka.Done
 import scala.annotation.tailrec
+
 import akka.actor.typed.BackoffSupervisorStrategy
 import akka.actor.typed.Behavior
 import akka.actor.typed.Signal
@@ -17,9 +19,14 @@ import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
 import akka.persistence.typed.EventAdapter
 import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.ReplicaId
 import akka.persistence.typed.SnapshotAdapter
 import akka.persistence.typed.SnapshotSelectionCriteria
 import akka.persistence.typed.internal._
+import scala.concurrent.Future
+import scala.reflect.ClassTag
+
+import akka.annotation.InternalStableApi
 
 object EventSourcedBehavior {
 
@@ -46,6 +53,9 @@ object EventSourcedBehavior {
   /**
    * Create a `Behavior` for a persistent actor.
    *
+   * This can be used when the state is immutable, but if the state is mutable, it is important to use
+   * the `withMutableState` that takes `emptyStateFactory: () => State` parameter.
+   *
    * @param persistenceId stable unique identifier for the event sourced behavior
    * @param emptyState the intial state for the entity before any events have been processed
    * @param commandHandler map commands to effects e.g. persisting events, replying to commands
@@ -56,22 +66,60 @@ object EventSourcedBehavior {
       emptyState: State,
       commandHandler: (State, Command) => Effect[Event, State],
       eventHandler: (State, Event) => State): EventSourcedBehavior[Command, Event, State] = {
+    withMutableState(persistenceId, () => emptyState, commandHandler, eventHandler)
+  }
+
+  /**
+   * Create a `Behavior` with mutable state for a persistent actor.
+   *
+   * When the state is mutable, it is important to use this variant to make sure that the state instance is
+   * recreated in case of failure restarts.
+   *
+   * @param persistenceId stable unique identifier for the event sourced behavior
+   * @param emptyStateFactory factory function of the intial state for the entity before any events have been processed
+   * @param commandHandler map commands to effects e.g. persisting events, replying to commands
+   * @param eventHandler compute the new state given the current state when an event has been persisted
+   */
+  def withMutableState[Command, Event, State](
+      persistenceId: PersistenceId,
+      emptyStateFactory: () => State,
+      commandHandler: (State, Command) => Effect[Event, State],
+      eventHandler: (State, Event) => State): EventSourcedBehavior[Command, Event, State] = {
     val loggerClass = LoggerClass.detectLoggerClassFromStack(classOf[EventSourcedBehavior[_, _, _]], logPrefixSkipList)
-    EventSourcedBehaviorImpl(persistenceId, emptyState, commandHandler, eventHandler, loggerClass)
+    EventSourcedBehaviorImpl(persistenceId, emptyStateFactory, commandHandler, eventHandler, loggerClass)
   }
 
   /**
    * Create a `Behavior` for a persistent actor that is enforcing that replies to commands are not forgotten.
    * Then there will be compilation errors if the returned effect isn't a [[ReplyEffect]], which can be
    * created with [[Effect.reply]], [[Effect.noReply]], [[EffectBuilder.thenReply]], or [[EffectBuilder.thenNoReply]].
+   *
+   * This can be used when the state is immutable, but if the state is mutable, it is important to use
+   * the `withEnforcedRepliesMutableState` that takes `emptyStateFactory: () => State` parameter.
    */
   def withEnforcedReplies[Command, Event, State](
       persistenceId: PersistenceId,
       emptyState: State,
       commandHandler: (State, Command) => ReplyEffect[Event, State],
       eventHandler: (State, Event) => State): EventSourcedBehavior[Command, Event, State] = {
+    withEnforcedRepliesMutableState(persistenceId, () => emptyState, commandHandler, eventHandler)
+  }
+
+  /**
+   * Create a `Behavior` with mutable state for a persistent actor that is enforcing that replies to commands are not forgotten.
+   * Then there will be compilation errors if the returned effect isn't a [[ReplyEffect]], which can be
+   * created with [[Effect.reply]], [[Effect.noReply]], [[EffectBuilder.thenReply]], or [[EffectBuilder.thenNoReply]].
+   *
+   * When the state is mutable, it is important to use this variant to make sure that the state instance is
+   * recreated in case of failure restarts.
+   */
+  def withEnforcedRepliesMutableState[Command, Event, State](
+      persistenceId: PersistenceId,
+      emptyStateFactory: () => State,
+      commandHandler: (State, Command) => ReplyEffect[Event, State],
+      eventHandler: (State, Event) => State): EventSourcedBehavior[Command, Event, State] = {
     val loggerClass = LoggerClass.detectLoggerClassFromStack(classOf[EventSourcedBehavior[_, _, _]], logPrefixSkipList)
-    EventSourcedBehaviorImpl(persistenceId, emptyState, commandHandler, eventHandler, loggerClass)
+    EventSourcedBehaviorImpl(persistenceId, emptyStateFactory, commandHandler, eventHandler, loggerClass)
   }
 
   /**
@@ -110,9 +158,28 @@ object EventSourcedBehavior {
       }
 
     extractConcreteBehavior(context.currentBehavior) match {
-      case w: Running.WithSeqNrAccessible => w.currentSequenceNumber
+      case w: EventSourcedBehaviorImpl.WithSeqNrAccessible => w.currentSequenceNumber
       case s =>
         throw new IllegalStateException(s"Cannot extract the lastSequenceNumber in state ${s.getClass.getName}")
+    }
+  }
+
+  /**
+   * The metadata of the given type that was persisted with an event, if any.
+   * Can only be called from inside the event handler or `RecoveryCompleted` of an `EventSourcedBehavior`.
+   */
+  def currentMetadata[M: ClassTag](context: ActorContext[_]): Option[M] = {
+    @tailrec
+    def extractConcreteBehavior(beh: Behavior[_]): Behavior[_] =
+      beh match {
+        case interceptor: InterceptorImpl[_, _] => extractConcreteBehavior(interceptor.nestedBehavior)
+        case concrete                           => concrete
+      }
+
+    extractConcreteBehavior(context.currentBehavior) match {
+      case w: EventSourcedBehaviorImpl.WithMetadataAccessible => w.metadata[M]
+      case s =>
+        throw new IllegalStateException(s"Cannot extract the metadata in state ${s.getClass.getName}")
     }
   }
 
@@ -256,4 +323,52 @@ object EventSourcedBehavior {
    * If not defined, the default `akka.persistence.typed.stash-capacity` will be used.
    */
   def withStashCapacity(size: Int): EventSourcedBehavior[Command, Event, State]
+
+  /**
+   * Invoke this callback when an event from another replica arrives, delaying persisting the event until the returned
+   * future completes, if the future fails the actor is crashed.
+   *
+   * Only used when the entity is replicated.
+   */
+  @ApiMayChange
+  def withReplicatedEventInterceptor(
+      interceptor: ReplicationInterceptor[State, Event]): EventSourcedBehavior[Command, Event, State]
+
+  /**
+   * INTERNAL API: Invoke this transformation function when an event from another replica arrives, before persisting the event and
+   * before calling the ordinary event handler. The transformation function returns the updated event and optionally
+   * additional metadata that will be stored together with the event.
+   *
+   * Only used when the entity is replicated.
+   */
+  @ApiMayChange
+  @InternalStableApi
+  @deprecated("Use withReplicatedEventsTransformation", "2.10.12")
+  def withReplicatedEventTransformation(
+      f: (State, EventWithMetadata[Event]) => EventWithMetadata[Event]): EventSourcedBehavior[Command, Event, State]
+
+  /**
+   * INTERNAL API: Invoke this transformation function when an event from another replica arrives, before persisting the event and
+   * before calling the ordinary event handler. The transformation function returns the updated event, and possibly
+   * additional events, and optionally additional metadata that will be stored together with the events.
+   *
+   * Only used when the entity is replicated.
+   */
+  @ApiMayChange
+  @InternalStableApi
+  def withReplicatedEventsTransformation(f: (State, EventWithMetadata[Event]) => Seq[EventWithMetadata[Event]])
+      : EventSourcedBehavior[Command, Event, State]
+}
+
+@FunctionalInterface
+trait ReplicationInterceptor[State, Event] {
+
+  /**
+   * @param state Current state
+   * @param event The replicated event
+   * @param originReplica The replica where the event came from
+   * @param sequenceNumber The local sequence number the event will get when persisted
+   * @return
+   */
+  def intercept(state: State, event: Event, originReplica: ReplicaId, sequenceNumber: Long): Future[Done]
 }

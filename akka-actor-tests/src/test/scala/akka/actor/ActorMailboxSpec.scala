@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
 
+import scala.annotation.nowarn
 import scala.concurrent.duration.{ Duration, FiniteDuration }
 
 import com.typesafe.config.Config
@@ -13,7 +14,6 @@ import akka.ConfigurationException
 import akka.dispatch._
 import akka.testkit._
 import akka.util.Helpers.ConfigOps
-import akka.util.unused
 
 object ActorMailboxSpec {
   val mailboxConf =
@@ -188,7 +188,8 @@ object ActorMailboxSpec {
 
   class StashQueueReportingActor extends QueueReportingActor with Stash
 
-  class StashQueueReportingActorWithParams(@unused i: Int, @unused s: String) extends StashQueueReportingActor
+  class StashQueueReportingActorWithParams(@nowarn("msg=never used") i: Int, @nowarn("msg=never used") s: String)
+      extends StashQueueReportingActor
 
   val UnboundedMailboxTypes = Seq(classOf[UnboundedMessageQueueSemantics])
   val BoundedMailboxTypes = Seq(classOf[BoundedMessageQueueSemantics])

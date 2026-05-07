@@ -1,12 +1,19 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
 
+import akka.annotation.InternalApi
+import akka.annotation.InternalStableApi
+
 import scala.annotation.tailrec
 import scala.collection.immutable.HashMap
 
+/**
+ * INTERNAL API
+ */
+@InternalStableApi
 private[akka] final case class WildcardIndex[T](
     wildcardTree: WildcardTree[T] = WildcardTree[T](),
     doubleWildcardTree: WildcardTree[T] = WildcardTree[T]()) {
@@ -37,11 +44,19 @@ private[akka] final case class WildcardIndex[T](
 
 }
 
+/**
+ * INTERNAL API
+ */
+@InternalApi
 private[akka] object WildcardTree {
   private val empty = new WildcardTree[Nothing]()
   def apply[T](): WildcardTree[T] = empty.asInstanceOf[WildcardTree[T]]
 }
 
+/**
+ * INTERNAL API
+ */
+@InternalApi
 private[akka] final case class WildcardTree[T](
     data: Option[T] = None,
     children: Map[String, WildcardTree[T]] = HashMap[String, WildcardTree[T]](),

@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
 
 import java.io.File
 
+import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -18,7 +19,6 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import akka.actor._
 import akka.persistence.journal.{ EventAdapter, EventSeq }
 import akka.testkit.TestProbe
-import akka.util.unused
 
 object EndToEndEventAdapterSpec {
 
@@ -30,7 +30,7 @@ object EndToEndEventAdapterSpec {
 
   case class JSON(payload: Any)
 
-  class AEndToEndAdapter(@unused system: ExtendedActorSystem) extends EventAdapter {
+  class AEndToEndAdapter(@nowarn("msg=never used") system: ExtendedActorSystem) extends EventAdapter {
     override def manifest(event: Any): String = event.getClass.getCanonicalName
 
     override def toJournal(event: Any): Any =
@@ -43,7 +43,7 @@ object EndToEndEventAdapterSpec {
       case _                                             => EventSeq.empty
     }
   }
-  class NewAEndToEndAdapter(@unused system: ExtendedActorSystem) extends EventAdapter {
+  class NewAEndToEndAdapter(@nowarn("msg=never used") system: ExtendedActorSystem) extends EventAdapter {
     override def manifest(event: Any): String = event.getClass.getCanonicalName
 
     override def toJournal(event: Any): Any =
@@ -56,7 +56,7 @@ object EndToEndEventAdapterSpec {
       case _                                             => EventSeq.empty
     }
   }
-  class BEndToEndAdapter(@unused system: ExtendedActorSystem) extends EventAdapter {
+  class BEndToEndAdapter(@nowarn("msg=never used") system: ExtendedActorSystem) extends EventAdapter {
     override def manifest(event: Any): String = event.getClass.getCanonicalName
 
     override def toJournal(event: Any): Any =
@@ -69,7 +69,7 @@ object EndToEndEventAdapterSpec {
       case _                                             => EventSeq.empty
     }
   }
-  class NewBEndToEndAdapter(@unused system: ExtendedActorSystem) extends EventAdapter {
+  class NewBEndToEndAdapter(@nowarn("msg=never used") system: ExtendedActorSystem) extends EventAdapter {
     override def manifest(event: Any): String = event.getClass.getCanonicalName
 
     override def toJournal(event: Any): Any =
@@ -83,7 +83,10 @@ object EndToEndEventAdapterSpec {
     }
   }
 
-  class EndToEndAdapterActor(name: String, override val journalPluginId: String, @unused probe: Option[ActorRef])
+  class EndToEndAdapterActor(
+      name: String,
+      override val journalPluginId: String,
+      @nowarn("msg=never used") probe: Option[ActorRef])
       extends NamedPersistentActor(name)
       with PersistentActor {
 

@@ -41,14 +41,6 @@ like round-robin and consistent hashing.
 
 <!--- #cluster-router --->
 
-<!--- #cluster-multidc --->
-### Cluster across multiple data centers
-
-Akka Cluster can be used across multiple data centers, availability zones or regions,
-so that one Cluster can span multiple data centers and still be tolerant to network partitions.
-
-<!--- #cluster-multidc --->
-
 <!--- #reliable-delivery --->
 ### Reliable Delivery
 

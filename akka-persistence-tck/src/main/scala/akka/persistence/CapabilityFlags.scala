@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
@@ -57,6 +57,11 @@ trait JournalCapabilityFlags extends CapabilityFlags {
    * metadata for an event
    */
   protected def supportsMetadata: CapabilityFlag
+
+  /**
+   * When `true` enables tests which check if the Journal can replay only the last event.
+   */
+  protected def supportsReplayOnlyLast: CapabilityFlag
 
 }
 //#journal-flags

@@ -1,16 +1,16 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
 
-import scala.compat.java8.FunctionConverters._
+import scala.jdk.DurationConverters._
+import scala.jdk.FunctionConverters._
 import scala.concurrent.duration.FiniteDuration
 
 import akka.event.Logging
 import akka.event.Logging.LogLevel
 import akka.util.ConstantFun
-import akka.util.JavaDurationConverters._
 
 final class RestartSettings private (
     val minBackoff: FiniteDuration,
@@ -25,13 +25,13 @@ final class RestartSettings private (
   def withMinBackoff(value: FiniteDuration): RestartSettings = copy(minBackoff = value)
 
   /** Java API: minimum (initial) duration until the child actor will started again, if it is terminated */
-  def withMinBackoff(value: java.time.Duration): RestartSettings = copy(minBackoff = value.asScala)
+  def withMinBackoff(value: java.time.Duration): RestartSettings = copy(minBackoff = value.toScala)
 
   /** Scala API: the exponential back-off is capped to this duration */
   def withMaxBackoff(value: FiniteDuration): RestartSettings = copy(maxBackoff = value)
 
   /** Java API: the exponential back-off is capped to this duration */
-  def withMaxBackoff(value: java.time.Duration): RestartSettings = copy(maxBackoff = value.asScala)
+  def withMaxBackoff(value: java.time.Duration): RestartSettings = copy(maxBackoff = value.toScala)
 
   /**
    * After calculation of the exponential back-off an additional random delay based on this factor is added
@@ -45,7 +45,7 @@ final class RestartSettings private (
 
   /** Java API: The amount of restarts is capped to `count` within a timeframe of `within` */
   def withMaxRestarts(count: Int, within: java.time.Duration): RestartSettings =
-    copy(maxRestarts = count, maxRestartsWithin = within.asScala)
+    copy(maxRestarts = count, maxRestartsWithin = within.toScala)
 
   /** Decides whether the failure should restart the stream or make the surrounding stream fail */
   def withRestartOn(restartOn: java.util.function.Predicate[Throwable]): RestartSettings =
@@ -90,11 +90,11 @@ object RestartSettings {
   /** Java API */
   def create(minBackoff: java.time.Duration, maxBackoff: java.time.Duration, randomFactor: Double): RestartSettings =
     new RestartSettings(
-      minBackoff = minBackoff.asScala,
-      maxBackoff = maxBackoff.asScala,
+      minBackoff = minBackoff.toScala,
+      maxBackoff = maxBackoff.toScala,
       randomFactor = randomFactor,
       maxRestarts = Int.MaxValue,
-      maxRestartsWithin = minBackoff.asScala,
+      maxRestartsWithin = minBackoff.toScala,
       logSettings = LogSettings.defaultSettings,
       restartOn = ConstantFun.anyToTrue)
 
@@ -110,7 +110,15 @@ object RestartSettings {
 
   }
 
-  final class LogSettings(val logLevel: LogLevel, val criticalLogLevel: LogLevel, val criticalLogLevelAfter: Int) {
+  final class LogSettings(
+      val logLevel: LogLevel,
+      val criticalLogLevel: LogLevel,
+      val criticalLogLevelAfter: Int,
+      val verboseLogsAfter: Option[Int]) {
+
+    // For source and binary compatibility
+    def this(logLevel: LogLevel, criticalLogLevel: LogLevel, criticalLogLevelAfter: Int) =
+      this(logLevel, criticalLogLevel, criticalLogLevelAfter, None)
 
     def withLogLevel(level: LogLevel): LogSettings =
       copy(logLevel = level)
@@ -126,13 +134,25 @@ object RestartSettings {
     def withCriticalLogLevel(criticalLevel: LogLevel, afterErrors: Int): LogSettings =
       copy(criticalLogLevel = criticalLevel, criticalLogLevelAfter = afterErrors)
 
+    /**
+     * If set, warning and error logs will use only the exception message up to `afterErrors` consecutive errors,
+     * after reaching the number of consecutive errors, the entire exception with stacktrace is logged.
+     *
+     * The counter (and verbosity level) is reset after the [[RestartSettings.maxRestartsWithin]]
+     * duration.
+     */
+    def withVerboseLogsAfter(afterErrors: Int): LogSettings =
+      copy(verboseLogsAfter = Some(afterErrors))
+
     private def copy(
         logLevel: LogLevel = logLevel,
         criticalLogLevel: LogLevel = criticalLogLevel,
-        criticalLogLevelAfter: Int = criticalLogLevelAfter): LogSettings =
+        criticalLogLevelAfter: Int = criticalLogLevelAfter,
+        verboseLogsAfter: Option[Int] = verboseLogsAfter): LogSettings =
       new LogSettings(
         logLevel = logLevel,
         criticalLogLevel = criticalLogLevel,
-        criticalLogLevelAfter = criticalLogLevelAfter)
+        criticalLogLevelAfter = criticalLogLevelAfter,
+        verboseLogsAfter = verboseLogsAfter)
   }
 }

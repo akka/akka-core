@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -193,7 +193,8 @@ private[remote] class OutboundControlJunction(
   val out: Outlet[OutboundEnvelope] = Outlet("OutboundControlJunction.out")
   override val shape: FlowShape[OutboundEnvelope, OutboundEnvelope] = FlowShape(in, out)
 
-  override def createLogicAndMaterializedValue(inheritedAttributes: Attributes) = {
+  override def createLogicAndMaterializedValue(
+      inheritedAttributes: Attributes): (GraphStageLogic, OutboundControlJunction.OutboundControlIngress) = {
 
     val logic = new GraphStageLogic(shape)
       with InHandler

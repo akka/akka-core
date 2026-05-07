@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl.fusing
@@ -10,6 +10,7 @@ import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.collection.immutable.VectorBuilder
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.{ Failure, Success, Try }
@@ -33,8 +34,7 @@ import akka.stream.impl.TraversalBuilder
 import akka.stream.impl.fusing.GraphStages.SimpleLinearGraphStage
 import akka.stream.scaladsl.{ DelayStrategy, Source }
 import akka.stream.stage._
-import akka.util.{ unused, OptionVal }
-import akka.util.ccompat._
+import akka.util.OptionVal
 
 // This file is perhaps getting long (Github Issue #31619), please add new operators in other files
 
@@ -462,8 +462,6 @@ private[stream] object Collect {
 @InternalApi private[akka] final case class ScanAsync[In, Out](zero: Out, f: (Out, In) => Future[Out])
     extends GraphStage[FlowShape[In, Out]] {
 
-  import akka.dispatch.ExecutionContexts
-
   val in = Inlet[In]("ScanAsync.in")
   val out = Outlet[Out]("ScanAsync.out")
   override val shape: FlowShape[In, Out] = FlowShape[In, Out](in, out)
@@ -554,7 +552,7 @@ private[stream] object Collect {
 
           eventualCurrent.value match {
             case Some(result) => futureCB(result)
-            case _            => eventualCurrent.onComplete(futureCB)(ExecutionContexts.parasitic)
+            case _            => eventualCurrent.onComplete(futureCB)(ExecutionContext.parasitic)
           }
         } catch {
           case NonFatal(ex) =>
@@ -641,8 +639,6 @@ private[stream] object Collect {
 @InternalApi private[akka] final class FoldAsync[In, Out](zero: Out, f: (Out, In) => Future[Out])
     extends GraphStage[FlowShape[In, Out]] {
 
-  import akka.dispatch.ExecutionContexts
-
   val in = Inlet[In]("FoldAsync.in")
   val out = Outlet[Out]("FoldAsync.out")
   val shape = FlowShape.of(in, out)
@@ -658,7 +654,7 @@ private[stream] object Collect {
       private var aggregator: Out = zero
       private var aggregating: Future[Out] = Future.successful(aggregator)
 
-      private def onRestart(@unused t: Throwable): Unit = {
+      private def onRestart(@nowarn("msg=never used") t: Throwable): Unit = {
         aggregator = zero
       }
 
@@ -721,7 +717,7 @@ private[stream] object Collect {
       private def handleAggregatingValue(): Unit = {
         aggregating.value match {
           case Some(result) => futureCB(result) // already completed
-          case _            => aggregating.onComplete(futureCB)(ExecutionContexts.parasitic)
+          case _            => aggregating.onComplete(futureCB)(ExecutionContext.parasitic)
         }
       }
 
@@ -1310,7 +1306,7 @@ private[stream] object Collect {
           buffer.enqueue(holder)
 
           future.value match {
-            case None    => future.onComplete(holder)(akka.dispatch.ExecutionContexts.parasitic)
+            case None    => future.onComplete(holder)(ExecutionContext.parasitic)
             case Some(v) =>
               // #20217 the future is already here, optimization: avoid scheduling it on the dispatcher and
               // run the logic directly on this thread
@@ -1427,7 +1423,7 @@ private[stream] object Collect {
           val future = f(grab(in))
           inFlight += 1
           future.value match {
-            case None    => future.onComplete(invokeFutureCB)(akka.dispatch.ExecutionContexts.parasitic)
+            case None    => future.onComplete(invokeFutureCB)(ExecutionContext.parasitic)
             case Some(v) => futureCompleted(v)
           }
         } catch {
@@ -2098,7 +2094,6 @@ private[akka] object TakeWithin {
         })
       }
 
-      @nowarn // compiler complaining about aggregator = _: T
       override def onPush(): Unit = {
         val elem = grab(in)
         try {
@@ -2316,7 +2311,6 @@ private[akka] final class StatefulMap[S, In, Out](create: () => S, f: (S, In) =>
  * INTERNAL API
  */
 @InternalApi
-@ccompatUsedUntil213
 private[akka] final class StatefulMapConcat[In, Out](val f: () => In => IterableOnce[Out])
     extends GraphStage[FlowShape[In, Out]] {
   val in = Inlet[In]("StatefulMapConcat.in")

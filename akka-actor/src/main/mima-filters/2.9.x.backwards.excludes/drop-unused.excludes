@@ -1,0 +1,2 @@
+# 32506 replace @unused with @nowarn
+ProblemFilters.exclude[MissingClassProblem]("akka.util.unused")

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.io
@@ -9,6 +9,7 @@ import java.nio.file.StandardOpenOption.{ CREATE, WRITE }
 
 import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.Success
@@ -16,7 +17,6 @@ import scala.util.Success
 import com.google.common.jimfs.{ Configuration, Jimfs }
 import org.scalatest.concurrent.ScalaFutures
 
-import akka.dispatch.ExecutionContexts
 import akka.stream._
 import akka.stream.impl.{ PhasedFusingActorMaterializer, StreamSupervisor }
 import akka.stream.impl.StreamSupervisor.Children
@@ -202,9 +202,9 @@ class FileSinkSpec extends StreamSpec(UnboundedMailboxConfig) with ScalaFutures 
             .lazyInitAsync(() => Future.successful(FileIO.toPath(f)))
             // map a Future[Option[Future[IOResult]]] into a Future[Option[IOResult]]
             .mapMaterializedValue(_.flatMap {
-              case Some(future) => future.map(Some(_))(ExecutionContexts.parasitic)
+              case Some(future) => future.map(Some(_))(ExecutionContext.parasitic)
               case None         => Future.successful(None)
-            }(ExecutionContexts.parasitic)))
+            }(ExecutionContext.parasitic)))
 
         Await.result(completion, 3.seconds)
         checkFileContents(f, TestLines.head)

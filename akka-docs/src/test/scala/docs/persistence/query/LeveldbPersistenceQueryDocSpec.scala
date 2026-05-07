@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.persistence.query
@@ -9,6 +9,8 @@ import akka.testkit.AkkaSpec
 import akka.persistence.query.{ EventEnvelope, PersistenceQuery, Sequence }
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.stream.scaladsl.Source
+
+import scala.annotation.nowarn
 
 object LeveldbPersistenceQueryDocSpec {
   //#tagger
@@ -32,6 +34,8 @@ object LeveldbPersistenceQueryDocSpec {
   //#tagger
 }
 
+@nowarn("msg=deprecated")
+@nowarn("msg=never used") // sample snippets
 class LeveldbPersistenceQueryDocSpec
     extends AkkaSpec("akka.persistence.journal.plugin = akka.persistence.journal.leveldb") {
 

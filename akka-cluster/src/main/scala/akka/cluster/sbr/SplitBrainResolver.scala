@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sbr
@@ -7,6 +7,7 @@ package akka.cluster.sbr
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -94,6 +95,7 @@ import akka.remote.artery.ThisActorSystemQuarantinedEvent
  * The implementation is split into two classes SplitBrainResolver and SplitBrainResolverBase to be
  * able to unit test the logic without running cluster.
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 @InternalApi private[sbr] final class SplitBrainResolver(stableAfter: FiniteDuration, strategy: DowningStrategy)
     extends SplitBrainResolverBase(stableAfter, strategy) {
 
@@ -135,6 +137,7 @@ import akka.remote.artery.ThisActorSystemQuarantinedEvent
  * The implementation is split into two classes SplitBrainResolver and SplitBrainResolverBase to be
  * able to unit test the logic without running cluster.
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 @InternalApi private[sbr] abstract class SplitBrainResolverBase(stableAfter: FiniteDuration, _strategy: DowningStrategy)
     extends Actor
     with Stash
@@ -433,7 +436,28 @@ import akka.remote.artery.ThisActorSystemQuarantinedEvent
   def actOnDecision(decision: Decision): Set[UniqueAddress] = {
     val nodesToDown =
       try {
-        strategy.nodesToDown(decision)
+        val nodes = strategy.nodesToDown(decision)
+        // Safeguard for indirectly connected decisions:
+        // If the decision would down more than a threshold fraction of members,
+        // convert to DownAll to prevent split brain from stale gossip in asymmetric partitions.
+        if (decision.isIndirectlyConnected) {
+          val threshold = settings.DownAllWhenIndirectlyConnectedThreshold
+          val memberCount = strategy.members.size
+          if (memberCount > 0 && threshold < 1.0 && nodes.size.toDouble / memberCount >= threshold) {
+            log.warning(
+              ClusterLogMarker.sbrDowning(decision),
+              "SBR indirectly connected decision would down [{}] of [{}] members which is more than " +
+              "the configured down-all-when-indirectly-connected threshold of [{}], downing all instead",
+              nodes.size,
+              memberCount,
+              settings.DownAllWhenIndirectlyConnectedThreshold)
+            strategy.nodesToDown(DownAll)
+          } else {
+            nodes
+          }
+        } else {
+          nodes
+        }
       } catch {
         case e: IllegalStateException =>
           log.warning(e.getMessage)

@@ -5,13 +5,9 @@ project.description: Query side to Akka Persistence allowing for building CQRS a
 
 ## Dependency
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Persistence Query, you must add the following dependency in your project:
 
@@ -38,7 +34,7 @@ application implemented using Akka persistence, is completely separated from the
 
 @@@ note { title=Alternative }
 When using the R2DBC plugin an alternative to using Akka persistence query or Projection is to
-[store the query representation](https://doc.akka.io/docs/akka-persistence-r2dbc/current/durable-state-store.html#storing-query-representation)
+[store the query representation](https://doc.akka.io/libraries/akka-persistence-r2dbc/current/durable-state-store.html#storing-query-representation)
 directly from the write side.
 @@@
 

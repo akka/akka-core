@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -7,13 +7,13 @@ package akka.stream.scaladsl
 import java.util.Optional
 import java.util.concurrent.CompletionStage
 
-import scala.compat.java8.FutureConverters._
-import scala.compat.java8.OptionConverters._
+import scala.concurrent.ExecutionContext
+import scala.jdk.FutureConverters._
+import scala.jdk.OptionConverters._
 import scala.concurrent.Future
 
 import akka.Done
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.stream.QueueOfferResult
 
 /**
@@ -97,9 +97,9 @@ object SourceQueueWithComplete {
       queue: SourceQueueWithComplete[T]): akka.stream.javadsl.SourceQueueWithComplete[T] =
     new akka.stream.javadsl.SourceQueueWithComplete[T] {
       def offer(elem: T): CompletionStage[QueueOfferResult] =
-        queue.offer(elem).toJava
+        queue.offer(elem).asJava
       def watchCompletion(): CompletionStage[Done] =
-        queue.watchCompletion().toJava
+        queue.watchCompletion().asJava
       def complete(): Unit = queue.complete()
       def fail(ex: Throwable): Unit = queue.fail(ex)
     }
@@ -146,7 +146,7 @@ object SinkQueueWithCancel {
   @InternalApi private[akka] def asJava[T](queue: SinkQueueWithCancel[T]): akka.stream.javadsl.SinkQueueWithCancel[T] =
     new akka.stream.javadsl.SinkQueueWithCancel[T] {
       override def pull(): CompletionStage[Optional[T]] =
-        queue.pull().map(_.asJava)(ExecutionContexts.parasitic).toJava
+        queue.pull().map(_.toJava)(ExecutionContext.parasitic).asJava
       override def cancel(): Unit = queue.cancel()
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed
@@ -26,6 +26,7 @@ package object scaladsl {
    *
    * @param log the underlying [[org.slf4j.Logger]]
    */
+  @deprecated("Not needed in 2.13 and later", "2.10.0")
   implicit class LoggerOps(val log: Logger) extends AnyVal {
 
     /**
@@ -110,7 +111,7 @@ package object scaladsl {
      * @param arg1   the first argument
      * @param arg2   the second argument
      */
-    def debug2(format: String, arg1: Any, arg2: Any): Unit =
+    def debug(format: String, arg1: Any, arg2: Any): Unit =
       log.debug(format, arg1, arg2)
 
     /**
@@ -125,7 +126,7 @@ package object scaladsl {
      * @param arg1   the first argument
      * @param arg2   the second argument
      */
-    def debug2(marker: Marker, format: String, arg1: Any, arg2: Any): Unit =
+    def debug(marker: Marker, format: String, arg1: Any, arg2: Any): Unit =
       log.debug(marker, format, arg1, arg2)
 
     /**
@@ -141,7 +142,7 @@ package object scaladsl {
      * @param format    the format string
      * @param arguments a list of 3 or more arguments
      */
-    def debugN(format: String, arguments: Any*): Unit = {
+    def debug(format: String, arguments: Any*): Unit = {
       val arr = arguments.toArray
       if (arr.isInstanceOf[Array[Object]])
         log.debug(format, arr.asInstanceOf[Array[Object]]: _*) // this seems to always be the case
@@ -162,7 +163,7 @@ package object scaladsl {
      * @param format    the format string
      * @param arguments a list of 3 or more arguments
      */
-    def debugN(marker: Marker, format: String, arguments: Any*): Unit = {
+    def debug(marker: Marker, format: String, arguments: Any*): Unit = {
       val arr = arguments.toArray
       if (arr.isInstanceOf[Array[Object]])
         log.debug(marker, format, arr.asInstanceOf[Array[Object]]: _*) // this seems to always be the case
@@ -181,7 +182,7 @@ package object scaladsl {
      * @param arg1   the first argument
      * @param arg2   the second argument
      */
-    def info2(format: String, arg1: Any, arg2: Any): Unit =
+    def info(format: String, arg1: Any, arg2: Any): Unit =
       log.info(format, arg1, arg2)
 
     /**
@@ -196,7 +197,7 @@ package object scaladsl {
      * @param arg1   the first argument
      * @param arg2   the second argument
      */
-    def info2(marker: Marker, format: String, arg1: Any, arg2: Any): Unit =
+    def info(marker: Marker, format: String, arg1: Any, arg2: Any): Unit =
       log.info(marker, format, arg1, arg2)
 
     /**
@@ -212,7 +213,7 @@ package object scaladsl {
      * @param format    the format string
      * @param arguments a list of 3 or more arguments
      */
-    def infoN(format: String, arguments: Any*): Unit = {
+    def info(format: String, arguments: Any*): Unit = {
       val arr = arguments.toArray
       if (arr.isInstanceOf[Array[Object]])
         log.info(format, arr.asInstanceOf[Array[Object]]: _*) // this seems to always be the case
@@ -233,7 +234,7 @@ package object scaladsl {
      * @param format    the format string
      * @param arguments a list of 3 or more arguments
      */
-    def infoN(marker: Marker, format: String, arguments: Any*): Unit = {
+    def info(marker: Marker, format: String, arguments: Any*): Unit = {
       val arr = arguments.toArray
       if (arr.isInstanceOf[Array[Object]])
         log.info(marker, format, arr.asInstanceOf[Array[Object]]: _*) // this seems to always be the case
@@ -252,7 +253,7 @@ package object scaladsl {
      * @param arg1   the first argument
      * @param arg2   the second argument
      */
-    def warn2(format: String, arg1: Any, arg2: Any): Unit =
+    def warn(format: String, arg1: Any, arg2: Any): Unit =
       log.warn(format, arg1, arg2)
 
     /**
@@ -267,7 +268,7 @@ package object scaladsl {
      * @param arg1   the first argument
      * @param arg2   the second argument
      */
-    def warn2(marker: Marker, format: String, arg1: Any, arg2: Any): Unit =
+    def warn(marker: Marker, format: String, arg1: Any, arg2: Any): Unit =
       log.warn(marker, format, arg1, arg2)
 
     /**

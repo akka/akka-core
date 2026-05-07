@@ -1,15 +1,13 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
 
 import akka.stream.testkit.scaladsl.StreamTestKit._
 import akka.stream.testkit.{ BaseTwoStreamsSetup, TestSubscriber }
-import scala.annotation.nowarn
 import org.reactivestreams.Publisher
 
-@nowarn // keep unused imports
 class FlowZipSpec extends BaseTwoStreamsSetup {
 
 //#zip

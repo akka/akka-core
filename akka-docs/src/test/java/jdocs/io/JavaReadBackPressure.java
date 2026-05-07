@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package jdocs.io;
@@ -16,7 +16,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com> */
 public class JavaReadBackPressure {
 
   public static class Listener extends AbstractActor {

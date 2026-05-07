@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.typed
@@ -8,7 +8,7 @@ package docs.akka.typed
 import akka.Done
 import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.typed.{ ActorRef, ActorSystem, Behavior }
-import akka.actor.typed.scaladsl.{ AbstractBehavior, ActorContext, Behaviors, LoggerOps }
+import akka.actor.typed.scaladsl.{ AbstractBehavior, ActorContext, Behaviors }
 //#imports
 
 import akka.NotUsed
@@ -115,7 +115,7 @@ object OOIntroSpec {
             handle ! PostMessage("Hello World!")
             Behaviors.same
           case MessagePosted(screenName, message) =>
-            context.log.info2("message has been posted by '{}': {}", screenName, message)
+            context.log.info("message has been posted by '{}': {}", screenName, message)
             Behaviors.stopped
         }
       }

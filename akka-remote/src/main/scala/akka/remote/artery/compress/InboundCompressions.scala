@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery.compress
 
 import java.util.function.LongFunction
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 
 import org.agrona.collections.Long2ObjectHashMap
@@ -18,7 +19,6 @@ import akka.event.Logging
 import akka.event.LoggingAdapter
 import akka.remote.artery._
 import akka.util.OptionVal
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -59,8 +59,7 @@ private[remote] trait InboundCompressions {
 private[remote] final class InboundCompressionsImpl(
     system: ActorSystem,
     inboundContext: InboundContext,
-    settings: ArterySettings.Compression,
-    flightRecorder: RemotingFlightRecorder = NoOpRemotingFlightRecorder)
+    settings: ArterySettings.Compression)
     extends InboundCompressions {
 
   private[this] val _actorRefsIns = new Long2ObjectHashMap[InboundActorRefCompression]()
@@ -111,7 +110,7 @@ private[remote] final class InboundCompressionsImpl(
       val inbound = vs.next()
       inboundContext.association(inbound.originUid) match {
         case OptionVal.Some(a) if !a.associationState.isQuarantined(inbound.originUid) =>
-          flightRecorder.compressionActorRefAdvertisement(inbound.originUid)
+          RemotingFlightRecorder.compressionActorRefAdvertisement(inbound.originUid)
           inbound.runNextTableAdvertisement()
         case _ => remove :+= inbound.originUid
       }
@@ -143,7 +142,7 @@ private[remote] final class InboundCompressionsImpl(
       val inbound = vs.next()
       inboundContext.association(inbound.originUid) match {
         case OptionVal.Some(a) if !a.associationState.isQuarantined(inbound.originUid) =>
-          flightRecorder.compressionClassManifestAdvertisement(inbound.originUid)
+          RemotingFlightRecorder.compressionClassManifestAdvertisement(inbound.originUid)
           inbound.runNextTableAdvertisement()
         case _ => remove :+= inbound.originUid
       }
@@ -152,7 +151,7 @@ private[remote] final class InboundCompressionsImpl(
   }
 
   override def currentOriginUids: Set[Long] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     // can't use union because of java.lang.Long and Scala Long mismatch,
     // only used for testing so doesn't matter
     val result = Set.empty[java.lang.Long] ++ _actorRefsIns.keySet.asScala.iterator ++
@@ -431,7 +430,7 @@ private[remote] abstract class InboundCompression[T >: Null](
    * Add `n` occurrence for the given key and call `heavyHittedDetected` if element has become a heavy hitter.
    * Empty keys are omitted.
    */
-  def increment(@unused remoteAddress: Address, value: T, n: Long): Unit = {
+  def increment(@nowarn("msg=never used") remoteAddress: Address, value: T, n: Long): Unit = {
     val count = cms.addObjectAndEstimateCount(value, n)
     addAndCheckIfheavyHitterDetected(value, count)
     alive = true

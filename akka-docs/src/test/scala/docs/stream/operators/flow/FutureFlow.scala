@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators.flow
@@ -9,8 +9,10 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.Flow
 import akka.stream.scaladsl.Source
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 
+@nowarn("msg=never used") // sample snippets
 class FutureFlow {
 
   implicit val system: ActorSystem = ???

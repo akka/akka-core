@@ -6,16 +6,8 @@
     <version>1.0</version>
 
     <properties>
-      <akka.version>2.9.4</akka.version>
+      <akka.version>2.10.17</akka.version>
     </properties>
-
-    <repositories>
-        <repository>
-            <id>akka-repository</id>
-            <name>Akka library repository</name>
-            <url>https://repo.akka.io/maven</url>
-        </repository>
-    </repositories>
 
     <dependencies>
         <dependency>
@@ -26,7 +18,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.13</version>
+            <version>1.5.8</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.akka</groupId>

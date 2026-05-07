@@ -1,12 +1,11 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.typed
 
 import scala.concurrent.duration._
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import scala.annotation.nowarn
 import org.scalatest.wordspec.AnyWordSpecLike
 
 object FaultToleranceDocSpec {
@@ -77,7 +76,6 @@ object FaultToleranceDocSpec {
   // #bubbling-example
 }
 
-@nowarn("msg=never used")
 class FaultToleranceDocSpec extends ScalaTestWithActorTestKit("""
       # silenced to not put noise in test logs
       akka.loglevel = off

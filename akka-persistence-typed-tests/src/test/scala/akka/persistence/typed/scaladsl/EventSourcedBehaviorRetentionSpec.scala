@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.scaladsl
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.Try
@@ -31,7 +32,6 @@ import akka.persistence.typed.SnapshotCompleted
 import akka.persistence.typed.SnapshotFailed
 import akka.persistence.typed.SnapshotSelectionCriteria
 import akka.serialization.jackson.CborSerializable
-import akka.util.unused
 
 object EventSourcedBehaviorRetentionSpec extends Matchers {
 
@@ -49,7 +49,7 @@ object EventSourcedBehaviorRetentionSpec extends Matchers {
   final case class State(value: Int, history: Vector[Int]) extends CborSerializable
 
   def counter(
-      @unused ctx: ActorContext[Command],
+      @nowarn("msg=never used") ctx: ActorContext[Command],
       persistenceId: PersistenceId,
       probe: Option[ActorRef[(State, Event)]] = None,
       snapshotSignalProbe: Option[ActorRef[WrappedSignal]] = None,
@@ -592,6 +592,12 @@ class EventSourcedBehaviorRetentionSpec
       snapshotSignalProbe.expectSnapshotCompleted(14) // every-2 through criteria
       eventProbe.expectMessageType[Success[DeleteEventsCompleted]].value.toSequenceNr shouldEqual 8
       deleteSnapshotSignalProbe.expectDeleteSnapshotCompleted(6)
+
+      // Work around race condition: Wait here for delete to complete (how is it not complete when we saw the signal?) or else the new snapshot
+      // is deferred.
+      // Observed in logs:
+      // "Skipping retention at seqNr [16] because previous retention has not completed yet. Next retention will cover skipped retention."
+      Thread.sleep(50)
 
       persistentActor ! Increment // 15
       persistentActor ! Increment // 16

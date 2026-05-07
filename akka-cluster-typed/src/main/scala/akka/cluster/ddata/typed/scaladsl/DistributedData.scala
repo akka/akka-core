@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.ddata.typed.scaladsl
 
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 
 import org.slf4j.LoggerFactory
 
@@ -12,13 +13,11 @@ import akka.actor.ExtendedActorSystem
 import akka.actor.typed.{ ActorRef, ActorSystem, Extension, ExtensionId, Props }
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.annotation.InternalApi
 import akka.cluster.{ ddata => dd }
 import akka.cluster.Cluster
 import akka.cluster.ddata.ReplicatedData
 import akka.cluster.ddata.SelfUniqueAddress
-import akka.util.JavaDurationConverters._
 
 object DistributedData extends ExtensionId[DistributedData] {
   def get(system: ActorSystem[_]): DistributedData = apply(system)
@@ -75,7 +74,7 @@ class DistributedData(system: ActorSystem[_]) extends Extension {
   @InternalApi private[akka] val unexpectedAskTimeout: FiniteDuration =
     system.settings.config
       .getDuration("akka.cluster.ddata.typed.replicator-message-adapter-unexpected-ask-timeout")
-      .asScala
+      .toScala
 
   private val classicSystem = system.toClassic.asInstanceOf[ExtendedActorSystem]
 
@@ -92,7 +91,7 @@ class DistributedData(system: ActorSystem[_]) extends Extension {
       if (Cluster(classicSystem).isTerminated)
         log.warn("Replicator points to dead letters, because Cluster is terminated.")
       else
-        log.warn2(
+        log.warn(
           "Replicator points to dead letters. Make sure the cluster node has the proper role. " +
           "Node has roles [{}], Distributed Data is configured for roles [{}].",
           Cluster(classicSystem).selfRoles.mkString(","),

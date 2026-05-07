@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -9,6 +9,10 @@ import akka.stream._
 import akka.stream.scaladsl._
 import akka.testkit.AkkaSpec
 
+import scala.annotation.nowarn
+
+@nowarn("msg=deprecated")
+@nowarn("msg=never used") // sample snippets
 class StreamBuffersRateSpec extends AkkaSpec {
 
   "Demonstrate pipelining" in {

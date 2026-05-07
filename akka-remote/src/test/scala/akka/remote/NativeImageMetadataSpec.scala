@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote
@@ -40,11 +40,7 @@ object NativeImageMetadataSpec {
             classOf[java.lang.String].getName,
             classOf[ActorSystem.Settings].getName,
             classOf[EventStream].getName,
-            classOf[DynamicAccess].getName)))),
-    // Flight recording (JFR additionally enabled in akka-actor native-image.properties)
-    ReflectConfigEntry(
-      classOf[akka.remote.artery.jfr.JFRRemotingFlightRecorder].getName,
-      methods = Seq(ReflectMethod(Constructor))))
+            classOf[DynamicAccess].getName)))))
 
   val nativeImageUtils = new NativeImageUtils("akka-remote", additionalEntries, Seq("akka.remote"))
 

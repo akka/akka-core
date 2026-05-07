@@ -1,18 +1,12 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
 
 import akka.testkit.AkkaSpec
-import scala.annotation.nowarn
 
-@nowarn // for keeping imports
 class FlowPrependSpec extends AkkaSpec {
-
-//#prepend
-
-//#prepend
 
   "An Prepend flow" should {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -8,6 +8,7 @@ import scala.annotation.implicitNotFound
 import scala.annotation.nowarn
 import scala.annotation.unchecked.uncheckedVariance
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
@@ -43,7 +44,6 @@ import akka.stream.stage._
 import akka.util.ConstantFun
 import akka.util.OptionVal
 import akka.util.Timeout
-import akka.util.ccompat._
 
 /**
  * A `Flow` is a set of stream processing steps that has one open input and one open output.
@@ -653,7 +653,7 @@ object Flow {
   @deprecated("Use 'Flow.lazyFutureFlow' instead", "2.6.0")
   def lazyInitAsync[I, O, M](flowFactory: () => Future[Flow[I, O, M]]): Flow[I, O, Future[Option[M]]] =
     Flow.lazyFutureFlow(flowFactory).mapMaterializedValue {
-      implicit val ec = akka.dispatch.ExecutionContexts.parasitic
+      implicit val ec = ExecutionContext.parasitic
       _.map(Some.apply).recover { case _: NeverMaterializedException => None }
     }
 
@@ -729,8 +729,8 @@ object Flow {
       .flatMapPrefixMat(1) {
         case Seq(a) =>
           val f: Flow[I, O, Future[M]] =
-            futureFlow(create()
-              .map(Flow[I].prepend(Source.single(a)).viaMat(_)(Keep.right))(akka.dispatch.ExecutionContexts.parasitic))
+            futureFlow(
+              create().map(Flow[I].prepend(Source.single(a)).viaMat(_)(Keep.right))(ExecutionContext.parasitic))
           f
         case Nil =>
           val f: Flow[I, O, Future[M]] = Flow[I]
@@ -819,7 +819,6 @@ final case class RunnableGraph[+Mat](override val traversalBuilder: TraversalBui
  * Binary compatibility is only maintained for callers of this trait’s interface.
  */
 @DoNotInherit
-@ccompatUsedUntil213
 trait FlowOps[+Out, +Mat] {
   import GraphDSL.Implicits._
 
@@ -1081,8 +1080,9 @@ trait FlowOps[+Out, +Mat] {
    * @param onComplete a function that transforms the ongoing state into an optional output element
    */
   def statefulMap[S, T](create: () => S)(f: (S, Out) => (S, T), onComplete: S => Option[T]): Repr[T] =
-    via(new StatefulMap[S, Out, T](create, f, onComplete))
-      .withAttributes(DefaultAttributes.statefulMap and SourceLocation.forLambda(f))
+    via(
+      new StatefulMap[S, Out, T](create, f, onComplete)
+        .withAttributes(DefaultAttributes.statefulMap and SourceLocation.forLambda(f)))
 
   /**
    * Transform each stream element with the help of a resource.
@@ -1117,8 +1117,8 @@ trait FlowOps[+Out, +Mat] {
    */
   def mapWithResource[R, T](create: () => R)(f: (R, Out) => T, close: R => Option[T]): Repr[T] =
     via(
-      new StatefulMap[R, Out, T](create, (resource, out) => (resource, f(resource, out)), resource => close(resource)))
-      .withAttributes(DefaultAttributes.mapWithResource and SourceLocation.forLambda(f))
+      new StatefulMap[R, Out, T](create, (resource, out) => (resource, f(resource, out)), resource => close(resource))
+        .withAttributes(DefaultAttributes.mapWithResource and SourceLocation.forLambda(f)))
 
   /**
    * Transform each input element into an `Iterable` of output elements that is
@@ -2584,15 +2584,15 @@ trait FlowOps[+Out, +Mat] {
     via(new Timers.IdleInject[Out, U](maxIdle, injectedElem))
 
   /**
-   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator set the maximum rate
+   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator sets the maximum rate
    * for emitting messages. This operator works for streams where all elements have the same cost or length.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and
    * started.
    *
    * The burst size is calculated based on the given rate (`cost/per`) as 0.1 * rate, for example:
@@ -2601,8 +2601,8 @@ trait FlowOps[+Out, +Mat] {
    * - rate 100/second => burst size 10
    * - rate 200/second => burst size 20
    *
-   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which makes pauses before emitting messages to
-   * meet throttle rate.
+   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which pauses before emitting messages to
+   * meet the throttle rate.
    *
    * '''Emits when''' upstream emits an element and configured time per each element elapsed
    *
@@ -2616,18 +2616,18 @@ trait FlowOps[+Out, +Mat] {
     throttle(elements, per, maximumBurst = Throttle.AutomaticMaximumBurst, ConstantFun.oneInt, ThrottleMode.Shaping)
 
   /**
-   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator set the maximum rate
+   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator sets the maximum rate
    * for emitting messages. This operator works for streams where all elements have the same cost or length.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and started.
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and started.
    *
    * Parameter `mode` manages behavior when upstream is faster than throttle rate:
-   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet throttle rate
+   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet the throttle rate
    *  - [[akka.stream.ThrottleMode.Enforcing]] fails with exception when upstream is faster than throttle rate. Enforcing
    *  cannot emit elements that cost more than the maximumBurst
    *
@@ -2662,11 +2662,11 @@ trait FlowOps[+Out, +Mat] {
    * Streams of `ByteString` for example.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and
    * started.
    *
    * The burst size is calculated based on the given rate (`cost/per`) as 0.1 * rate, for example:
@@ -2675,8 +2675,8 @@ trait FlowOps[+Out, +Mat] {
    * - rate 100/second => burst size 10
    * - rate 200/second => burst size 20
    *
-   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which makes pauses before emitting messages to
-   * meet throttle rate.
+   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which pauses before emitting messages to
+   * meet the throttle rate.
    *
    * '''Emits when''' upstream emits an element and configured time per each element elapsed
    *
@@ -2688,7 +2688,7 @@ trait FlowOps[+Out, +Mat] {
    *
    */
   def throttle(cost: Int, per: FiniteDuration, costCalculation: (Out) => Int): Repr[Out] =
-    via(new Throttle(cost, per, Throttle.AutomaticMaximumBurst, costCalculation, ThrottleMode.Shaping))
+    throttle(cost, per, Throttle.AutomaticMaximumBurst, costCalculation, ThrottleMode.Shaping)
 
   /**
    * Sends elements downstream with speed limited to `cost/per`. Cost is
@@ -2697,14 +2697,14 @@ trait FlowOps[+Out, +Mat] {
    * Streams of `ByteString` for example.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and started.
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and started.
    *
    * Parameter `mode` manages behavior when upstream is faster than throttle rate:
-   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet throttle rate
+   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet the throttle rate
    *  - [[akka.stream.ThrottleMode.Enforcing]] fails with exception when upstream is faster than throttle rate. Enforcing
    *  cannot emit elements that cost more than the maximumBurst
    *
@@ -2735,7 +2735,86 @@ trait FlowOps[+Out, +Mat] {
       maximumBurst: Int,
       costCalculation: (Out) => Int,
       mode: ThrottleMode): Repr[Out] =
-    via(new Throttle(cost, per, maximumBurst, costCalculation, mode))
+    via(new Throttle(() => new ThrottleControl(cost, per, maximumBurst, mode, shared = false), costCalculation, mode))
+
+  /**
+   * The `ThrottleControl` can be updated to change the throttle rate from the outside of the stream
+   * and share a total rate limit between several streams.
+   * Sends elements downstream with speed limited to `elements/per` as defined in the `ThrottleControl`.
+   * In other words, this operator sets the maximum rate for emitting messages. This operator works for streams
+   * where all elements have the same cost or length.
+   *
+   * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size).
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and
+   * started.
+   *
+   * The burst size is calculated based on the given rate (`cost/per`) as 0.1 * rate, for example:
+   * - rate < 20/second => burst size 1
+   * - rate 20/second => burst size 2
+   * - rate 100/second => burst size 10
+   * - rate 200/second => burst size 20
+   *
+   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which pauses before emitting messages to
+   * meet the throttle rate.
+   *
+   * '''Emits when''' upstream emits an element and configured time per each element elapsed
+   *
+   * '''Backpressures when''' downstream backpressures or the incoming rate is higher than the speed limit
+   *
+   * '''Completes when''' upstream completes
+   *
+   * '''Cancels when''' downstream cancels
+   */
+  def throttle(control: ThrottleControl): Repr[Out] =
+    throttle(control, ConstantFun.oneInt)
+
+  /**
+   * The `ThrottleControl` can be updated to change the throttle rate from the outside of the stream
+   * and share a total rate limit between several streams.
+   * Sends elements downstream with speed limited to `cost/per` as defined in the `ThrottleControl`. Cost is
+   * calculating for each element individually by calling `calculateCost` function.
+   * This operator works for streams when elements have different cost(length).
+   * Streams of `ByteString` for example.
+   *
+   * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and started.
+   *
+   * Parameter `mode` manages behavior when upstream is faster than throttle rate:
+   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet the throttle rate
+   *  - [[akka.stream.ThrottleMode.Enforcing]] fails with exception when upstream is faster than throttle rate. Enforcing
+   *  cannot emit elements that cost more than the maximumBurst
+   *
+   * It is recommended to use non-zero burst sizes as they improve both performance and throttling precision by allowing
+   * the implementation to avoid using the scheduler when input rates fall below the enforced limit and to reduce
+   * most of the inaccuracy caused by the scheduler resolution (which is in the range of milliseconds).
+   *
+   *  WARNING: Be aware that throttle is using scheduler to slow down the stream. This scheduler has minimal time of triggering
+   *  next push. Consequently it will slow down the stream as it has minimal pause for emitting. This can happen in
+   *  case burst is 0 and speed is higher than 30 events per second. You need to increase the `maximumBurst`  if
+   *  elements arrive with small interval (30 milliseconds or less). Use the overloaded `throttle` method without
+   *  `maximumBurst` parameter to automatically calculate the `maximumBurst` based on the given rate (`cost/per`).
+   *  In other words the throttler always enforces the rate limit when `maximumBurst` parameter is given, but in
+   *  certain cases (mostly due to limited scheduler resolution) it enforces a tighter bound than what was prescribed.
+   *
+   * '''Emits when''' upstream emits an element and configured time per each element elapsed
+   *
+   * '''Backpressures when''' downstream backpressures or the incoming rate is higher than the speed limit
+   *
+   * '''Completes when''' upstream completes
+   *
+   * '''Cancels when''' downstream cancels
+   *
+   */
+  def throttle(control: ThrottleControl, costCalculation: (Out) => Int): Repr[Out] =
+    via(new Throttle(() => control, costCalculation, control.mode))
 
   /**
    * Detaches upstream demand from downstream demand without detaching the
@@ -2982,8 +3061,11 @@ trait FlowOps[+Out, +Mat] {
    * '''Cancels when''' downstream cancels
    */
   def zipWithIndex: Repr[(Out, Long)] =
-    statefulMap[Long, (Out, Long)](() => 0L)((index, out) => (index + 1L, (out, index)), _ => None)
-      .withAttributes(DefaultAttributes.zipWithIndex)
+    via(
+      new StatefulMap[Long, Out, (Out, Long)](
+        () => 0L,
+        (index, out) => (index + 1L, (out, index)),
+        ConstantFun.scalaAnyToNone).withAttributes(DefaultAttributes.zipWithIndex))
 
   /**
    * Interleave is a deterministic merge of the given [[Source]] with elements of this [[Flow]].
@@ -3323,7 +3405,7 @@ trait FlowOps[+Out, +Mat] {
     that match {
       case source if TraversalBuilder.isEmptySource(source) => this.asInstanceOf[Repr[U]]
       case other =>
-        TraversalBuilder.getSingleSource(other) match {
+        TraversalBuilder.getSingleSource[Any](other) match {
           case OptionVal.Some(singleSource) =>
             via(new SingleConcat(singleSource.elem.asInstanceOf[U]))
           case _ => via(concatGraph(other, detached))

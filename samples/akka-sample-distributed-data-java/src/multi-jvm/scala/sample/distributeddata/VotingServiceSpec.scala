@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2009-2024 Lightbend Inc. <https://www.lightbend.com>
- */
 package sample.distributeddata
 
 import java.math.BigInteger
@@ -96,7 +93,7 @@ class VotingServiceSpec extends MultiNodeSpec(VotingServiceSpec) with STMultiNod
         votingService ! new GetVotes(p.ref)
         val votes = p.expectMessageType[Votes](3.seconds)
         votes.open should be (false)
-        import scala.collection.JavaConverters._
+        import scala.jdk.CollectionConverters._
         votes.result.asScala.toMap should be (expected)
       }
 

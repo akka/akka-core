@@ -1,12 +1,11 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns.internal
 
 import java.net.{ InetAddress, InetSocketAddress }
 
-import scala.annotation.nowarn
 import scala.collection.{ immutable => im }
 import scala.concurrent.duration._
 import scala.util.Try
@@ -35,6 +34,8 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
 
   final case class DropRequest(question: DnsQuestion)
 
+  case object TcpDropped
+
   // sent as an indication that as of the time of sending, `id` is not being used
   //  by an active question.  Useful for a questioner which tracks which ids it can use
   final case class Dropped(id: Short) extends NoSerializationVerificationNeeded
@@ -47,6 +48,8 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
     if (question.name.last == '.') Seq(unchangedPair, question.name.dropRight(1) -> question.qType)
     else Seq(unchangedPair, (question.name + '.') -> question.qType)
   }
+
+  private final case class InFlight(replyTo: ActorRef, message: Message, tcpRequest: Boolean = false)
 }
 
 /**
@@ -62,7 +65,7 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
   val udp = IO(Udp)
   val tcp = IO(Tcp)
 
-  private[internal] var inflightRequests: Map[Short, (ActorRef, Message)] = Map.empty
+  private var inflightRequests: Map[Short, InFlight] = Map.empty
 
   lazy val tcpDnsClient: ActorRef = createTcpClient()
 
@@ -90,12 +93,11 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
   /**
    * Silent to allow map update syntax
    */
-  @nowarn()
   def ready(socket: ActorRef): Receive = {
     case DropRequest(question) =>
       val id = question.id
       inflightRequests.get(id) match {
-        case Some((_, sentMsg)) =>
+        case Some(InFlight(_, sentMsg, _)) =>
           val sentQs = sentMsg.questions.map { question =>
             question.name -> question.qType
           }
@@ -129,7 +131,7 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
         log.debug("Resolving [{}] (A)", name)
 
         val msg = message(name, id, RecordType.A)
-        inflightRequests += (id -> (sender() -> msg))
+        inflightRequests += (id -> InFlight(sender(), msg))
         log.debug("Message [{}] to [{}]: [{}]", id, ns, msg)
         socket ! Udp.Send(msg.write(), ns)
       }
@@ -143,7 +145,7 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
         log.debug("Resolving [{}] (AAAA)", name)
 
         val msg = message(name, id, RecordType.AAAA)
-        inflightRequests += (id -> (sender() -> msg))
+        inflightRequests += (id -> InFlight(sender(), msg))
         log.debug("Message to [{}]: [{}]", ns, msg)
         socket ! Udp.Send(msg.write(), ns)
       }
@@ -156,7 +158,7 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
       } else {
         log.debug("Resolving [{}] (SRV)", name)
         val msg = message(name, id, RecordType.SRV)
-        inflightRequests += (id -> (sender() -> msg))
+        inflightRequests += (id -> InFlight(sender(), msg))
         log.debug("Message to [{}]: [{}]", ns, msg)
         socket ! Udp.Send(msg.write(), ns)
       }
@@ -169,7 +171,7 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
           Try {
             val msg = Message.parse(send.payload)
             inflightRequests.get(msg.id).foreach {
-              case (s, _) =>
+              case InFlight(s, _, _) =>
                 s ! Failure(new RuntimeException("Send failed to nameserver"))
                 inflightRequests -= msg.id
             }
@@ -177,6 +179,9 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
         case _ =>
           log.warning("Dns client failed to send {}", cmd)
       }
+    case Udp.Received(_, remote) if remote != ns =>
+      log.warning(Security, "Discarding DNS response from unexpected source [{}], expected [{}]", remote, ns)
+
     case Udp.Received(data, remote) =>
       log.debug("Received message from [{}]: [{}]", remote, data)
       val msg = Message.parse(data)
@@ -185,8 +190,10 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
       if (msg.flags.isTruncated) {
         log.debug("DNS response truncated, falling back to TCP")
         inflightRequests.get(msg.id) match {
-          case Some((_, msg)) =>
-            tcpDnsClient ! msg
+          case Some(inFlight) =>
+            inflightRequests = inflightRequests.updated(msg.id, inFlight.copy(tcpRequest = true))
+            tcpDnsClient ! inFlight.message
+
           case _ =>
             log.debug("Client for id {} not found. Discarding unsuccessful response.", msg.id)
         }
@@ -197,11 +204,11 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
       }
     case UdpAnswer(questions, response) =>
       inflightRequests.get(response.id) match {
-        case Some((reply, sentMsg)) =>
+        case Some(InFlight(reply, sentMsg, _)) =>
           val sentQs = sentMsg.questions.flatMap(withAndWithoutTrailingDots).toSet
           val answeredQs = questions.flatMap(withAndWithoutTrailingDots).toSet
 
-          if (answeredQs.isEmpty || answeredQs.intersect(sentQs).nonEmpty) {
+          if (answeredQs.intersect(sentQs).nonEmpty) {
             reply ! response
             inflightRequests -= response.id
           } else {
@@ -220,19 +227,26 @@ import akka.pattern.{ BackoffOpts, BackoffSupervisor }
     // for TCP, we don't have to use the question for correlation
     case response: Answer =>
       inflightRequests.get(response.id) match {
-        case Some((reply, sentMsg)) =>
-          reply ! response
+        case Some(InFlight(replyTo, _, _)) =>
+          replyTo ! response
           inflightRequests -= response.id
 
         case None =>
           log.debug("Client for id [{}] not found. Discarding response.", response.id)
       }
 
+    case TcpDropped =>
+      log.warning("TCP client failed, clearing inflight resolves which were being resolved by TCP")
+
+      inflightRequests = inflightRequests.filterNot {
+        case (_, inFlight) => inFlight.tcpRequest
+      }
+
     case Udp.Unbind  => socket ! Udp.Unbind
     case Udp.Unbound => context.stop(self)
   }
 
-  def createTcpClient() = {
+  def createTcpClient(): ActorRef = {
     context.actorOf(
       BackoffSupervisor.props(
         BackoffOpts.onFailure(

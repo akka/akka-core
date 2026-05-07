@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.metrics
 
-import scala.annotation.nowarn
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import scala.jdk.CollectionConverters._
 
 import akka.actor.Address
 
@@ -260,13 +260,15 @@ private[metrics] trait MetricNumericConverter {
    * May involve rounding or truncation.
    */
   def convertNumber(from: Any): Either[Long, Double] = from match {
-    case n: Int        => Left(n)
-    case n: Long       => Left(n)
-    case n: Double     => Right(n)
-    case n: Float      => Right(n)
-    case n: BigInt     => Left(n.longValue)
-    case n: BigDecimal => Right(n.doubleValue)
-    case x             => throw new IllegalArgumentException(s"Not a number [$x]")
+    case n: Int                  => Left(n)
+    case n: Long                 => Left(n)
+    case n: Double               => Right(n)
+    case n: Float                => Right(n)
+    case n: BigInt               => Left(n.longValue)
+    case n: java.math.BigInteger => Left(n.longValue)
+    case n: BigDecimal           => Right(n.doubleValue)
+    case n: java.math.BigDecimal => Right(n.doubleValue)
+    case x                       => throw new IllegalArgumentException(s"Not a number [$x]")
   }
 
 }
@@ -323,9 +325,7 @@ final case class NodeMetrics(address: Address, timestamp: Long, metrics: Set[Met
   /**
    * Java API
    */
-  @nowarn("msg=deprecated")
-  def getMetrics: java.lang.Iterable[Metric] =
-    scala.collection.JavaConverters.asJavaIterableConverter(metrics).asJava
+  def getMetrics: java.lang.Iterable[Metric] = metrics.asJava
 
   /**
    * Returns true if <code>that</code> address is the same as this

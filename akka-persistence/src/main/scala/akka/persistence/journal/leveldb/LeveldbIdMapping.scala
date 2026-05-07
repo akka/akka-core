@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal.leveldb
@@ -8,7 +8,6 @@ import org.iq80.leveldb.DBIterator
 
 import akka.actor.Actor
 import akka.util.ByteString.UTF_8
-import akka.util.unused
 
 /**
  * INTERNAL API.
@@ -70,7 +69,7 @@ private[persistence] trait LeveldbIdMapping extends Actor { this: LeveldbStore =
     numericId
   }
 
-  override protected def newPersistenceIdAdded(@unused id: String): Unit = ()
+  override protected def newPersistenceIdAdded(id: String): Unit = ()
 
   override def preStart(): Unit = {
     idMap = readIdMap()

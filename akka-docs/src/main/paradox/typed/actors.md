@@ -7,13 +7,9 @@ You are viewing the documentation for the new actor APIs, to view the Akka Class
 
 ## Module info
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Akka Actors, add the following dependency in your project:
 
@@ -45,7 +41,13 @@ concurrent and parallel systems. Actors were defined in the 1973 paper by Carl
 Hewitt but have been popularized by the Erlang language, and used for example at
 Ericsson with great success to build highly concurrent and reliable telecom
 systems. The API of Akka’s Actors has borrowed some of its syntax from Erlang.
- 
+
+@@@note
+
+🎓 For a deeper understanding of the Actor Model, consider the free online course [**Actor Fundamentals**](https://akkademy.akka.io/learn/courses/21/actor-fundamentals) in Akkademy.
+
+@@@
+
 ## First example
 
 If you are new to Akka we recommend watching the short [introduction video to Akka actors](https://akka.io/blog/news/2019/12/03/akka-typed-actor-intro-video).
@@ -174,6 +176,12 @@ The console output may look like this:
 ```
 
 You will also need to add a @ref:[logging dependency](logging.md) to see that output when running.
+
+@@@note
+
+🎓 For a deeper introduction to actors, consider the free online courses @java[[**Akka Basics for Java**](https://akkademy.akka.io/learn/courses/23/akka-basics-for-java)]@scala[[**Akka Basics for Scala**](https://akkademy.akka.io/learn/courses/22/akka-basics-for-scala)]) in Akkademy.
+
+@@@
 
 ## A More Complex Example
 
@@ -481,3 +489,9 @@ the `Main` Actor terminates there is nothing more to do.
 Therefore after creating the Actor system with the `Main` Actor’s
 @apidoc[typed.Behavior] we can let the `main` method return, the @apidoc[typed.ActorSystem] will continue running and 
 the JVM alive until the root actor stops.
+
+@@@note
+
+🎓 For a deeper introduction to actors, consider the free online courses @java[[**Akka Basics for Java**](https://akkademy.akka.io/learn/courses/23/akka-basics-for-java)]@scala[[**Akka Basics for Scala**](https://akkademy.akka.io/learn/courses/22/akka-basics-for-scala)] in Akkademy.
+
+@@@

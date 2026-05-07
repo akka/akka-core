@@ -1,15 +1,18 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
 
 import java.util.UUID
+import java.util.concurrent.CompletionStage
 
 import scala.annotation.nowarn
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.util.Success
 
 import akka.actor._
@@ -32,8 +35,8 @@ import akka.cluster.sharding.internal.{
 import akka.cluster.sharding.internal.AbstractLeastShardAllocationStrategy
 import akka.cluster.sharding.internal.ClusterShardAllocationMixin.RegionEntry
 import akka.cluster.sharding.internal.ClusterShardAllocationMixin.ShardSuitabilityOrdering
+import akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider
 import akka.cluster.sharding.internal.EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker
-import akka.dispatch.ExecutionContexts
 import akka.event.{ BusLogging, Logging }
 import akka.pattern.{ pipe, AskTimeoutException }
 import akka.persistence._
@@ -197,28 +200,41 @@ object ShardCoordinator {
 
   /**
    * Java API: Java implementations of custom shard allocation and rebalancing logic used by the [[ShardCoordinator]]
-   * should extend this abstract class and implement the two methods.
+   * should extend this abstract class and override [[allocateNewShard]] and [[rebalanceShard]].
+   *
+   * Earlier versions of this API had different extension points.  Overriding those is still supported
+   * but they may be removed in a future release.
    */
   abstract class AbstractShardAllocationStrategy extends ShardAllocationStrategy {
+    import java.util.concurrent.CompletableFuture
+
+    @nowarn("cat=deprecation") // calls deprecated allocateShard
     override final def allocateShard(
         requester: ActorRef,
         shardId: ShardId,
         currentShardAllocations: Map[ActorRef, immutable.IndexedSeq[ShardId]]): Future[ActorRef] = {
 
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       allocateShard(requester, shardId, currentShardAllocations.asJava)
     }
 
+    @nowarn("cat=deprecation") // calls deprecated rebalance
     override final def rebalance(
         currentShardAllocations: Map[ActorRef, immutable.IndexedSeq[ShardId]],
         rebalanceInProgress: Set[ShardId]): Future[Set[ShardId]] = {
-      import akka.util.ccompat.JavaConverters._
-      implicit val ec = ExecutionContexts.parasitic
+      import scala.jdk.CollectionConverters._
+      implicit val ec = ExecutionContext.parasitic
       rebalance(currentShardAllocations.asJava, rebalanceInProgress.asJava).map(_.asScala.toSet)
     }
 
     /**
      * Invoked when the location of a new shard is to be decided.
+     *
+     * The default implementation defers to [[allocateNewShard]].  In earlier versions of this API, this
+     * Scala Future-returning method was the extension point.
+     *
+     * New implementations of this class should prefer to override [[allocateNewShard]].  This method may be removed
+     * in a future release.
      *
      * @param requester               actor reference to the [[ShardRegion]] that requested the location of the
      *                                shard, can be returned if preference should be given to the node where the shard was first accessed
@@ -228,13 +244,46 @@ object ShardCoordinator {
      * @return a `Future` of the actor ref of the [[ShardRegion]] that is to be responsible for the shard, must be one of
      *         the references included in the `currentShardAllocations` parameter
      */
+    @deprecated("prefer allocateNewShard", "2.10.10")
     def allocateShard(
         requester: ActorRef,
         shardId: String,
-        currentShardAllocations: java.util.Map[ActorRef, immutable.IndexedSeq[String]]): Future[ActorRef]
+        currentShardAllocations: java.util.Map[ActorRef, immutable.IndexedSeq[String]]): Future[ActorRef] = {
+      import scala.jdk.FutureConverters.CompletionStageOps
+      allocateNewShard(requester, shardId, currentShardAllocations).asScala
+    }
+
+    /**
+     * Invoked when the location of a new shard is to be decided.
+     *
+     * New implementations of this class should override this method instead of overriding [[allocateShard]].
+     *
+     * For compatibility with earlier versions of this API, this method's default implementation returns
+     * an immediately-failing [[java.util.concurrent.CompletionStage]].
+     *
+     * @param requester               actor reference to the [[ShardRegion]] that requested the location of the
+     *                                shard, can be returned if preference should be given to the node where the shard was first accessed
+     * @param shardId                 the id of the shard to allocate
+     * @param currentShardAllocations all actor refs to `ShardRegion` and their current allocated shards,
+     *                                in the order they were allocated
+     *  @return a [[java.util.concurrent.CompletionStage]] of the actor ref of the [[ShardRegion]] that is to be responsible for the shard,
+     *          must be one of the references included in the `currentShardAllocations` parameter
+     */
+    @nowarn("msg=never used")
+    def allocateNewShard(
+        requester: ActorRef,
+        shardId: String,
+        currentShardAllocations: java.util.Map[ActorRef, immutable.IndexedSeq[String]]): CompletionStage[ActorRef] =
+      CompletableFuture.failedStage(new scala.NotImplementedError("Must override allocateNewShard or allocateShard"))
 
     /**
      * Invoked periodically to decide which shards to rebalance to another location.
+     *
+     * The default implementation defers to [[rebalanceShards]].  In earlier versions of this API, this
+     * Scala Future-returning method was the extension point.
+     *
+     * New implementations of this class should prefer to override [[rebalanceShards]].  This method may be removed in a
+     * future release
      *
      * @param currentShardAllocations all actor refs to `ShardRegion` and their current allocated shards,
      *                                in the order they were allocated
@@ -242,9 +291,34 @@ object ShardCoordinator {
      *                                you should not include these in the returned set
      * @return a `Future` of the shards to be migrated, may be empty to skip rebalance in this round
      */
+    @deprecated("prefer rebalanceShards", "2.10.10")
     def rebalance(
         currentShardAllocations: java.util.Map[ActorRef, immutable.IndexedSeq[String]],
-        rebalanceInProgress: java.util.Set[String]): Future[java.util.Set[String]]
+        rebalanceInProgress: java.util.Set[String]): Future[java.util.Set[String]] = {
+      import scala.jdk.FutureConverters.CompletionStageOps
+      rebalanceShards(currentShardAllocations, rebalanceInProgress).asScala
+    }
+
+    /**
+     * Invoked periodically to decide which shards to rebalance to another location.
+     *
+     * New implementations of this class should override this method instead of overriding [[rebalance]].
+     *
+     * For compatibility with earlier versions of this API, this method's default implementation returns
+     * an immediately-failing [[java.util.concurrent.CompletionStage]].
+     *
+     * @param currentShardAllocations all actor refs to `ShardRegion` and their current allocated shards,
+     *                                in the order they were allocated
+     * @param rebalanceInProgress     set of shards that are currently being rebalanced, i.e.
+     *                                you should not include these in the returned set
+     * @return a [[java.util.concurrent.CompletionStage]] of the set of shards to be migrated, may be empty to skip rebalance in this round
+     */
+    @nowarn("msg=never used")
+    def rebalanceShards(
+        currentShardAllocations: java.util.Map[ActorRef, immutable.IndexedSeq[String]],
+        rebalanceInProgress: java.util.Set[String]): CompletionStage[java.util.Set[String]] =
+      CompletableFuture.failedStage(new scala.NotImplementedError("Must override rebalanceShard or rebalance"))
+
   }
 
   private val emptyRebalanceResult = Future.successful(Set.empty[ShardId])
@@ -532,6 +606,8 @@ object ShardCoordinator {
 
   private final case class DelayedShardRegionTerminated(region: ActorRef)
 
+  private case object StaleRegionCheckTick
+
   private final case class StopShardTimeout(requestId: UUID)
 
   /**
@@ -571,6 +647,10 @@ object ShardCoordinator {
       with Timers {
 
     import Internal._
+
+    private val instrumentation = ClusterShardingInstrumentationProvider.get(context.system).instrumentation
+
+    instrumentation.shardHandoffStarted(typeName, shard)
 
     regions.foreach { region =>
       region ! BeginHandOff(shard)
@@ -635,6 +715,7 @@ object ShardCoordinator {
     }
 
     def done(ok: Boolean): Unit = {
+      instrumentation.shardHandoffFinished(typeName, shard, ok)
       context.parent ! RebalanceDone(shard, ok)
       context.stop(self)
     }
@@ -650,6 +731,61 @@ object ShardCoordinator {
     Props(new RebalanceWorker(typeName, shard, shardRegionFrom, handOffTimeout, regions, isRebalance))
   }
 
+  /** INTERNAL API */
+  @InternalApi
+  private[akka] final class PendingGetShardHomes(val requestsByShard: Map[ShardRegion.ShardId, Set[ActorRef]]) {
+    import ShardRegion.ShardId
+
+    def addRequest(shard: ShardId, replyTo: Option[ActorRef]): PendingGetShardHomes =
+      replyTo match {
+        case None =>
+          // demand, but no replyTo
+          if (requestsByShard.contains(shard)) this
+          else new PendingGetShardHomes(requestsByShard + (shard -> Set.empty))
+
+        case Some(r) =>
+          new PendingGetShardHomes(requestsByShard.updatedWith(shard) { current =>
+            current.orElse(Some(Set.empty[ActorRef])).map(_.incl(r))
+          })
+      }
+
+    def removeRequestsForShard(shard: ShardId): (Set[ActorRef], PendingGetShardHomes) =
+      if (requestsByShard.contains(shard)) {
+        requestsByShard(shard) -> new PendingGetShardHomes(requestsByShard - shard)
+      } else Set.empty -> this
+
+    def removeRequest(): (Option[(ShardId, Option[ActorRef])], PendingGetShardHomes) =
+      if (requestsByShard.isEmpty) None -> this
+      else {
+        val iterator = requestsByShard.iterator
+        val first = {
+          val (shard, r2s) = iterator.next()
+          shard -> r2s.size
+        }
+
+        val (selectedShard, _) = iterator.foldLeft(first) { (acc, req) =>
+          val (_, selectedSize) = acc
+          val (requestedShard, r2s) = req
+
+          if (r2s.size > selectedSize) requestedShard -> r2s.size
+          else acc
+        }
+
+        val selectedReplyTo = requestsByShard(selectedShard).headOption
+        val nextPending = selectedReplyTo match {
+          case None => new PendingGetShardHomes(requestsByShard - selectedShard)
+          case Some(r) =>
+            new PendingGetShardHomes(requestsByShard.updatedWith(selectedShard)(_.flatMap { replyTos =>
+              val next = replyTos.excl(r)
+
+              if (next.isEmpty) None // no need to leave any ignored replyTo after removal
+              else Some(next)
+            }))
+        }
+
+        Some(selectedShard -> selectedReplyTo) -> nextPending
+      }
+  }
 }
 
 /**
@@ -670,7 +806,7 @@ abstract class ShardCoordinator(
 
   val log = Logging.withMarker(context.system, this)
   private val verboseDebug = context.system.settings.config.getBoolean("akka.cluster.sharding.verbose-debug-logging")
-  private val ignoreRef = context.system.asInstanceOf[ExtendedActorSystem].provider.ignoreRef
+  protected val ignoreRef = context.system.asInstanceOf[ExtendedActorSystem].provider.ignoreRef
 
   val cluster = Cluster(context.system)
   val removalMargin = cluster.downingProvider.downRemovalMargin
@@ -695,6 +831,14 @@ abstract class ShardCoordinator(
   var regionTerminationInProgress = Set.empty[ActorRef]
   // each waiting actor together with a request identifier to clear out all waiting for one request on timeout
   var waitingForShardsToStop: Map[ShardId, Set[(ActorRef, UUID)]] = Map.empty
+
+  private val staleRegionDetectionConfig = {
+    val c = context.system.settings.config.getConfig("akka.cluster.sharding.stale-region-detection")
+    val enabled = c.getBoolean("enabled")
+    val checkInterval = c.getDuration("check-interval").toScala
+    val startupGracePeriod = c.getDuration("startup-grace-period").toScala
+    (enabled, checkInterval, startupGracePeriod)
+  }
 
   import context.dispatcher
 
@@ -931,7 +1075,7 @@ abstract class ShardCoordinator(
                 if (verboseDebug)
                   log.debug(
                     "{}: Graceful shutdown of {} region [{}] with [{}] shards [{}] started",
-                    Array(
+                    Array[Any](
                       typeName,
                       if (region.path.address.hasLocalScope) "local" else "",
                       region,
@@ -1011,6 +1155,18 @@ abstract class ShardCoordinator(
               val waiting = acc(shard)
               if (waiting.size == 1) acc - shard
               else acc.updated(shard, waiting.filterNot { case (_, id) => id == requestId })
+          }
+        }
+
+      case StaleRegionCheckTick =>
+        // Re-watch all remote regions.
+        // If the node is gone, ClusterRemoteWatcher.addWatch() will immediately
+        // trigger a new Terminated via the memberTombstones check.
+        // If the node is alive, the watch is simply re-established (no-op).
+        state.regions.keys.foreach { ref =>
+          if (!ref.path.address.hasLocalScope) {
+            context.unwatch(ref)
+            context.watch(ref)
           }
         }
 
@@ -1192,6 +1348,12 @@ abstract class ShardCoordinator(
     // This is an optimization that makes it operational faster and reduces the
     // amount of lost messages during startup.
     context.system.scheduler.scheduleOnce(500.millis, self, StateInitialized)
+
+    // Start stale region detection after the startup grace period
+    val (srdEnabled, srdCheckInterval, srdStartupGrace) = staleRegionDetectionConfig
+    if (srdEnabled) {
+      timers.startTimerWithFixedDelay(StaleRegionCheckTick, StaleRegionCheckTick, srdStartupGrace, srdCheckInterval)
+    }
   }
 
   def stateInitialized(): Unit = {
@@ -1286,6 +1448,7 @@ abstract class ShardCoordinator(
 
               sendHostShardMsg(evt.shard, evt.region)
               getShardHomeSender ! ShardHome(evt.shard, evt.region)
+              unstashGetShardHomeRequestsForShard(evt.shard)
             }
           } else {
             if (verboseDebug)
@@ -1306,6 +1469,7 @@ abstract class ShardCoordinator(
     }
 
   protected def unstashOneGetShardHomeRequest(): Unit
+  protected def unstashGetShardHomeRequestsForShard(shard: ShardId): Unit
 
   private def regionAddress(region: ActorRef): Address = {
     if (region.path.address.host.isEmpty) cluster.selfAddress
@@ -1498,6 +1662,7 @@ class PersistentShardCoordinator(
   }
 
   override protected def unstashOneGetShardHomeRequest(): Unit = ()
+  override protected def unstashGetShardHomeRequestsForShard(shard: ShardId): Unit = ()
 }
 
 /**
@@ -1537,6 +1702,7 @@ private[akka] class DDataShardCoordinator(
     with Timers {
   import DDataShardCoordinator._
   import ShardCoordinator.Internal._
+  import ShardCoordinator.PendingGetShardHomes
 
   import akka.cluster.ddata.Replicator.Update
 
@@ -1557,7 +1723,7 @@ private[akka] class DDataShardCoordinator(
   private val initEmptyState = State.empty.withRememberEntities(settings.rememberEntities)
 
   private var terminating = false
-  private var getShardHomeRequests: Set[(ActorRef, GetShardHome)] = Set.empty
+  private var getShardHomeRequests = new PendingGetShardHomes(Map.empty)
   private var initialStateRetries = 0
   private var updateStateRetries = 0
 
@@ -1823,6 +1989,9 @@ private[akka] class DDataShardCoordinator(
       log.debug("{}: Late arrival of remembered shards while waiting for update, stashing", typeName)
       stash()
 
+    case Terminated(ref) if state.regions.contains(ref) =>
+      stashAtHead()
+
     case _ => stash()
   }
 
@@ -1842,17 +2011,28 @@ private[akka] class DDataShardCoordinator(
       typeName,
       request.shard,
       sender)
-    getShardHomeRequests += (sender -> request)
+    val replyTo = if (sender == ignoreRef) None else Some(sender)
+    getShardHomeRequests = getShardHomeRequests.addRequest(request.shard, replyTo)
   }
 
   override protected def unstashOneGetShardHomeRequest(): Unit = {
-    if (getShardHomeRequests.nonEmpty) {
-      // unstash one, will continue unstash of next after receive GetShardHome or update completed
-      val requestTuple = getShardHomeRequests.head
-      val (originalSender, request) = requestTuple
-      self.tell(request, sender = originalSender)
-      getShardHomeRequests -= requestTuple
+    // prefers shard with most requests from regions
+    val (req, nextPending) = getShardHomeRequests.removeRequest()
+    req.foreach {
+      case (shard, replyTo) =>
+        val effectiveSender = replyTo.getOrElse(ignoreRef)
+        self.tell(GetShardHome(shard), effectiveSender)
     }
+    getShardHomeRequests = nextPending
+  }
+
+  override protected def unstashGetShardHomeRequestsForShard(shard: ShardId): Unit = {
+    val req = GetShardHome(shard)
+    val (r2s, nextPending) = getShardHomeRequests.removeRequestsForShard(shard)
+    r2s.foreach { originalSender =>
+      self.tell(req, originalSender)
+    }
+    getShardHomeRequests = nextPending
   }
 
   def activate(): Unit = {

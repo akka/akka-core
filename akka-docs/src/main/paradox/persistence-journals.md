@@ -102,13 +102,9 @@ In order to help developers build correct and high quality storage plugins, we p
 The TCK is usable from Java as well as Scala projects. To test your implementation (independently of language) you 
 need to include the akka-persistence-tck dependency.
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 

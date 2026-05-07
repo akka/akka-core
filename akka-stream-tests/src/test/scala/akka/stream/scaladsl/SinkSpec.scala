@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
 
 import scala.annotation.nowarn
+import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
@@ -130,7 +131,7 @@ class SinkSpec extends StreamSpec with DefaultTimeout with ScalaFutures {
 
     "combine many sinks to one" in {
       val source = Source(List(0, 1, 2, 3, 4, 5))
-      implicit val ex = akka.dispatch.ExecutionContexts.parasitic
+      implicit val ex = ExecutionContext.parasitic
       val sink = Sink
         .combine(
           List(
@@ -143,7 +144,7 @@ class SinkSpec extends StreamSpec with DefaultTimeout with ScalaFutures {
     }
 
     "combine two sinks with combineMat" in {
-      implicit val ex = akka.dispatch.ExecutionContexts.parasitic
+      implicit val ex = ExecutionContext.parasitic
       Source(List(0, 1, 2, 3, 4, 5))
         .toMat(Sink.combineMat(Sink.reduce[Int]((a, b) => a + b), Sink.reduce[Int]((a, b) => a + b))(Broadcast[Int](_))(
           (f1, f2) => {

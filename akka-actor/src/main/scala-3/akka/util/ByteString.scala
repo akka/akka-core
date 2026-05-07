@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -760,7 +760,7 @@ sealed abstract class ByteString
   def apply(idx: Int): Byte
   private[akka] def byteStringCompanion: ByteString.Companion
   // override so that toString will also be `ByteString(...)` for the concrete subclasses
-  // of ByteString which changed for Scala 2.12, see https://github.com/akka/akka/issues/21774
+  // of ByteString which changed for Scala 2.12, see https://github.com/akka/akka-core/issues/21774
   override final def className: String = "ByteString"
 
   override def isEmpty: Boolean = length == 0
@@ -891,7 +891,7 @@ sealed abstract class ByteString
    * @param buffer a ByteBuffer to copy bytes to
    * @return the number of bytes actually copied
    */
-  def copyToBuffer(@unused buffer: ByteBuffer): Int
+  def copyToBuffer(@nowarn("msg=never used") buffer: ByteBuffer): Int
 
   /**
    * Create a new ByteString with all contents compacted into a single,
@@ -925,9 +925,8 @@ sealed abstract class ByteString
    * Java API: Returns an Iterable of read-only ByteBuffers that directly wraps this ByteStrings
    * all fragments. Will always have at least one entry.
    */
-  @nowarn
   def getByteBuffers(): JIterable[ByteBuffer] = {
-    import scala.collection.JavaConverters.asJavaIterableConverter
+    import scala.jdk.CollectionConverters._
     asByteBuffers.asJava
   }
 

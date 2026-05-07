@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl.fusing
@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.annotation.unchecked.uncheckedVariance
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
@@ -18,7 +19,6 @@ import scala.util.control.NonFatal
 import akka.Done
 import akka.actor.Cancellable
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.event.Logging
 import akka.stream._
 import akka.stream.ActorAttributes.SupervisionStrategy
@@ -359,7 +359,7 @@ import akka.stream.stage._
               onFutureSourceCompleted(it)
             case _ =>
               val cb = getAsyncCallback[Try[Graph[SourceShape[T], M]]](onFutureSourceCompleted).invoke _
-              futureSource.onComplete(cb)(ExecutionContexts.parasitic) // could be optimised FastFuture-like
+              futureSource.onComplete(cb)(ExecutionContext.parasitic) // could be optimised FastFuture-like
           }
 
         // initial handler (until future completes)
@@ -440,7 +440,7 @@ import akka.stream.stage._
               onFutureCompleted(completed)
             case None =>
               val cb = getAsyncCallback[Try[T]](onFutureCompleted).invoke _
-              future.onComplete(cb)(ExecutionContexts.parasitic)
+              future.onComplete(cb)(ExecutionContext.parasitic)
           }
 
           def onFutureCompleted(result: Try[T]): Unit = {

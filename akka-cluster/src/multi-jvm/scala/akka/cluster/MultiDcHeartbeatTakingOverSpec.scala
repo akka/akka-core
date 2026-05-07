@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.immutable.SortedSet
 import scala.concurrent.duration._
@@ -16,9 +17,7 @@ import akka.annotation.InternalApi
 import akka.remote.testconductor.RoleName
 import akka.remote.testkit.MultiNodeConfig
 import akka.testkit._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object MultiDcHeartbeatTakingOverSpecMultiJvmSpec extends MultiNodeConfig {
   val first = role("first") //   alpha
   val second = role("second") // alpha
@@ -64,6 +63,7 @@ class MultiDcHeartbeatTakingOverSpecMultiJvmNode3 extends MultiDcHeartbeatTaking
 class MultiDcHeartbeatTakingOverSpecMultiJvmNode4 extends MultiDcHeartbeatTakingOverSpec
 class MultiDcHeartbeatTakingOverSpecMultiJvmNode5 extends MultiDcHeartbeatTakingOverSpec
 
+@nowarn("msg=Use Akka Distributed Cluster")
 abstract class MultiDcHeartbeatTakingOverSpec extends MultiNodeClusterSpec(MultiDcHeartbeatTakingOverSpecMultiJvmSpec) {
 
   "A 2-dc cluster" must {

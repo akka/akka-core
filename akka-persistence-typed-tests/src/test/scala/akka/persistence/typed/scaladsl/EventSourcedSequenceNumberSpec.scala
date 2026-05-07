@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.scaladsl
@@ -102,6 +102,12 @@ class EventSourcedSequenceNumberSpec
 
       // and during replay
       val ref2 = spawn(behavior(PersistenceId.ofUniqueId("ess-1"), probe.ref))
+
+      // This command will be handled after the replay.
+      // It will most likely be stashed during the replay and it should see seqNr 5 when handled.
+      // Reproducer of issue #32651
+      ref2 ! "cmd"
+
       probe.expectMessage("1 eventHandler evt")
       probe.expectMessage("2 eventHandler evt")
       probe.expectMessage("3 eventHandler evt1")
@@ -109,7 +115,6 @@ class EventSourcedSequenceNumberSpec
       probe.expectMessage("5 eventHandler evt3")
       probe.expectMessage("5 onRecoveryComplete")
 
-      ref2 ! "cmd"
       probe.expectMessage("5 onCommand")
       probe.expectMessage("6 eventHandler evt")
       probe.expectMessage("6 thenRun")

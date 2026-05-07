@@ -1,13 +1,15 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
 
 import scala.collection.immutable
+import scala.reflect.ClassTag
 
 import akka.actor.{ ActorRef, NoSerializationVerificationNeeded }
 import akka.annotation.DoNotInherit
+import akka.annotation.InternalApi
 import akka.persistence.serialization.Message
 import akka.util.HashCode
 
@@ -18,6 +20,7 @@ import akka.util.HashCode
  *
  * In essence it is either an [[NonPersistentRepr]] or [[AtomicWrite]].
  */
+@InternalApi
 private[persistence] sealed trait PersistentEnvelope {
   def payload: Any
   def sender: ActorRef
@@ -28,6 +31,7 @@ private[persistence] sealed trait PersistentEnvelope {
  * INTERNAL API
  * Message which can be resequenced by the Journal, but will not be persisted.
  */
+@InternalApi
 private[persistence] final case class NonPersistentRepr(payload: Any, sender: ActorRef) extends PersistentEnvelope {
   override def size: Int = 1
 }
@@ -184,6 +188,7 @@ object PersistentRepr {
 /**
  * INTERNAL API.
  */
+@InternalApi
 private[persistence] final case class PersistentImpl(
     override val payload: Any,
     override val sequenceNr: Long,
@@ -245,4 +250,51 @@ private[persistence] final case class PersistentImpl(
   override def toString: String = {
     s"PersistentRepr($persistenceId,$sequenceNr,$writerUuid,$timestamp,$metadata)"
   }
+}
+
+/**
+ * INTERNAL API
+ */
+@InternalApi private[akka] object CompositeMetadata {
+  def extract[M: ClassTag](metadata: Option[Any]): Option[M] = {
+    val metadataType = implicitly[ClassTag[M]].runtimeClass
+    metadata.flatMap {
+      case CompositeMetadata(entries) =>
+        entries.collectFirst {
+          case m: M if metadataType == m.getClass => m
+        }
+      case other: M if metadataType == other.getClass => Some(other)
+      case _                                          => None
+    }
+  }
+
+  def extract[M: ClassTag](metadataEntries: Seq[Any]): Option[M] = {
+    val metadataType = implicitly[ClassTag[M]].runtimeClass
+    metadataEntries.collectFirst {
+      case m: M if metadataType == m.getClass => m
+    }
+  }
+
+  def construct(metadataEntries: Seq[Any]): Option[Any] = {
+    if (metadataEntries.isEmpty)
+      None
+    else if (metadataEntries.size == 1)
+      Some(metadataEntries.head)
+    else
+      Some(CompositeMetadata(metadataEntries))
+  }
+
+}
+
+/**
+ * INTERNAL API: Metadata entries keyed by metadata class.
+ *
+ * For backwards compatibility of for example EventEnvelope.eventMetadata the entries is a Seq
+ * with the metadata that was added last (ReplicatedEventMetaData) at the head of the Seq.
+ * Otherwise it could have been a `Map[Class, Any]`.
+ */
+@InternalApi
+private[akka] final case class CompositeMetadata(entries: immutable.Seq[Any]) {
+  if (entries.isEmpty)
+    throw new IllegalArgumentException("CompositeMetadata must have at least one entry")
 }

@@ -1,18 +1,21 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery;
 
-import akka.util.Unsafe;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 
 class AbstractAssociation {
-  protected static final long sharedStateOffset;
+  protected static final VarHandle sharedStateHandle;
 
   static {
     try {
-      sharedStateOffset =
-          Unsafe.instance.objectFieldOffset(
+      MethodHandles.Lookup lookup =
+          MethodHandles.privateLookupIn(Association.class, MethodHandles.lookup());
+      sharedStateHandle =
+          lookup.unreflectVarHandle(
               Association.class.getDeclaredField("_sharedStateDoNotCallMeDirectly"));
     } catch (Throwable t) {
       throw new ExceptionInInitializerError(t);

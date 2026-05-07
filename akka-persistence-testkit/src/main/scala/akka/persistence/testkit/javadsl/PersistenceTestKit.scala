@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit.javadsl
@@ -8,12 +8,13 @@ import java.time.Duration
 import java.util.{ List => JList }
 import java.util.{ function => jf }
 
+import scala.jdk.DurationConverters._
+
 import akka.actor.ActorSystem
 import akka.annotation.ApiMayChange
 import akka.persistence.testkit.{ EventStorage, ExpectedFailure, ExpectedRejection, JournalOperation }
 import akka.persistence.testkit.scaladsl.{ PersistenceTestKit => ScalaTestKit }
-import akka.util.JavaDurationConverters._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Class for testing persisted events in persistent actors.
@@ -32,7 +33,7 @@ class PersistenceTestKit(scalaTestkit: ScalaTestKit) {
    * Check for `max` time that nothing has been saved in the storage.
    */
   def expectNothingPersisted(persistenceId: String, max: Duration): Unit =
-    scalaTestkit.expectNothingPersisted(persistenceId, max.asScala)
+    scalaTestkit.expectNothingPersisted(persistenceId, max.toScala)
 
   /**
    * Check that `event` has been saved in the storage.
@@ -44,7 +45,7 @@ class PersistenceTestKit(scalaTestkit: ScalaTestKit) {
    * Check for `max` time that `event` has been saved in the storage.
    */
   def expectNextPersisted[A](persistenceId: String, event: A, max: Duration): A =
-    scalaTestkit.expectNextPersisted(persistenceId, event, max.asScala)
+    scalaTestkit.expectNextPersisted(persistenceId, event, max.toScala)
 
   /**
    * Check that next persisted in storage for particular persistence id event has expected type.
@@ -56,7 +57,7 @@ class PersistenceTestKit(scalaTestkit: ScalaTestKit) {
    * Check for `max` time that next persisted in storage for particular persistence id event has expected type.
    */
   def expectNextPersistedClass[A](persistenceId: String, cla: Class[A], max: Duration): A =
-    scalaTestkit.expectNextPersistedClass(persistenceId, cla, max.asScala)
+    scalaTestkit.expectNextPersistedClass(persistenceId, cla, max.toScala)
 
   /**
    * Fail next `n` write operations with the `cause` exception for particular persistence id.
@@ -191,7 +192,7 @@ class PersistenceTestKit(scalaTestkit: ScalaTestKit) {
    * Receive for `max` time next n events from the storage.
    */
   def receivePersisted[A](persistenceId: String, n: Int, cla: Class[A], max: Duration): JList[A] =
-    scalaTestkit.receivePersisted(persistenceId, n, cla, max.asScala).asJava
+    scalaTestkit.receivePersisted(persistenceId, n, cla, max.toScala).asJava
 
   /**
    * Reject next n save in storage operations for particular persistence id with `cause` exception.

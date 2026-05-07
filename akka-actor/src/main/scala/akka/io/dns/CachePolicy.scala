@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns
 
 import scala.concurrent.duration.{ Duration, FiniteDuration, _ }
+import scala.jdk.DurationConverters._
 
 import akka.annotation.InternalApi
-import akka.util.JavaDurationConverters._
 
 object CachePolicy {
 
@@ -18,8 +18,8 @@ object CachePolicy {
   final class Ttl private (val value: FiniteDuration) extends CachePolicy {
     if (value < Duration.Zero)
       throw new IllegalArgumentException(s"TTL values must be a positive value (zero included).")
-    import akka.util.JavaDurationConverters._
-    def getValue: java.time.Duration = value.asJava
+    import scala.jdk.DurationConverters._
+    def getValue: java.time.Duration = value.toJava
 
     override def equals(other: Any): Boolean = other match {
       case that: Ttl => value == that.value
@@ -39,7 +39,7 @@ object CachePolicy {
           s"Positive TTL values must be a strictly positive value. Use Ttl.never for zero.")
       new Ttl(value)
     }
-    def fromPositive(value: java.time.Duration): Ttl = fromPositive(value.asScala)
+    def fromPositive(value: java.time.Duration): Ttl = fromPositive(value.toScala)
 
     /**
      * INTERNAL API

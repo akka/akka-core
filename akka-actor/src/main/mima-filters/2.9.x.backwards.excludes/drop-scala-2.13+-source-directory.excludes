@@ -1,0 +1,5 @@
+# issue #32511 scala-2.13+ source directory
+ProblemFilters.exclude[MissingClassProblem]("akka.compat.Future")
+ProblemFilters.exclude[MissingClassProblem]("akka.compat.Future$")
+ProblemFilters.exclude[MissingClassProblem]("akka.compat.PartialFunction")
+ProblemFilters.exclude[MissingClassProblem]("akka.compat.PartialFunction$")

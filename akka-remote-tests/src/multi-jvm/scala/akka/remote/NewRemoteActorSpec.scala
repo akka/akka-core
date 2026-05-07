@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.ConfigFactory
@@ -14,7 +15,6 @@ import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.Props
 import akka.actor.Terminated
-import akka.util.unused
 
 object NewRemoteActorMultiJvmSpec extends MultiNodeConfig {
 
@@ -46,7 +46,7 @@ object NewRemoteActorSpec {
     }
   }
 
-  class SomeActorWithParam(@unused ignored: String) extends Actor {
+  class SomeActorWithParam(@nowarn("msg=never used") ignored: String) extends Actor {
     def receive = {
       case "identify" => sender() ! self
     }

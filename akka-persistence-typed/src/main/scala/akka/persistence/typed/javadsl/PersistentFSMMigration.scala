@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.javadsl
@@ -7,11 +7,11 @@ package akka.persistence.typed.javadsl
 import java.time.Duration
 import java.util.Optional
 
-import scala.compat.java8.OptionConverters._
+import scala.jdk.DurationConverters._
+import scala.jdk.OptionConverters._
 
 import akka.japi.function.Function3
 import akka.persistence.typed.SnapshotAdapter
-import akka.util.JavaDurationConverters._
 
 /**
  * Helper functions for migration from PersistentFSM to Persistence Typed
@@ -28,5 +28,5 @@ object PersistentFSMMigration {
    */
   def snapshotAdapter[State](adapt: Function3[String, Any, Optional[Duration], State]): SnapshotAdapter[State] =
     akka.persistence.typed.scaladsl.PersistentFSMMigration.snapshotAdapter((stateId, snapshot, timer) =>
-      adapt.apply(stateId, snapshot, timer.map(_.asJava).asJava))
+      adapt.apply(stateId, snapshot, timer.map(_.toJava).toJava))
 }

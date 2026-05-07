@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.internal
 
 import scala.collection.immutable
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 import akka.actor.typed.internal.PoisonPill
@@ -13,7 +14,6 @@ import akka.actor.typed.internal.UnstashException
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.Behavior
 import akka.actor.typed.Signal
 import akka.annotation.InternalApi
@@ -31,12 +31,13 @@ import akka.persistence.typed.SingleEventSeq
 import akka.persistence.typed.internal.BehaviorSetup.SnapshotWithoutRetention
 import akka.persistence.typed.internal.EventSourcedBehaviorImpl.GetSeenSequenceNr
 import akka.persistence.typed.internal.EventSourcedBehaviorImpl.GetState
+import akka.persistence.typed.internal.EventSourcedBehaviorImpl.GetVersion
+import akka.persistence.typed.internal.EventSourcedBehaviorImpl.WithMetadataAccessible
+import akka.persistence.typed.internal.EventSourcedBehaviorImpl.WithSeqNrAccessible
 import akka.persistence.typed.internal.ReplayingEvents.ReplayingState
-import akka.persistence.typed.internal.Running.WithSeqNrAccessible
 import akka.persistence.typed.internal.Running.startReplicationStream
 import akka.util.OptionVal
 import akka.util.PrettyDuration._
-import akka.util.unused
 
 /***
  * INTERNAL API
@@ -84,7 +85,8 @@ private[akka] final class ReplayingEvents[C, E, S](
     with JournalInteractions[C, E, S]
     with SnapshotInteractions[C, E, S]
     with StashManagement[C, E, S]
-    with WithSeqNrAccessible {
+    with WithSeqNrAccessible
+    with WithMetadataAccessible {
 
   import InternalProtocol._
   import ReplayingEvents.ReplayingState
@@ -94,13 +96,13 @@ private[akka] final class ReplayingEvents[C, E, S](
 
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  def onRecoveryStart(@unused context: ActorContext[_]): Unit = ()
+  def onRecoveryStart(context: ActorContext[_]): Unit = ()
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  def onRecoveryComplete(@unused context: ActorContext[_]): Unit = ()
+  def onRecoveryComplete(context: ActorContext[_]): Unit = ()
   // FIXME remove instrumentation hook method in 2.10.0
   @InternalStableApi
-  def onRecoveryFailed(@unused context: ActorContext[_], @unused reason: Throwable, @unused event: Option[Any]): Unit =
+  def onRecoveryFailed(context: ActorContext[_], reason: Throwable, event: Option[Any]): Unit =
     ()
 
   override def onMessage(msg: InternalProtocol): Behavior[InternalProtocol] = {
@@ -113,8 +115,11 @@ private[akka] final class ReplayingEvents[C, E, S](
       case cmd: IncomingCommand[C @unchecked]         => onInternalCommand(cmd)
       case get: GetState[S @unchecked]                => stashInternal(get)
       case get: GetSeenSequenceNr                     => stashInternal(get)
+      case get: GetVersion                            => stashInternal(get)
       case RecoveryPermitGranted                      => Behaviors.unhandled // should not happen, we already have the permit
       case ContinueUnstash                            => Behaviors.unhandled
+      case _: AsyncEffectCompleted[_, _, _]           => Behaviors.unhandled
+      case _: AsyncReplicationInterceptCompleted      => Behaviors.unhandled
     }
   }
 
@@ -128,93 +133,103 @@ private[akka] final class ReplayingEvents[C, E, S](
   }
 
   private def onJournalResponse(response: JournalProtocol.Response): Behavior[InternalProtocol] = {
-    try {
-      response match {
-        case ReplayedMessage(repr) =>
-          var eventForErrorReporting: OptionVal[Any] = OptionVal.None
-          try {
-            val eventSeq =
-              if (repr.payload == FilteredPayload) EventSeq.empty // ignore FilteredPayload
-              else setup.eventAdapter.fromJournal(repr.payload, repr.manifest)
+    response match {
+      case ReplayedMessage(repr) =>
+        var eventForErrorReporting: OptionVal[Any] = OptionVal.None
+        try {
+          val eventSeq =
+            if (repr.payload == FilteredPayload) EventSeq.empty // ignore FilteredPayload
+            else setup.eventAdapter.fromJournal(repr.payload, repr.manifest)
 
-            def handleEvent(event: E): Unit = {
-              eventForErrorReporting = OptionVal.Some(event)
-              state = state.copy(seqNr = repr.sequenceNr, eventsReplayed = state.eventsReplayed + 1)
+          def handleEvent(event: E): Unit = {
+            eventForErrorReporting = OptionVal.Some(event)
+            state = state.copy(seqNr = repr.sequenceNr, eventsReplayed = state.eventsReplayed + 1)
+            setup.currentSequenceNumber = repr.sequenceNr
+            setup.currentMetadata = repr.metadata
 
-              val replicatedMetaAndSelfReplica: Option[(ReplicatedEventMetadata, ReplicaId, ReplicationSetup)] =
-                setup.replication match {
-                  case Some(replication) =>
-                    val meta = repr.metadata match {
-                      case Some(m) => m.asInstanceOf[ReplicatedEventMetadata]
-                      case None    =>
-                        // migrated from non-replicated, fill in metadata
-                        ReplicatedEventMetadata(
-                          originReplica = replication.replicaId,
-                          originSequenceNr = repr.sequenceNr,
-                          version = VersionVector(replication.replicaId.id, repr.sequenceNr),
-                          concurrent = false)
-                    }
-                    replication.setContext(recoveryRunning = true, meta.originReplica, meta.concurrent)
-                    Some((meta, replication.replicaId, replication))
-                  case None => None
-                }
-
-              val newState = setup.eventHandler(state.state, event)
-
+            val replicatedMetaAndSelfReplica: Option[(ReplicatedEventMetadata, ReplicaId, ReplicationSetup)] =
               setup.replication match {
                 case Some(replication) =>
-                  replication.clearContext()
-                case None =>
+                  val meta =
+                    CompositeMetadata.extract[ReplicatedEventMetadata](repr.metadata).getOrElse {
+                      // migrated from non-replicated, fill in metadata
+                      ReplicatedEventMetadata(
+                        originReplica = replication.replicaId,
+                        originSequenceNr = repr.sequenceNr,
+                        version = VersionVector(replication.replicaId.id, repr.sequenceNr),
+                        concurrent = false)
+                    }
+
+                  replication.setContext(recoveryRunning = true, meta.originReplica, meta.concurrent)
+                  Some((meta, replication.replicaId, replication))
+                case None => None
               }
 
-              replicatedMetaAndSelfReplica match {
-                case Some((meta, selfReplica, replication)) if meta.originReplica != selfReplica =>
-                  // keep track of highest origin seqnr per other replica
-                  state = state.copy(
-                    state = newState,
-                    eventSeenInInterval = true,
-                    version = meta.version,
-                    seenSeqNrPerReplica = state.seenSeqNrPerReplica + (meta.originReplica -> meta.originSequenceNr))
-                  replication.clearContext()
-                case Some((_, _, replication)) =>
-                  replication.clearContext()
-                  state = state.copy(state = newState, eventSeenInInterval = true)
-                case _ =>
-                  state = state.copy(state = newState, eventSeenInInterval = true)
-              }
+            val newState = setup.eventHandler(state.state, event)
+
+            setup.replication match {
+              case Some(replication) =>
+                replication.clearContext()
+              case None =>
             }
 
-            eventSeq match {
-              case SingleEventSeq(event) => handleEvent(event)
-              case EventsSeq(events)     => events.foreach(handleEvent)
-              case EmptyEventSeq         => // no events
-            }
+            replicatedMetaAndSelfReplica match {
+              case Some((meta, selfReplica, replication)) =>
+                // keep track of highest origin seqnr per other replica
+                val updatedSeen =
+                  if (meta.originReplica == selfReplica)
+                    state.seenSeqNrPerReplica
+                  else
+                    state.seenSeqNrPerReplica + (meta.originReplica -> meta.originSequenceNr)
 
-            this
-          } catch {
-            case NonFatal(ex) =>
-              state = state.copy(repr.sequenceNr)
-              onRecoveryFailure(ex, eventForErrorReporting.toOption)
+                state = state.copy(
+                  state = newState,
+                  eventSeenInInterval = true,
+                  version = meta.version,
+                  seenSeqNrPerReplica = updatedSeen)
+                replication.clearContext()
+
+              case _ =>
+                state = state.copy(state = newState, eventSeenInInterval = true)
+            }
           }
 
-        case RecoverySuccess(highestJournalSeqNr) =>
+          eventSeq match {
+            case SingleEventSeq(event) => handleEvent(event)
+            case EventsSeq(events)     => events.foreach(handleEvent)
+            case EmptyEventSeq         => // no events
+          }
+
+          this
+        } catch {
+          case NonFatal(ex) =>
+            state = state.copy(seqNr = repr.sequenceNr)
+            setup.currentSequenceNumber = repr.sequenceNr
+            setup.currentMetadata = repr.metadata
+            onRecoveryFailure(ex, eventForErrorReporting.toOption, "replaying-event")
+        }
+
+      case RecoverySuccess(highestJournalSeqNr) =>
+        try {
           val highestSeqNr = Math.max(highestJournalSeqNr, state.seqNr)
           state = state.copy(seqNr = highestSeqNr)
+          setup.currentSequenceNumber = highestSeqNr
           setup.internalLogger.debug("Recovery successful, recovered until sequenceNr: [{}]", highestSeqNr)
           onRecoveryCompleted(state)
+        } catch {
+          case ex: UnstashException[_] =>
+            // let supervisor handle it, don't treat as recovery failure
+            throw ex
 
-        case ReplayMessagesFailure(cause) =>
-          onRecoveryFailure(cause, Some(response))
+          case NonFatal(cause) =>
+            onRecoveryFailure(cause, None, "recovery-completed")
+        }
 
-        case _ =>
-          Behaviors.unhandled
-      }
-    } catch {
-      case ex: UnstashException[_] =>
-        // let supervisor handle it, don't treat it as recovery failure
-        throw ex
-      case NonFatal(cause) =>
-        onRecoveryFailure(cause, None)
+      case ReplayMessagesFailure(cause) =>
+        onRecoveryFailure(cause, Some(response), "failure-from-journal")
+
+      case _ =>
+        Behaviors.unhandled
     }
   }
 
@@ -237,7 +252,7 @@ private[akka] final class ReplayingEvents[C, E, S](
       } else {
         val msg =
           s"Replay timed out, didn't get event within [${setup.settings.recoveryEventTimeout}], highest sequence number seen [${state.seqNr}]"
-        onRecoveryFailure(new RecoveryTimedOut(msg), None)
+        onRecoveryFailure(new RecoveryTimedOut(msg), None, "retrieving-events")
       }
     } else {
       // snapshot timeout, but we're already in the events recovery phase
@@ -259,7 +274,7 @@ private[akka] final class ReplayingEvents[C, E, S](
    * @param cause failure cause.
    * @param event the event that was being processed when the exception was thrown
    */
-  private def onRecoveryFailure(cause: Throwable, event: Option[Any]): Behavior[InternalProtocol] = {
+  private def onRecoveryFailure(cause: Throwable, event: Option[Any], phase: String): Behavior[InternalProtocol] = {
     val instrumentationEvent =
       event match {
         case Some(_: Message) | None => null
@@ -272,7 +287,7 @@ private[akka] final class ReplayingEvents[C, E, S](
     setup.cancelRecoveryTimer()
     tryReturnRecoveryPermit("on replay failure: " + cause.getMessage)
     if (setup.internalLogger.isDebugEnabled) {
-      setup.internalLogger.debug2(
+      setup.internalLogger.debug(
         "Recovery failure for persistenceId [{}] after {}",
         setup.persistenceId,
         (System.nanoTime() - state.recoveryStartTime).nanos.pretty)
@@ -282,10 +297,10 @@ private[akka] final class ReplayingEvents[C, E, S](
     val msg = event match {
       case Some(_: Message) | None =>
         s"Exception during recovery. Last known sequence number [$sequenceNr]. " +
-        s"PersistenceId [${setup.persistenceId.id}], due to: ${cause.getMessage}"
+        s"PersistenceId [${setup.persistenceId.id}], phase [$phase] due to: ${cause.getMessage}"
       case Some(evt) =>
         s"Exception during recovery while handling [${evt.getClass.getName}] with sequence number [$sequenceNr]. " +
-        s"PersistenceId [${setup.persistenceId.id}], due to: ${cause.getMessage}"
+        s"PersistenceId [${setup.persistenceId.id}], phase [$phase] due to: ${cause.getMessage}"
     }
 
     throw new JournalFailureException(msg, cause)
@@ -297,10 +312,18 @@ private[akka] final class ReplayingEvents[C, E, S](
       onRecoveryComplete(setup.context)
       tryReturnRecoveryPermit("replay completed successfully")
       if (setup.internalLogger.isDebugEnabled) {
-        setup.internalLogger.debug2(
-          "Recovery for persistenceId [{}] took {}",
-          setup.persistenceId,
-          (System.nanoTime() - state.recoveryStartTime).nanos.pretty)
+        if (setup.replication.isDefined)
+          setup.internalLogger.debug(
+            "Recovery for persistenceId [{}] took {}, version [{}], seenSeqNrPerReplica [{}]",
+            setup.persistenceId,
+            (System.nanoTime() - state.recoveryStartTime).nanos.pretty,
+            state.version,
+            state.seenSeqNrPerReplica)
+        else
+          setup.internalLogger.debug(
+            "Recovery for persistenceId [{}] took {}",
+            setup.persistenceId,
+            (System.nanoTime() - state.recoveryStartTime).nanos.pretty)
       }
 
       setup.onSignal(state.state, RecoveryCompleted, catchAndLog = false)
@@ -312,7 +335,7 @@ private[akka] final class ReplayingEvents[C, E, S](
           seqNr = state.seqNr,
           state = state.state,
           receivedPoisonPill = state.receivedPoisonPill,
-          state.version,
+          version = state.version,
           seenPerReplica = state.seenSeqNrPerReplica,
           replicationControl = Map.empty,
           instrumentationContexts = Map.empty)
@@ -325,7 +348,7 @@ private[akka] final class ReplayingEvents[C, E, S](
         }
         setup.retention match {
           case criteria: SnapshotCountRetentionCriteriaImpl if criteria.snapshotEveryNEvents <= state.eventsReplayed =>
-            internalSaveSnapshot(initialRunningState)
+            internalSaveSnapshot(initialRunningState, setup.currentMetadata)
             new running.StoringSnapshot(initialRunningState, immutable.Seq.empty, SnapshotWithoutRetention)
           case _ =>
             tryUnstashOne(new running.HandlingCommands(initialRunningState))
@@ -335,6 +358,12 @@ private[akka] final class ReplayingEvents[C, E, S](
       setup.cancelRecoveryTimer()
     }
 
+  // WithSeqNrAccessible
   override def currentSequenceNumber: Long =
-    state.seqNr
+    setup.currentSequenceNumber
+
+  // WithMetadataAccessible
+  override def metadata[M: ClassTag]: Option[M] =
+    CompositeMetadata.extract[M](setup.currentMetadata)
+
 }

@@ -1,0 +1,4 @@
+# PR #32477 addition to DoNotInherit class
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.cluster.sharding.typed.javadsl.ClusterSharding.shard")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.cluster.sharding.typed.scaladsl.ClusterSharding.shard")
+

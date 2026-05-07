@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2022-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -8,6 +8,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -15,7 +16,6 @@ import scala.concurrent.duration._
 import org.scalatest.compatible.Assertion
 
 import akka.Done
-import akka.dispatch.ExecutionContexts
 import akka.stream.ActorAttributes
 import akka.stream.Supervision
 import akka.stream.testkit._
@@ -129,7 +129,7 @@ class FlowMapAsyncPartitionedSpec extends StreamSpec with WithLogCapturing {
           case (n, _) =>
             val promise = Promise[Done]()
             processingProbe.ref ! Elem(n, promise)
-            promise.future.map(_ => n)(ExecutionContexts.parasitic)
+            promise.future.map(_ => n)(ExecutionContext.parasitic)
         })(Keep.left)
         .toMat(Sink.seq[Int])(Keep.both)
         .run()

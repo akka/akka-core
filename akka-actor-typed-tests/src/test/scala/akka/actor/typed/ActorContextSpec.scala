@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed
@@ -14,6 +14,8 @@ import akka.actor.testkit.typed.scaladsl.LoggingTestKit
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.testkit.typed.scaladsl.TestProbe
 import akka.actor.typed.scaladsl.Behaviors
+
+import scala.annotation.nowarn
 
 object ActorSpecMessages {
 
@@ -77,6 +79,7 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
 
     "be usable from Behavior.interpretMessage" in {
       // compilation only
+      @nowarn("cat=unused-locals")
       lazy val b: Behavior[String] = Behaviors.receive { (context, message) =>
         Behavior.interpretMessage(b, context, message)
       }
@@ -178,15 +181,15 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
         }
         .decorate
 
-      val parent: Behavior[Command] = Behaviors.setup[Command](context => {
+      val parent: Behavior[Command] = Behaviors.setup[Command] { context =>
         val childRef = context.spawnAnonymous(Behaviors.supervise(child).onFailure(SupervisorStrategy.restart))
         context.watch(childRef)
         probe.ref ! ChildMade(childRef)
 
         Behaviors
           .receivePartial[Command] {
-            case (context, StopRef(ref)) =>
-              context.stop(ref)
+            case (context2, StopRef(ref)) =>
+              context2.stop(ref)
               Behaviors.same
           }
           .receiveSignal {
@@ -195,7 +198,7 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
               Behaviors.stopped
           }
           .decorate
-      })
+      }
 
       val parentRef = spawn(parent)
       val childRef = probe.expectMessageType[ChildMade].ref
@@ -220,8 +223,8 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
           probe.ref ! ChildMade(childRef)
           Behaviors
             .receivePartial[Command] {
-              case (context, StopRef(ref)) =>
-                context.stop(ref)
+              case (context2, StopRef(ref)) =>
+                context2.stop(ref)
                 Behaviors.same
             }
             .receiveSignal {
@@ -404,8 +407,8 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
             probe.ref ! ChildMade(childRef)
             Behaviors
               .receivePartial[Command] {
-                case (context, Watch(ref)) =>
-                  context.watch(ref)
+                case (context2, Watch(ref)) =>
+                  context2.watch(ref)
                   probe.ref ! Pong
                   Behaviors.same
               }
@@ -435,17 +438,17 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
         .decorate
       val actor = spawn(
         Behaviors
-          .setup[Command](context => {
+          .setup[Command] { context =>
             val childRef = context.spawn(child, "A")
             probe.ref ! ChildMade(childRef)
             Behaviors
               .receivePartial[Command] {
-                case (context, Watch(ref)) =>
-                  context.watch(ref)
+                case (context2, Watch(ref)) =>
+                  context2.watch(ref)
                   probe.ref ! Pong
                   Behaviors.same
-                case (context, UnWatch(ref)) =>
-                  context.unwatch(ref)
+                case (context2, UnWatch(ref)) =>
+                  context2.unwatch(ref)
                   probe.ref ! Pong
                   Behaviors.same
               }
@@ -454,7 +457,7 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
                   probe.ref ! ReceivedSignal(signal)
                   Behaviors.same
               }
-          })
+          }
           .decorate)
       val childRef = probe.expectMessageType[ChildMade].ref
       actor ! Watch(childRef)
@@ -658,8 +661,8 @@ abstract class ActorContextSpec extends ScalaTestWithActorTestKit with AnyWordSp
         val child = context.spawnAnonymous(Behaviors.empty[Command])
         probe.ref ! ChildMade(child)
         Behaviors.receivePartial[Command] {
-          case (context, StopRef(ref)) =>
-            context.stop(ref)
+          case (context2, StopRef(ref)) =>
+            context2.stop(ref)
             probe.ref ! Pong
             Behaviors.same
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit.scaladsl
@@ -38,6 +38,8 @@ class PersistenceTestKitJournalCompatSpec extends JournalSpec(config = Persisten
 
   override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = true
   override protected def supportsMetadata: CapabilityFlag = true
+  override protected def supportsReplayOnlyLast: CapabilityFlag = true
+
 }
 
 class PersistenceTestKitSnapshotStoreCompatSpec

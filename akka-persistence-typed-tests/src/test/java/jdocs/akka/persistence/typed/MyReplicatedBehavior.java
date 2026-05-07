@@ -1,14 +1,18 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package jdocs.akka.persistence.typed;
 
+import akka.Done;
 import akka.actor.typed.Behavior;
 import akka.persistence.typed.ReplicaId;
 import akka.persistence.typed.ReplicationId;
 import akka.persistence.typed.javadsl.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 // #factory
 public class MyReplicatedBehavior
@@ -70,5 +74,15 @@ public class MyReplicatedBehavior
   @Override
   public EventHandler<State, Event> eventHandler() {
     throw new UnsupportedOperationException("dummy for example");
+  }
+
+  @Override
+  public Optional<ReplicationInterceptor<Event, State>> replicationInterceptor() {
+    return Optional.of(
+        (originReplica, sequenceNumber, state, event) -> {
+          Logger logger = LoggerFactory.getLogger(MyReplicatedBehavior.class);
+          logger.info("Intercept side effect for replicated event {}", event);
+          return CompletableFuture.completedFuture(Done.done());
+        });
   }
 }

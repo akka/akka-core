@@ -1,4 +1,4 @@
-# https://github.com/akka/akka/pull/28739#issuecomment-602527515
+# https://github.com/akka/akka-core/pull/28739#issuecomment-602527515
 # StashBuffer trait is not meant to be extended by external users, and is marked as such with a @DoNotInherit
 ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.actor.typed.javadsl.StashBuffer.capacity")
 ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.actor.typed.scaladsl.StashBuffer.capacity")

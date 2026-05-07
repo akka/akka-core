@@ -1,0 +1,2 @@
+# PR https://github.com/akka/akka-core/pull/32463
+ProblemFilters.exclude[IncompatibleSignatureProblem]("akka.persistence.typed.internal.Running#HandlingCommands.applyEffects")

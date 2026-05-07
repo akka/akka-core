@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
@@ -171,6 +171,14 @@ class RetrySpec extends AkkaSpec with RetrySupport {
       retried.value.get shouldBe a[scala.util.Failure[_]]
       retried.failed.value.get.get shouldBe an[IllegalArgumentException]
     }
+  }
+
+  "provide a retry settings based api" in {
+    // just a successful try to cover API and implicit system provider
+    val retried = retry(RetrySettings(5).withFixedDelay(40.millis)) { () =>
+      Future.successful(5)
+    }
+    retried.futureValue should ===(5)
   }
 
 }

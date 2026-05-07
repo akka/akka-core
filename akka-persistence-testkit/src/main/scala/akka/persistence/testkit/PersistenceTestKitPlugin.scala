@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.Try
@@ -18,7 +19,6 @@ import akka.persistence.journal.Tagged
 import akka.persistence.snapshot.SnapshotStore
 import akka.persistence.testkit.internal.{ InMemStorageExtension, SnapshotStorageEmulatorExtension }
 import akka.persistence.testkit.internal.CurrentTime
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -26,7 +26,9 @@ import akka.util.unused
  * Persistence testkit plugin for events.
  */
 @InternalApi
-class PersistenceTestKitPlugin(@unused cfg: Config, cfgPath: String) extends AsyncWriteJournal with ActorLogging {
+class PersistenceTestKitPlugin(@nowarn("msg=never used") cfg: Config, cfgPath: String)
+    extends AsyncWriteJournal
+    with ActorLogging {
 
   private final val storage = {
     log.debug("Using in memory storage [{}] for test kit journal", cfgPath)
@@ -57,10 +59,15 @@ class PersistenceTestKitPlugin(@unused cfg: Config, cfgPath: String) extends Asy
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit): Future[Unit] =
-    Future.fromTry(
-      Try(
+    Future.fromTry(Try {
+      val highest = storage.tryReadSeqNumber(persistenceId)
+      if (highest != 0L && max != 0L) {
+        val to = math.min(toSequenceNr, highest)
+        // read only last when fromSequenceNr is -1
+        val from = if (fromSequenceNr == -1) to else fromSequenceNr
+
         storage
-          .tryRead(persistenceId, fromSequenceNr, toSequenceNr, max)
+          .tryRead(persistenceId, from, to, max)
           .map { repr =>
             // we keep the tags in the repr, so remove those here
             repr.payload match {
@@ -69,7 +76,11 @@ class PersistenceTestKitPlugin(@unused cfg: Config, cfgPath: String) extends Asy
             }
 
           }
-          .foreach(recoveryCallback)))
+          .foreach(recoveryCallback)
+      } else {
+        Future.successful(())
+      }
+    })
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] =
     Future.fromTry(Try {
@@ -83,7 +94,7 @@ object PersistenceTestKitPlugin {
 
   val PluginId = "akka.persistence.testkit.journal"
 
-  import akka.util.ccompat.JavaConverters._
+  import scala.jdk.CollectionConverters._
 
   def getInstance() = this
 
@@ -124,12 +135,12 @@ object PersistenceTestKitSnapshotPlugin {
 
   val PluginId = "akka.persistence.testkit.snapshotstore.pluginid"
 
-  import akka.util.ccompat.JavaConverters._
+  import scala.jdk.CollectionConverters._
 
   def getInstance() = this
 
   val config: Config = ConfigFactory.parseMap(
-    Map(
+    Map[String, Any](
       "akka.persistence.snapshot-store.plugin" -> PluginId,
       s"$PluginId.class" -> classOf[PersistenceTestKitSnapshotPlugin].getName,
       s"$PluginId.snapshot-is-optional" -> false, // fallback isn't used by the testkit
@@ -142,7 +153,7 @@ object PersistenceTestKitDurableStateStorePlugin {
 
   val PluginId = "akka.persistence.testkit.state"
 
-  import akka.util.ccompat.JavaConverters._
+  import scala.jdk.CollectionConverters._
 
   def getInstance() = this
 

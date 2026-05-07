@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor.io.dns
@@ -11,9 +11,12 @@ import akka.pattern.ask
 import akka.io.{ Dns, IO }
 import akka.util.Timeout
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+@nowarn("msg=deprecated")
+@nowarn("msg=never used") // sample snippets
 object DnsCompileOnlyDocSpec {
 
   implicit val system: ActorSystem = ActorSystem()

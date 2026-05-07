@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.delivery
@@ -7,8 +7,9 @@ package akka.actor.typed.delivery
 import java.time.{ Duration => JavaDuration }
 import java.util.Optional
 
-import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration._
+import scala.jdk.OptionConverters._
+import scala.jdk.DurationConverters._
 import scala.reflect.ClassTag
 
 import com.typesafe.config.Config
@@ -23,7 +24,6 @@ import akka.annotation.ApiMayChange
 import akka.annotation.InternalApi
 import akka.util.Helpers.Requiring
 import akka.util.Helpers.toRootLowerCase
-import akka.util.JavaDurationConverters._
 
 /**
  * Point-to-point reliable delivery between a single producer actor sending messages and a single consumer
@@ -161,9 +161,9 @@ object ProducerController {
           config.getBytes("chunk-large-messages").requiring(_ <= Int.MaxValue, "Too large chunk-large-messages.").toInt
       }
       new Settings(
-        durableQueueRequestTimeout = config.getDuration("durable-queue.request-timeout").asScala,
+        durableQueueRequestTimeout = config.getDuration("durable-queue.request-timeout").toScala,
         durableQueueRetryAttempts = config.getInt("durable-queue.retry-attempts"),
-        durableQueueResendFirstInterval = config.getDuration("durable-queue.resend-first-interval").asScala,
+        durableQueueResendFirstInterval = config.getDuration("durable-queue.resend-first-interval").toScala,
         chunkLargeMessagesBytes)
     }
 
@@ -207,19 +207,19 @@ object ProducerController {
      * Java API
      */
     def withDurableQueueRequestTimeout(newDurableQueueRequestTimeout: JavaDuration): Settings =
-      copy(durableQueueRequestTimeout = newDurableQueueRequestTimeout.asScala)
+      copy(durableQueueRequestTimeout = newDurableQueueRequestTimeout.toScala)
 
     /**
      * Java API
      */
     def withDurableQueueResendFirstInterval(newDurableQueueResendFirstInterval: JavaDuration): Settings =
-      copy(durableQueueResendFirstInterval = newDurableQueueResendFirstInterval.asScala)
+      copy(durableQueueResendFirstInterval = newDurableQueueResendFirstInterval.toScala)
 
     /**
      * Java API
      */
     def getDurableQueueRequestTimeout(): JavaDuration =
-      durableQueueRequestTimeout.asJava
+      durableQueueRequestTimeout.toJava
 
     def withChunkLargeMessagesBytes(newChunkLargeMessagesBytes: Int): Settings =
       copy(chunkLargeMessagesBytes = newChunkLargeMessagesBytes)
@@ -284,7 +284,7 @@ object ProducerController {
       messageClass: Class[A],
       producerId: String,
       durableQueueBehavior: Optional[Behavior[DurableProducerQueue.Command[A]]]): Behavior[Command[A]] = {
-    apply(producerId, durableQueueBehavior.asScala)(ClassTag(messageClass))
+    apply(producerId, durableQueueBehavior.toScala)(ClassTag(messageClass))
   }
 
   /**
@@ -295,7 +295,7 @@ object ProducerController {
       producerId: String,
       durableQueueBehavior: Optional[Behavior[DurableProducerQueue.Command[A]]],
       settings: Settings): Behavior[Command[A]] = {
-    apply(producerId, durableQueueBehavior.asScala, settings)(ClassTag(messageClass))
+    apply(producerId, durableQueueBehavior.toScala, settings)(ClassTag(messageClass))
   }
 
 }

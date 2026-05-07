@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl.streamref
@@ -112,7 +112,7 @@ private[stream] final class SinkRefStageImpl[In] private[akka] (val initialPartn
             observeAndValidateSender(
               partner,
               "Illegal initialPartnerRef! This may be a bug, please report your " +
-              "usage and complete stack trace on the issue tracker: https://github.com/akka/akka")
+              "usage and complete stack trace on the issue tracker: https://github.com/akka/akka-core")
             tryPull()
           case _ =>
             log.debug(

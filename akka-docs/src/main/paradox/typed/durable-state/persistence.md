@@ -5,13 +5,9 @@ project.description: Durable State with Akka Persistence enables actors to persi
 
 ## Module info
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Akka Persistence, add the module to your project:
 
@@ -107,6 +103,21 @@ The two most commonly used effects are:
 The state is typically defined as an immutable class and a new instance of the state is passed to the `persist` effect.
 You may choose to use a mutable class for the state, and then the command handler may update the state instance, but
 it must still pass the updated state to the `persist` effect.
+
+@@@ div { .group-java }
+
+If the state is mutable, it is important that the `emptyState` method creates a new State instance each time
+it is called to ensure that the state is recreated in case of failure restarts.
+
+@@@
+
+@@@ div { .group-scala }
+
+If the state is mutable, it is important to use the `DurableStateBehavior.withMutableState` factory method that
+takes `emptyStateFactory: () => State` parameter to make sure that the state instance is recreated in case of
+failure restarts.
+
+@@@
 
 More effects are explained in @ref:[Effects and Side Effects](#effects-and-side-effects).
 
@@ -210,6 +221,14 @@ Scala
 
 Java
 :  @@snip [PersistentActorCompileOnlyTest.java](/akka-persistence-typed/src/test/java/akka/persistence/typed/javadsl/PersistentActorCompileOnlyTest.java) { #commonChainedEffects }
+
+@@@ div { .group-scala }
+
+It is recommended to use an immutable state class. If the state is mutable, it is important to use
+the `DurableStateBehavior.withEnforcedRepliesMutableState` factory method that takes `emptyStateFactory: () => State`
+parameter to make sure that the state instance is recreated in case of failure restarts.
+
+@@@
 
 ### Side effects ordering and guarantees
 

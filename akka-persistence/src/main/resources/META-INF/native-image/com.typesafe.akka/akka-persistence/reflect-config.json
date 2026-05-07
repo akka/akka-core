@@ -99,6 +99,8 @@
 }, {
   "name" : "akka.persistence.serialization.Message"
 }, {
+  "name" : "akka.persistence.CompositeMetadata"
+}, {
   "name" : "akka.persistence.SerializedEvent"
 }, {
   "name" : "akka.persistence.serialization.Snapshot"

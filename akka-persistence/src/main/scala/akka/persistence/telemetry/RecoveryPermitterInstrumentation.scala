@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.telemetry
@@ -16,8 +16,7 @@ import akka.actor.ExtensionIdProvider
 import akka.annotation.InternalStableApi
 import akka.event.Logging
 import akka.util.TopologicalSort.topologicalSort
-import akka.util.ccompat.JavaConverters._
-import akka.util.unused
+import scala.jdk.CollectionConverters._
 
 /**
  * INTERNAL API: Instrumentation SPI for PersistentActor.
@@ -58,7 +57,7 @@ object EmptyRecoveryPermitterInstrumentation extends EmptyRecoveryPermitterInstr
 @InternalStableApi
 class EmptyRecoveryPermitterInstrumentation extends RecoveryPermitterInstrumentation {
 
-  def this(@unused system: ActorSystem) = this()
+  def this(system: ActorSystem) = this()
 
   override def recoveryPermitterStatus(
       recoveryPermitter: ActorRef,

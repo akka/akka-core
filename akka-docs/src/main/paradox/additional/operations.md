@@ -59,7 +59,7 @@ Member nodes are identified by their address, in format *`akka://actor-system-na
 
 ## Monitoring and Observability
 
-Aside from log monitoring and the monitoring provided by your APM or platform provider, [Lightbend Telemetry](https://developer.lightbend.com/docs/telemetry/current/instrumentations/akka/akka.html),
-available through a [Lightbend Subscription](https://www.lightbend.com/lightbend-subscription),
+Aside from log monitoring and the monitoring provided by your APM or platform provider, [Akka Insights](https://doc.akka.io/libraries/akka-insights/current/home.html),
+available through a [Akka Subscription](https://akka.io/pricing/do-it-yourself),
 can provide additional insights in the run-time characteristics of your application, including metrics, events,
 and distributed tracing for Akka Actors, Cluster, HTTP, and more.

@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -22,7 +23,6 @@ import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.testkit._
 import akka.testkit.TestEvent._
-import akka.util.unused
 
 object SupervisorSpec {
   val Timeout = 5.seconds
@@ -92,7 +92,8 @@ object SupervisorSpec {
 
   val failure = new AssertionError("deliberate test failure")
 
-  class Mailbox(@unused settings: ActorSystem.Settings, @unused config: Config) extends MailboxType {
+  class Mailbox(@nowarn("msg=never used") settings: ActorSystem.Settings, @nowarn("msg=never used") config: Config)
+      extends MailboxType {
     override def create(owner: Option[ActorRef], system: Option[ActorSystem]): MessageQueue =
       throw failure
   }
@@ -220,7 +221,7 @@ class SupervisorSpec
     "restart properly when same instance is returned" in {
       val restarts = 3 //max number of restarts
 
-      // can't be anonymous class due to https://github.com/akka/akka/issues/32128
+      // can't be anonymous class due to https://github.com/akka/akka-core/issues/32128
       class ChildActor extends Actor {
         var preRestarts = 0
         var postRestarts = 0

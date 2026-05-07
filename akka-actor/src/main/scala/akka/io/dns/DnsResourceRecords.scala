@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns
 
 import java.net.{ Inet4Address, Inet6Address, InetAddress }
 
+import scala.annotation.nowarn
 import scala.annotation.switch
 import scala.concurrent.duration._
 
@@ -15,7 +16,7 @@ import akka.actor.NoSerializationVerificationNeeded
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
 import akka.io.dns.internal.{ DomainName, _ }
-import akka.util.{ unused, ByteIterator, ByteString }
+import akka.util.{ ByteIterator, ByteString }
 
 /**
  * Not for user extension
@@ -36,7 +37,7 @@ final case class ARecord(override val name: String, override val ttl: CachePolic
  */
 @InternalApi
 private[io] object ARecord {
-  def parseBody(name: String, ttl: Ttl, @unused length: Short, it: ByteIterator): ARecord = {
+  def parseBody(name: String, ttl: Ttl, @nowarn("msg=never used") length: Short, it: ByteIterator): ARecord = {
     val address = Array.ofDim[Byte](4)
     it.getBytes(address)
     ARecord(name, ttl, InetAddress.getByAddress(address).asInstanceOf[Inet4Address])
@@ -56,7 +57,7 @@ private[io] object AAAARecord {
    * INTERNAL API
    */
   @InternalApi
-  def parseBody(name: String, ttl: Ttl, @unused length: Short, it: ByteIterator): AAAARecord = {
+  def parseBody(name: String, ttl: Ttl, @nowarn("msg=never used") length: Short, it: ByteIterator): AAAARecord = {
     val address = Array.ofDim[Byte](16)
     it.getBytes(address)
     AAAARecord(name, ttl, InetAddress.getByAddress(address).asInstanceOf[Inet6Address])
@@ -73,7 +74,12 @@ private[dns] object CNameRecord {
    * INTERNAL API
    */
   @InternalApi
-  def parseBody(name: String, ttl: Ttl, @unused length: Short, it: ByteIterator, msg: ByteString): CNameRecord = {
+  def parseBody(
+      name: String,
+      ttl: Ttl,
+      @nowarn("msg=never used") length: Short,
+      it: ByteIterator,
+      msg: ByteString): CNameRecord = {
     CNameRecord(name, ttl, DomainName.parse(it, msg))
   }
 }
@@ -97,7 +103,12 @@ private[dns] object SRVRecord {
    * INTERNAL API
    */
   @InternalApi
-  def parseBody(name: String, ttl: Ttl, @unused length: Short, it: ByteIterator, msg: ByteString): SRVRecord = {
+  def parseBody(
+      name: String,
+      ttl: Ttl,
+      @nowarn("msg=never used") length: Short,
+      it: ByteIterator,
+      msg: ByteString): SRVRecord = {
     val priority = it.getShort.toInt & 0xFFFF
     val weight = it.getShort.toInt & 0xFFFF
     val port = it.getShort.toInt & 0xFFFF
@@ -128,7 +139,7 @@ private[dns] object UnknownRecord {
       ttl: Ttl,
       recType: Short,
       recClass: Short,
-      @unused length: Short,
+      @nowarn("msg=never used") length: Short,
       it: ByteIterator): UnknownRecord =
     UnknownRecord(name, ttl, recType, recClass, it.toByteString)
 }

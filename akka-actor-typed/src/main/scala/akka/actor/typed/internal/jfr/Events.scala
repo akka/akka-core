@@ -1,5 +1,5 @@
 /*
- * Copyright (C) extends Event 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.internal.jfr
@@ -36,10 +36,7 @@ final class DeliveryProducerStarted(val producerId: String, val actorPath: Strin
 @Enabled(false) // hi frequency event
 @StackTrace(false)
 @Category(Array("Akka", "Delivery", "ProducerController")) @Label("Delivery ProducerController sent RequestNext")
-final class DeliveryProducerRequestNext(
-    val producerId: String,
-    val currentSeqNr: Long,
-    @nowarn("msg=never used") val confirmedSeqNr: Long)
+final class DeliveryProducerRequestNext(val producerId: String, val currentSeqNr: Long, val confirmedSeqNr: Long)
     extends Event
 
 /** INTERNAL API */

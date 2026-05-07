@@ -5,7 +5,7 @@ also be nested inside another data structure. This requires a bit more careful t
  
 In this sample we model a shopping cart as a map of product ids and the number of that product added or removed in the
 shopping cart. By using the @apidoc[Counter] CRDT and persisting its `Update` in our events we can be sure that an
-add or remove of items in any data center will eventually lead to all data centers ending up with the same number of
+add or remove of items in any replica will eventually lead to all replicas ending up with the same number of
 each product. 
  
 Scala
@@ -14,9 +14,9 @@ Scala
 Java
 :   @@snip [ShoppingCartExample](/akka-persistence-typed-tests/src/test/java/jdocs/akka/persistence/typed/ReplicatedShoppingCartExample.java) { #shopping-cart }
 
-With this model we cannot have a `ClearCart` command as that could give different states in different data centers.
+With this model we cannot have a `ClearCart` command as that could give different states in different replicas.
 It is quite easy to imagine such a scenario: commands arriving in the order `ClearCart`, `AddItem('a', 5)` in one
-data center and the order `AddItem('a', 5), ClearCart` in another.
+replica and the order `AddItem('a', 5), ClearCart` in another.
  
 To clear a cart a client would instead have to remove as many items of each product as it sees in the cart at the time
 of removal.

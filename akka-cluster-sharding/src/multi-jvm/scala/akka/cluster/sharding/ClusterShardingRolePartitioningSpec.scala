@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -13,7 +13,7 @@ import akka.testkit._
 
 // Tests the case where cluster roles are used with cluster.min-nr-of-members, no per role min set
 // with 5 node cluster, 2 roles: 3 nodes role R1, 2 nodes role R2
-// See https://github.com/akka/akka/issues/28177#issuecomment-555013145
+// See https://github.com/akka/akka-core/issues/28177#issuecomment-555013145
 object E1 {
   val TypeKey = "Datatype1"
   val extractEntityId: ShardRegion.ExtractEntityId = {
@@ -132,7 +132,7 @@ abstract class ClusterShardingRolePartitioningSpec(multiNodeConfig: ClusterShard
       enterBarrier(s"${roles.size}-up")
     }
 
-    // https://github.com/akka/akka/issues/28177
+    // https://github.com/akka/akka-core/issues/28177
     "access role R2 (nodes 4,5) from one of the proxy nodes (1,2,3)" in {
       runOn(first) {
 

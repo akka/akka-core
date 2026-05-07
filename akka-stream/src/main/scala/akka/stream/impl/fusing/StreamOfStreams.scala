@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl.fusing
@@ -28,7 +28,7 @@ import akka.stream.impl.fusing.GraphStages.SingleSource
 import akka.stream.scaladsl._
 import akka.stream.stage._
 import akka.util.OptionVal
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * INTERNAL API
@@ -225,7 +225,9 @@ import akka.util.ccompat.JavaConverters._
     override def onUpstreamFinish(): Unit = {
       if (!prefixComplete) {
         // This handles the unpulled out case as well
-        emit(out, (builder.result(), Source.empty), () => completeStage())
+        val prefix = builder.result()
+        builder = null // free for GC
+        emit(out, (prefix, Source.empty), () => completeStage())
       } else {
         if (!tailSource.isClosed) tailSource.complete()
         completeStage()

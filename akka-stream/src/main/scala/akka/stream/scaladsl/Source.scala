@@ -1,21 +1,18 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
 
 import java.util.concurrent.CompletionStage
-
 import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.annotation.unchecked.uncheckedVariance
 import scala.collection.immutable
-import scala.compat.java8.FutureConverters._
+import scala.jdk.FutureConverters._
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration.FiniteDuration
-
 import org.reactivestreams.{ Publisher, Subscriber }
-
 import akka.{ Done, NotUsed }
 import akka.actor.{ ActorRef, Cancellable }
 import akka.annotation.InternalApi
@@ -26,6 +23,9 @@ import akka.stream.impl.fusing.GraphStages
 import akka.stream.impl.fusing.GraphStages._
 import akka.stream.stage.GraphStageWithMaterializedValue
 import akka.util.ConstantFun
+
+import scala.util.Failure
+import scala.util.Success
 
 /**
  * A `Source` is a set of stream processing steps that has one open output. It can comprise
@@ -353,7 +353,17 @@ object Source {
    * beginning) regardless of when they subscribed.
    */
   def apply[T](iterable: immutable.Iterable[T]): Source[T, NotUsed] =
-    fromGraph(new IterableSource[T](iterable))
+    iterable match {
+      case Nil         => empty
+      case head :: Nil => single(head)
+      case s: IterableOnce[T] =>
+        s.knownSize match {
+          case 0 => empty
+          case 1 => single(s.head)
+          case _ => fromGraph(new IterableSource[T](iterable))
+        }
+      case _ => fromGraph(new IterableSource[T](iterable))
+    }
 
   /**
    * Starts a new `Source` from the given `Future`. The stream will consist of
@@ -373,7 +383,7 @@ object Source {
    */
   @deprecated("Use 'Source.completionStage' instead", "2.6.0")
   def fromCompletionStage[T](future: CompletionStage[T]): Source[T, NotUsed] =
-    fromGraph(new FutureSource(future.toScala))
+    fromGraph(new FutureSource(future.asScala))
 
   /**
    * Streams the elements of the given future source once it successfully completes.
@@ -393,7 +403,7 @@ object Source {
   @deprecated("Use scala-compat CompletionStage to future converter and 'Source.futureSource' instead", "2.6.0")
   def fromSourceCompletionStage[T, M](
       completion: CompletionStage[_ <: Graph[SourceShape[T], M]]): Source[T, CompletionStage[M]] =
-    fromFutureSource(completion.toScala).mapMaterializedValue(_.toJava)
+    fromFutureSource(completion.asScala).mapMaterializedValue(_.asJava)
 
   /**
    * Elements are emitted periodically with the specified interval.
@@ -505,7 +515,12 @@ object Source {
    * The stream fails if the `Future` is completed with a failure.
    */
   def future[T](futureElement: Future[T]): Source[T, NotUsed] =
-    fromGraph(new FutureSource[T](futureElement))
+    futureElement.value match {
+      case Some(Success(null))  => empty
+      case Some(Success(value)) => single(value)
+      case Some(Failure(cause)) => failed(cause)
+      case None                 => fromGraph(new FutureSource[T](futureElement))
+    }
 
   /**
    * Never emits any elements, never completes and never fails.
@@ -521,14 +536,19 @@ object Source {
    * Here for Java interoperability, the normal use from Scala should be [[Source.future]]
    */
   def completionStage[T](completionStage: CompletionStage[T]): Source[T, NotUsed] =
-    future(completionStage.toScala)
+    future(completionStage.asScala)
 
   /**
    * Turn a `Future[Source]` into a source that will emit the values of the source when the future completes successfully.
    * If the `Future` is completed with a failure the stream is failed.
    */
-  def futureSource[T, M](futureSource: Future[Source[T, M]]): Source[T, Future[M]] =
-    fromGraph(new FutureFlattenSource(futureSource))
+  def futureSource[T, M](futureSource: Future[Source[T, M]]): Source[T, Future[M]] = {
+    futureSource.value match {
+      case Some(Success(source)) => source.mapMaterializedValue(Future.successful)
+      case Some(Failure(exc))    => failed(exc).mapMaterializedValue(_ => Future.failed(exc))
+      case _                     => fromGraph(new FutureFlattenSource(futureSource))
+    }
+  }
 
   /**
    * Defers invoking the `create` function to create a single element until there is downstream demand.

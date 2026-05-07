@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -168,7 +168,7 @@ class UnfoldResourceAsyncSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
     "continue when Strategy is Resume and read throws" in {
       val result = Source
         .unfoldResourceAsync[Int, Iterator[Any]](
-          () => Future.successful(List(1, 2, TE("read-error"), 3).iterator),
+          () => Future.successful(List[Any](1, 2, TE("read-error"), 3).iterator),
           iterator =>
             if (iterator.hasNext) {
               iterator.next() match {
@@ -187,7 +187,7 @@ class UnfoldResourceAsyncSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
     "continue when Strategy is Resume and read returns failed future" in {
       val result = Source
         .unfoldResourceAsync[Int, Iterator[Any]](
-          () => Future.successful(List(1, 2, TE("read-error"), 3).iterator),
+          () => Future.successful(List[Any](1, 2, TE("read-error"), 3).iterator),
           iterator =>
             if (iterator.hasNext) {
               iterator.next() match {

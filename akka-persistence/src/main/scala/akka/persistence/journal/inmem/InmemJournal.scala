@@ -1,13 +1,16 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal.inmem
 
 import scala.collection.immutable
+import scala.concurrent.duration.Duration
 import scala.concurrent.Future
+import scala.jdk.DurationConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
+
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import akka.actor.ActorRef
@@ -22,10 +25,7 @@ import akka.persistence.journal.inmem.InmemJournal.{ MessageWithMeta, ReplayWith
 import akka.serialization.SerializationExtension
 import akka.serialization.Serializers
 import akka.util.OptionVal
-import akka.util.JavaDurationConverters._
 import akka.pattern.after
-
-import scala.concurrent.duration.Duration
 
 /**
  * The InmemJournal publishes writes and deletes to the `eventStream`, which tests may use to
@@ -65,7 +65,7 @@ object InmemJournal {
 
   private val delayWrites = {
     val key = "delay-writes"
-    if (cfg.hasPath(key)) cfg.getDuration(key).asScala
+    if (cfg.hasPath(key)) cfg.getDuration(key).toScala
     else Duration.Zero
   }
   private val testSerialization = {
@@ -107,10 +107,15 @@ object InmemJournal {
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit): Future[Unit] = {
     val highest = highestSequenceNr(persistenceId)
-    if (highest != 0L && max != 0L)
-      read(persistenceId, fromSequenceNr, math.min(toSequenceNr, highest), max).foreach {
+    if (highest != 0L && max != 0L) {
+      val to = math.min(toSequenceNr, highest)
+      // read only last when fromSequenceNr is -1
+      val from = if (fromSequenceNr == -1) to else fromSequenceNr
+
+      read(persistenceId, from, to, max).foreach {
         case (pr, _) => recoveryCallback(pr)
       }
+    }
     Future.successful(())
   }
 

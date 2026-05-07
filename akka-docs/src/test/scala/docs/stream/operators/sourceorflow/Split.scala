@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators.sourceorflow
@@ -14,7 +14,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Source
 
 object Split {
-  def splitWhenExample(args: Array[String]): Unit = {
+  def splitWhenExample(): Unit = {
     import akka.actor.ActorSystem
 
     implicit val system: ActorSystem = ActorSystem()
@@ -57,7 +57,7 @@ object Split {
     //#splitWhen
   }
 
-  def splitAfterExample(args: Array[String]): Unit = {
+  def splitAfterExample(): Unit = {
     import akka.actor.ActorSystem
 
     implicit val system: ActorSystem = ActorSystem()

@@ -1,12 +1,15 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.internal.adapter
 
+import java.time.LocalDate
+import java.util.Optional
 import java.util.concurrent.CompletionStage
 
-import scala.compat.java8.FutureConverters
+import scala.concurrent.ExecutionContext
+import scala.jdk.FutureConverters._
 import scala.concurrent.ExecutionContextExecutor
 
 import org.slf4j.{ Logger, LoggerFactory }
@@ -106,13 +109,11 @@ import akka.util.OptionVal
   override def uptime: Long = classicSystem.uptime
   override def printTree: String = system.printTree
 
-  import akka.dispatch.ExecutionContexts.parasitic
-
   override def terminate(): Unit = system.terminate()
   override lazy val whenTerminated: scala.concurrent.Future[akka.Done] =
-    system.whenTerminated.map(_ => Done)(parasitic)
+    system.whenTerminated.map(_ => Done)(ExecutionContext.parasitic)
   override lazy val getWhenTerminated: CompletionStage[akka.Done] =
-    FutureConverters.toJava(whenTerminated)
+    whenTerminated.asJava
 
   override def systemActorOf[U](behavior: Behavior[U], name: String, props: Props): ActorRef[U] = {
     val ref = system.systemActorOf(
@@ -127,6 +128,10 @@ import akka.util.OptionVal
   override def refPrefix: String = "user"
 
   override def address: Address = system.provider.getDefaultAddress
+
+  override def licenseKeyExpiry: Option[LocalDate] = system.licenseKeyExpiry
+
+  override def getLicenseKeyExpiry: Optional[LocalDate] = system.getLicenseKeyExpiry
 
 }
 

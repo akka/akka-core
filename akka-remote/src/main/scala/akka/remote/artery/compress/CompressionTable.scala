@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery.compress
@@ -23,7 +23,7 @@ private[remote] final class CompressionTable[T](
     private val _dictionary: Object2IntHashMap[T]) {
 
   def dictionary: Map[T, Int] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     _dictionary.entrySet().iterator().asScala.map(entry => entry.getKey -> entry.getValue.intValue()).toMap
   }
 
@@ -36,7 +36,7 @@ private[remote] final class CompressionTable[T](
       // TODO: these are some expensive checks, about the numbers being consecutive, without gaps
       // TODO: we can remove them, make them re-map (not needed I believe though)
       val expectedGaplessSum = Integer.valueOf((_dictionary.size * (_dictionary.size + 1)) / 2) /* Dirichlet */
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       require(
         _dictionary.values.iterator().asScala.min == 0,
         "Compression table should start allocating from 0, yet lowest allocated id was " + _dictionary.values

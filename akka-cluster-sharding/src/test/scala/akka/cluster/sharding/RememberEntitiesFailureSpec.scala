@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -54,6 +54,9 @@ object RememberEntitiesFailureSpec {
         context.stop(self)
       case "graceful-stop" =>
         context.parent ! ShardRegion.Passivate("stop")
+      case "incarnation" =>
+        // Don't do this at home, kids...
+        sender() ! self
       case msg => sender() ! msg
     }
   }
@@ -394,6 +397,53 @@ class RememberEntitiesFailureSpec
 
         system.stop(sharding)
       }
+    }
+
+    "neither restart entity nor crash when entity passivates after being eagerly restarted" in {
+      val shardingSettings = ClusterShardingSettings(system).withRememberEntities(true)
+
+      var sharding: ActorRef = null
+      val probe = TestProbe()
+      implicit val sender: ActorRef = probe.ref
+
+      val spawnProbe = TestProbe()
+      val props = Props[EntityActor] {
+        spawnProbe.ref.tell("spawned", ActorRef.noSender)
+        new EntityActor()
+      }
+
+      sharding = ClusterSharding(system).start(
+        "failStartPassivate",
+        props,
+        shardingSettings,
+        extractEntityId,
+        extractShardId,
+        ShardAllocationStrategy.leastShardAllocationStrategy(absoluteLimit = 1, relativeLimit = 0.1),
+        "graceful-stop")
+
+      sharding ! EntityEnvelope(1, "incarnation")
+      spawnProbe.expectMsg("spawned")
+      var currentIncarnation = probe.receiveN(1).head.asInstanceOf[ActorRef]
+
+      probe.watch(currentIncarnation)
+      currentIncarnation ! "stop"
+      probe.expectTerminated(currentIncarnation)
+      // The restart timer is active
+      currentIncarnation = null
+
+      // restart the entity early
+      sharding ! EntityEnvelope(1, "incarnation")
+      spawnProbe.expectMsg("spawned")
+      sharding ! EntityEnvelope(1, "graceful-stop")
+      currentIncarnation = probe.receiveN(1).head.asInstanceOf[ActorRef]
+
+      probe.watch(currentIncarnation)
+      probe.expectTerminated(currentIncarnation)
+      // entity is now passivated
+
+      probe.watch(sharding)
+      spawnProbe.expectNoMessage(1.second)
+      probe.expectNoMessage(1.second)
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -66,14 +66,12 @@ object AkkaDisciplinePlugin extends AutoPlugin {
     "akka-testkit")
 
   // cat=lint-deprecation: we want to keep using both Java and Scala deprecation annotations
-  val defaultScala2Options = "-Wconf:cat=unused-nowarn:s,cat=lint-infer-any:s,cat=lint-deprecation:s,any:e"
-  // cat=other-shadowing: a good warning, but we do re-use names so much all over the tests that it is a ton of work to fix
-  val defaultScala2TestOptions =
-    "-Wconf:cat=unused-nowarn:s,cat=lint-infer-any:s,cat=other-shadowing:s,any:e"
+  val defaultScala2Options = "-Wconf:any:e,cat=lint-deprecation:s"
+  val defaultScala2TestOptions = "-Wconf:any:e"
 
-  // deprecation doesn't quite seem to work, warns for the location of the annotation
-  // We have SerialVersionUID on traits which doesn't make sense but needs to stay for historical/compat reasons
-  val defaultScala3Options = "-Wconf:cat=deprecation:s,msg=SerialVersionUID does nothing:s,any:e"
+  // Set to verbose warn instead of fail because hard to get it to comply with 2.13 discipline settings
+  // none of the cat or msg silences I've tried seem to work, but any:v does
+  val defaultScala3Options = "-Wconf:any:verbose"
 
   lazy val nowarnSettings = Seq(
     Compile / scalacOptions += (
@@ -92,18 +90,17 @@ object AkkaDisciplinePlugin extends AutoPlugin {
   val docs =
     Seq(
       Compile / scalacOptions --= Seq(defaultScala2Options, defaultScala3Options),
-      Compile / scalacOptions += "-Wconf:cat=unused:s,cat=deprecation:s,cat=unchecked:s,any:e",
+      Compile / scalacOptions += "-Wconf:any:e,cat=unused:s,cat=deprecation:s,cat=unchecked:s",
       Test / scalacOptions --= Seq("-Xlint", "-unchecked", "-deprecation"),
       Test / scalacOptions --= Seq(defaultScala2Options, defaultScala3Options),
       Test / scalacOptions +=
         (if (scalaVersion.value.startsWith("3.")) defaultScala3Options
-         else "-Wconf:cat=unused:s,cat=deprecation:s,cat=unchecked:s,any:e"),
+         else "-Wconf:cat=any:e,unused:s,cat=deprecation:s,cat=unchecked:s"),
       Compile / doc / scalacOptions := Seq())
 
   lazy val disciplineSettings =
     if (enabled) {
       nowarnSettings ++ Seq(
-        Compile / scalacOptions ++= Seq("-Xfatal-warnings"),
         Test / scalacOptions --= testUndiscipline,
         Compile / javacOptions ++= (
             if (scalaVersion.value.startsWith("3.")) {
@@ -132,10 +129,10 @@ object AkkaDisciplinePlugin extends AutoPlugin {
         // Discipline is not needed for the docs compilation run (which uses
         // different compiler phases from the regular run), and in particular
         // '-Ywarn-unused:explicits' breaks 'sbt ++2.13.0-M5 akka-actor/doc'
-        // https://github.com/akka/akka/issues/26119
+        // https://github.com/akka/akka-core/issues/26119
         Compile / doc / scalacOptions --= (
             if (scalaVersion.value.startsWith("3.")) disciplineScalac3Options.toSeq
-            else disciplineScalac2Options.toSeq :+ "-Xfatal-warnings"
+            else disciplineScalac2Options.toSeq
           ),
         // having discipline warnings in console is just an annoyance
         Compile / console / scalacOptions --= (

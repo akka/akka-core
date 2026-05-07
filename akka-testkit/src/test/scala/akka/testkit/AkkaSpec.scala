@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.testkit
@@ -31,6 +31,7 @@ object AkkaSpec {
         loggers = ["akka.testkit.TestEventListener"]
         loglevel = "WARNING"
         stdout-loglevel = "WARNING"
+        warn-on-no-license-key = off
         actor {
           default-dispatcher {
             executor = "fork-join-executor"
@@ -45,7 +46,7 @@ object AkkaSpec {
       """)
 
   def mapToConfig(map: Map[String, Any]): Config = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     ConfigFactory.parseMap(map.asJava)
   }
 

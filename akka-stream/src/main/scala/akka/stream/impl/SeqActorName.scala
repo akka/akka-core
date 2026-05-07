@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -10,7 +10,7 @@ import akka.annotation.{ DoNotInherit, InternalApi }
 
 /**
  * INTERNAL API
- * As discussed in https://github.com/akka/akka/issues/16613
+ * As discussed in https://github.com/akka/akka-core/issues/16613
  *
  * Generator of sequentially numbered actor names.
  * Pulled out from HTTP internals, most often used used by streams which materialize actors directly

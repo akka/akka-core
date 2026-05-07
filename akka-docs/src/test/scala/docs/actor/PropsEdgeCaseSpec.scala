@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor
@@ -8,11 +8,13 @@ import akka.actor.{ Actor, Props }
 import docs.CompileOnlySpec
 import org.scalatest.wordspec.AnyWordSpec
 
+import scala.annotation.nowarn
+
 //#props-edge-cases-value-class
 case class MyValueClass(v: Int) extends AnyVal
 
 //#props-edge-cases-value-class
-
+@nowarn("msg=never used") // sample snippets
 class PropsEdgeCaseSpec extends AnyWordSpec with CompileOnlySpec {
   "value-class-edge-case-example" in compileOnlySpec {
     //#props-edge-cases-value-class-example

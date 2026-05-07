@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal.leveldb
@@ -20,7 +20,7 @@ import akka.persistence._
 import akka.persistence.journal.Tagged
 import akka.persistence.journal.WriteJournalBase
 import akka.serialization.SerializationExtension
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 private[persistence] object LeveldbStore {
   val emptyConfig = ConfigFactory.empty()
@@ -212,7 +212,6 @@ private[persistence] trait LeveldbStore
   protected def addPersistenceIdSubscriber(subscriber: ActorRef, persistenceId: String): Unit =
     persistenceIdSubscribers.addBinding(persistenceId, subscriber)
 
-  @nowarn("msg=deprecated")
   protected def removeSubscriber(subscriber: ActorRef): Unit = {
     val keys = persistenceIdSubscribers.collect { case (k, s) if s.contains(subscriber) => k }
     keys.foreach { key =>

@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 
 import org.scalatest.matchers.should.Matchers
@@ -13,8 +14,8 @@ object ReflectSpec {
   final class A
   final class B
 
-  class One(@unused a: A)
-  class Two(@unused a: A, @unused b: B)
+  class One(@nowarn("msg=never used") a: A)
+  class Two(@nowarn("msg=never used") a: A, @nowarn("msg=never used") b: B)
 
   class MultipleOne(a: A, b: B) {
     def this(a: A) = this(a, null)

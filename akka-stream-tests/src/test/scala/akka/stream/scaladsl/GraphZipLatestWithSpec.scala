@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -102,8 +102,8 @@ class GraphZipLatestWithSpec extends TwoStreamsSetup {
         subscription.request(2)
       }
       probe.expectError() match {
-        case a: java.lang.ArithmeticException =>
-          a.getMessage should be("/ by zero")
+        case ae: java.lang.ArithmeticException =>
+          ae.getMessage should be("/ by zero")
         case unexpected => throw new RuntimeException(s"Unexpected: $unexpected")
       }
       probe.expectNoMessage(200.millis)

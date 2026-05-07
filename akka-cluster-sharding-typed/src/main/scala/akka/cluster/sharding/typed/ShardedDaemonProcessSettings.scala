@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -7,6 +7,7 @@ package akka.cluster.sharding.typed
 import java.time.{ Duration => JDuration }
 
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -14,7 +15,6 @@ import akka.actor.typed.ActorSystem
 import akka.annotation.ApiMayChange
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
-import akka.util.JavaDurationConverters._
 
 object ShardedDaemonProcessSettings {
 
@@ -31,9 +31,9 @@ object ShardedDaemonProcessSettings {
    * Load settings from a specific config location.
    */
   def fromConfig(config: Config): ShardedDaemonProcessSettings = {
-    val keepAliveInterval = config.getDuration("keep-alive-interval").asScala
+    val keepAliveInterval = config.getDuration("keep-alive-interval").toScala
     val keepAliveFromNumberOfNodes = config.getInt("keep-alive-from-number-of-nodes")
-    val keepAliveThrottleInterval = config.getDuration("keep-alive-throttle-interval").asScala
+    val keepAliveThrottleInterval = config.getDuration("keep-alive-throttle-interval").toScala
     new ShardedDaemonProcessSettings(
       keepAliveInterval,
       None,
@@ -68,7 +68,7 @@ final class ShardedDaemonProcessSettings @InternalApi private[akka] (
    * Note: How the sharded set is kept alive may change in the future meaning this setting may go away.
    */
   def withKeepAliveInterval(keepAliveInterval: JDuration): ShardedDaemonProcessSettings =
-    copy(keepAliveInterval = keepAliveInterval.asScala)
+    copy(keepAliveInterval = keepAliveInterval.toScala)
 
   /**
    * Specify sharding settings that should be used for the sharded daemon process instead of loading from config.
@@ -102,7 +102,7 @@ final class ShardedDaemonProcessSettings @InternalApi private[akka] (
    * Java API: Keep alive messages are sent with this delay between each message.
    */
   def withKeepAliveThrottleInterval(keepAliveThrottleInterval: JDuration): ShardedDaemonProcessSettings =
-    copy(keepAliveThrottleInterval = keepAliveThrottleInterval.asScala)
+    copy(keepAliveThrottleInterval = keepAliveThrottleInterval.toScala)
 
   private def copy(
       keepAliveInterval: FiniteDuration = keepAliveInterval,

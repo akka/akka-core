@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.testconductor
@@ -17,7 +17,8 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandler
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -117,7 +118,7 @@ private[akka] object RemoteConnection {
     role match {
       case Client =>
         val bootstrap = new Bootstrap()
-        val eventLoopGroup = new NioEventLoopGroup(poolSize)
+        val eventLoopGroup = new MultiThreadIoEventLoopGroup(poolSize, NioIoHandler.newFactory())
         val cf = bootstrap
           .group(eventLoopGroup)
           .channel(classOf[NioSocketChannel])
@@ -142,8 +143,8 @@ private[akka] object RemoteConnection {
 
       case Server =>
         val bootstrap = new ServerBootstrap()
-        val parentEventLoopGroup = new NioEventLoopGroup(poolSize)
-        val childEventLoopGroup = new NioEventLoopGroup(poolSize)
+        val parentEventLoopGroup = new MultiThreadIoEventLoopGroup(poolSize, NioIoHandler.newFactory())
+        val childEventLoopGroup = new MultiThreadIoEventLoopGroup(poolSize, NioIoHandler.newFactory())
         val cf = bootstrap
           .group(parentEventLoopGroup, childEventLoopGroup)
           .channel(classOf[NioServerSocketChannel])

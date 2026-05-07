@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal
@@ -16,12 +16,10 @@ import com.typesafe.config.Config
 
 import akka.actor.ExtendedActorSystem
 import akka.event.{ Logging, LoggingAdapter }
-import akka.util.ccompat._
 
 /**
  * `EventAdapters` serves as a per-journal collection of bound event adapters.
  */
-@ccompatUsedUntil213
 class EventAdapters(
     map: ConcurrentHashMap[Class[_], EventAdapter],
     bindings: immutable.Seq[(Class[_], EventAdapter)],
@@ -163,14 +161,14 @@ private[akka] object EventAdapters {
       .to(immutable.Seq)
 
   private final def configToMap(config: Config, path: String): Map[String, String] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     if (config.hasPath(path)) {
       config.getConfig(path).root.unwrapped.asScala.toMap.map { case (k, v) => k -> v.toString }
     } else Map.empty
   }
 
   private final def configToListMap(config: Config, path: String): Map[String, immutable.Seq[String]] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     if (config.hasPath(path)) {
       config.getConfig(path).root.unwrapped.asScala.toMap.map {
         case (k, v: util.ArrayList[_]) if v.isInstanceOf[util.ArrayList[_]] => k -> v.asScala.map(_.toString).toList

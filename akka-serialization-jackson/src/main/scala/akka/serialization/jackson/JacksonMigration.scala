@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.serialization.jackson
 
-import com.fasterxml.jackson.databind.JsonNode
+import scala.annotation.nowarn
 
-import akka.util.unused
+import com.fasterxml.jackson.databind.JsonNode
 
 /**
  * Data migration of old formats to current format can
@@ -42,7 +42,7 @@ abstract class JacksonMigration {
    * Override this method if you have changed the class name. Return
    * current class name.
    */
-  def transformClassName(@unused fromVersion: Int, className: String): String =
+  def transformClassName(@nowarn("msg=never used") fromVersion: Int, className: String): String =
     className
 
   /**

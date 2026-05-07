@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns.internal
@@ -118,7 +118,7 @@ class AsyncDnsResolverSpec extends AkkaSpec("""
       r ! Resolve(name)
       dnsClient1.expectNoMessage(50.millis)
       val answer = senderProbe.expectMsgType[Resolved]
-      answer.records.collect { case r: ARecord => r }.toSet shouldEqual Set(
+      answer.records.collect { case ar: ARecord => ar }.toSet shouldEqual Set(
         ARecord("127.0.0.1", Ttl.effectivelyForever, InetAddress.getByName("127.0.0.1")))
     }
 
@@ -128,8 +128,8 @@ class AsyncDnsResolverSpec extends AkkaSpec("""
       dnsClient1.expectNoMessage(50.millis)
       val answer = senderProbe.expectMsgType[Resolved]
       val aaaaRecord = answer.records match {
-        case Seq(r: AAAARecord) => r
-        case _                  => throw new RuntimeException() // compiler exhaustiveness check pleaser
+        case Seq(aaaar: AAAARecord) => aaaar
+        case _                      => throw new RuntimeException() // compiler exhaustiveness check pleaser
       }
       aaaaRecord.name should be("1:2:3:0:0:0:0:0")
       aaaaRecord.ttl should be(Ttl.effectivelyForever)

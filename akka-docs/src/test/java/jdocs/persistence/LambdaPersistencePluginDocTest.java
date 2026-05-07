@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package jdocs.persistence;
@@ -169,7 +169,7 @@ public class LambdaPersistencePluginDocTest {
 
   static Object o4 =
       new Object() {
-        // https://github.com/akka/akka/issues/26826
+        // https://github.com/akka/akka-core/issues/26826
         // #journal-tck-before-after-java
         @RunWith(JUnitRunner.class)
         class MyJournalSpecTest extends JavaJournalSpec {

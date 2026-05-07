@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
@@ -12,6 +12,7 @@ import java.nio.file.{ Path, Paths }
 import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -20,8 +21,7 @@ import akka.annotation.InternalApi
 import akka.io.Inet._
 import akka.util.{ ByteString, Helpers }
 import akka.util.Helpers.Requiring
-import akka.util.JavaDurationConverters._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * TCP Extension for Akka’s IO layer.
@@ -360,7 +360,6 @@ object Tcp extends ExtensionId[TcpExt] with ExtensionIdProvider {
    * @see [[WritePath]]
    */
   @deprecated("Use WritePath instead", "2.5.10")
-  @nowarn("msg=deprecated")
   final case class WriteFile(filePath: String, position: Long, count: Long, ack: Event) extends SimpleWriteCommand {
     require(position >= 0, "WriteFile.position must be >= 0")
     require(count > 0, "WriteFile.count must be > 0")
@@ -732,7 +731,7 @@ object TcpMessage {
       localAddress: InetSocketAddress,
       options: JIterable[SocketOption],
       timeout: java.time.Duration,
-      pullMode: Boolean): Command = connect(remoteAddress, localAddress, options, timeout.asScala, pullMode)
+      pullMode: Boolean): Command = connect(remoteAddress, localAddress, options, timeout.toScala, pullMode)
 
   /**
    * Connect to the given `remoteAddress` without binding to a local address and without

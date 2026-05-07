@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
 
 import scala.concurrent.duration._
-
 import akka.Done
 import akka.NotUsed
 import akka.testkit.AkkaSpec
@@ -20,9 +19,10 @@ import akka.util.Timeout
 
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.atomic.AtomicInteger
-
 import akka.stream.scaladsl.Flow
 import org.scalacheck.Gen.const
+
+import scala.annotation.nowarn
 
 object IntegrationDocSpec {
   import TwitterStreamQuickstartDocSpec._
@@ -132,6 +132,7 @@ object IntegrationDocSpec {
 
 }
 
+@nowarn("msg=never used") // sample snippets
 class IntegrationDocSpec extends AkkaSpec(IntegrationDocSpec.config) {
   import TwitterStreamQuickstartDocSpec._
   import IntegrationDocSpec._
@@ -226,7 +227,7 @@ class IntegrationDocSpec extends AkkaSpec(IntegrationDocSpec.config) {
 
     case object StreamInitialized
     case object StreamCompleted
-    final case class StreamFailure(ex: Throwable)
+    case class StreamFailure(ex: Throwable)
   }
 
   class AckingReceiver(probe: ActorRef) extends Actor with ActorLogging {
@@ -478,7 +479,6 @@ class IntegrationDocSpec extends AkkaSpec(IntegrationDocSpec.config) {
 
     val source = Source(1 to 10)
 
-    implicit val ec = system.dispatcher
     source
       .map(x => {
         queue.offer(x).map {
@@ -509,8 +509,7 @@ class IntegrationDocSpec extends AkkaSpec(IntegrationDocSpec.config) {
     //#source-queue-synchronous
 
     val fastElements = 1 to 10
-
-    implicit val ec = system.dispatcher
+    
     fastElements.foreach { x =>
       queue.offer(x) match {
         case QueueOfferResult.Enqueued    => println(s"enqueued $x")

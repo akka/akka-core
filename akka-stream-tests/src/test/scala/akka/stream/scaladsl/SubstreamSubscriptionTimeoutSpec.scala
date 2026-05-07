@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -58,7 +58,7 @@ class SubstreamSubscriptionTimeoutSpec extends StreamSpec("""
       Thread.sleep(1500)
 
       // Must be a Sink.seq, otherwise there is a race due to the concat in the `lift` implementation
-      val f = s3.runWith(Sink.seq).recover { case _: SubscriptionTimeoutException => "expected" }
+      val f = s3.runWith(Sink.seq).recover[AnyRef] { case _: SubscriptionTimeoutException => "expected" }
       Await.result(f, remainingOrDefault) should equal("expected")
 
       publisherProbe.sendComplete()

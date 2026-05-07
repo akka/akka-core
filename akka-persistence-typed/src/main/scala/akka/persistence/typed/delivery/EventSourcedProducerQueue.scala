@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.delivery
@@ -7,6 +7,7 @@ package akka.persistence.typed.delivery
 import java.time.{ Duration => JavaDuration }
 
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 
 import com.typesafe.config.Config
 
@@ -22,7 +23,6 @@ import akka.persistence.typed.delivery.EventSourcedProducerQueue.CleanupTick
 import akka.persistence.typed.scaladsl.Effect
 import akka.persistence.typed.scaladsl.EventSourcedBehavior
 import akka.persistence.typed.scaladsl.RetentionCriteria
-import akka.util.JavaDurationConverters._
 
 /**
  * [[DurableProducerQueue]] that can be used with [[akka.actor.typed.delivery.ProducerController]]
@@ -51,11 +51,11 @@ object EventSourcedProducerQueue {
      */
     def apply(config: Config): Settings = {
       new Settings(
-        restartMaxBackoff = config.getDuration("restart-max-backoff").asScala,
+        restartMaxBackoff = config.getDuration("restart-max-backoff").toScala,
         snapshotEvery = config.getInt("snapshot-every"),
         keepNSnapshots = config.getInt("keep-n-snapshots"),
         deleteEvents = config.getBoolean("delete-events"),
-        cleanupUnusedAfter = config.getDuration("cleanup-unused-after").asScala,
+        cleanupUnusedAfter = config.getDuration("cleanup-unused-after").toScala,
         journalPluginId = config.getString("journal-plugin-id"),
         snapshotPluginId = config.getString("snapshot-plugin-id"))
     }
@@ -103,13 +103,13 @@ object EventSourcedProducerQueue {
      * Java API
      */
     def withRestartMaxBackoff(newRestartMaxBackoff: JavaDuration): Settings =
-      copy(restartMaxBackoff = newRestartMaxBackoff.asScala)
+      copy(restartMaxBackoff = newRestartMaxBackoff.toScala)
 
     /**
      * Java API
      */
     def getRestartMaxBackoff(): JavaDuration =
-      restartMaxBackoff.asJava
+      restartMaxBackoff.toJava
 
     /**
      * Scala API
@@ -121,13 +121,13 @@ object EventSourcedProducerQueue {
      * Java API
      */
     def withCleanupUnusedAfter(newCleanupUnusedAfter: JavaDuration): Settings =
-      copy(cleanupUnusedAfter = newCleanupUnusedAfter.asScala)
+      copy(cleanupUnusedAfter = newCleanupUnusedAfter.toScala)
 
     /**
      * Java API
      */
     def getCleanupUnusedAfter(): JavaDuration =
-      cleanupUnusedAfter.asJava
+      cleanupUnusedAfter.toJava
 
     def withJournalPluginId(id: String): Settings =
       copy(journalPluginId = id)

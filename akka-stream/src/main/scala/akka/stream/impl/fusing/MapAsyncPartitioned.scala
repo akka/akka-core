@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2022-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2022-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl.fusing
 
 import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
@@ -189,7 +190,7 @@ private[akka] final case class MapAsyncPartitioned[In, Out, Partition](
         holder.clearIncoming()
 
         future.value match {
-          case None              => future.onComplete(holder)(akka.dispatch.ExecutionContexts.parasitic)
+          case None              => future.onComplete(holder)(ExecutionContext.parasitic)
           case Some(Failure(ex)) => throw ex
           case Some(v)           =>
             // future already completed, so don't schedule on dispatcher

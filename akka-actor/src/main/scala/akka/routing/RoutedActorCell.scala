@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.routing
@@ -20,7 +20,6 @@ import akka.actor.SupervisorStrategy
 import akka.actor.Terminated
 import akka.dispatch.Envelope
 import akka.dispatch.MessageDispatcher
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
@@ -36,7 +35,6 @@ private[akka] object RoutedActorCell {
 /**
  * INTERNAL API
  */
-@ccompatUsedUntil213
 private[akka] class RoutedActorCell(
     _system: ActorSystemImpl,
     _ref: InternalActorRef,

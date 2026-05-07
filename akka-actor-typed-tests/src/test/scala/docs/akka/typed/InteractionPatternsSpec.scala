@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.typed
@@ -17,7 +17,6 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.scaladsl.TimerScheduler
 import akka.pattern.StatusReply
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -140,10 +139,10 @@ class InteractionPatternsSpec extends ScalaTestWithActorTestKit with AnyWordSpec
                       context.log.info("Started {}", taskId)
                       Behaviors.same
                     case Backend.JobProgress(taskId, progress) =>
-                      context.log.info2("Progress {}: {}", taskId, progress)
+                      context.log.info("Progress {}: {}", taskId, progress)
                       Behaviors.same
                     case Backend.JobCompleted(taskId, result) =>
-                      context.log.info2("Completed {}: {}", taskId, result)
+                      context.log.info("Completed {}: {}", taskId, result)
                       inProgress(taskId) ! result
                       active(inProgress - taskId, count)
                   }

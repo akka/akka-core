@@ -1,16 +1,17 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators
 
 import java.util.concurrent.ThreadLocalRandom
-
 import scala.concurrent.Future
-
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Broadcast
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 object BroadcastDocExample {
 
   implicit val system: ActorSystem = ActorSystem("BroadcastDocExample")

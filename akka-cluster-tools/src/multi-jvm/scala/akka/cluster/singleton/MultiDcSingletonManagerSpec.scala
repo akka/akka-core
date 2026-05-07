@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.singleton
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.ConfigFactory
@@ -63,6 +64,7 @@ object MultiDcSingleton {
   case class Pong(fromDc: String, fromAddress: Address, roles: Set[String]) extends CborSerializable
 }
 
+@nowarn("msg=Use Akka Distributed Cluster")
 abstract class MultiDcSingletonManagerSpec
     extends MultiNodeSpec(MultiDcSingletonManagerSpec)
     with STMultiNodeSpec

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.io
@@ -9,13 +9,17 @@ import akka.actor.Actor
 import akka.io.IO
 import akka.io.Udp
 import akka.actor.ActorRef
+
 import java.net.InetSocketAddress
 import akka.util.ByteString
 import akka.testkit.TestProbe
 import akka.actor.Props
+
 import scala.concurrent.duration._
 import akka.actor.PoisonPill
 import akka.io.UdpConnected
+
+import scala.annotation.nowarn
 
 object ScalaUdpDocSpec {
 
@@ -100,6 +104,7 @@ object ScalaUdpDocSpec {
 
 }
 
+@nowarn("msg=never used") // sample snippets
 abstract class UdpDocSpec extends AkkaSpec {
 
   def listenerProps(next: ActorRef): Props

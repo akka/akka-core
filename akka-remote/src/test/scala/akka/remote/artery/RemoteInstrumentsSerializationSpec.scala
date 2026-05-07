@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -8,13 +8,14 @@ import java.nio.{ ByteBuffer, CharBuffer }
 import java.nio.ByteOrder
 import java.nio.charset.Charset
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import akka.actor.{ ActorRef, ActorSystem, ExtendedActorSystem, InternalActorRef }
 import akka.event._
 import akka.testkit.{ AkkaSpec, EventFilter, TestProbe }
 import akka.testkit.TestEvent.Mute
-import akka.util.{ unused, OptionVal }
+import akka.util.OptionVal
 
 class RemoteInstrumentsSerializationSpec extends AkkaSpec("akka.loglevel = DEBUG") {
   import RemoteInstrumentsSerializationSpec._
@@ -125,7 +126,7 @@ class RemoteInstrumentsSerializationSpec extends AkkaSpec("akka.loglevel = DEBUG
 
 object RemoteInstrumentsSerializationSpec {
 
-  class Filter(@unused settings: ActorSystem.Settings, stream: EventStream) extends LoggingFilter {
+  class Filter(@nowarn("msg=never used") settings: ActorSystem.Settings, stream: EventStream) extends LoggingFilter {
     stream.publish(Mute(EventFilter.debug()))
 
     override def isErrorEnabled(logClass: Class[_], logSource: String): Boolean = true

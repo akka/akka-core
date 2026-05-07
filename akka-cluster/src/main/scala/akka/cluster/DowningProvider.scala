@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -40,7 +40,7 @@ private[cluster] object DowningProvider {
  * When implementing a downing provider you should make sure that it will not split the cluster into
  * several separate clusters in case of network problems or system overload (long GC pauses). This
  * is much more difficult than it might be perceived at first, so carefully read the concerns and scenarios
- * described in https://doc.akka.io/docs/akka/current/split-brain-resolver.html
+ * described in https://doc.akka.io/libraries/akka-core/current/split-brain-resolver.html
  */
 abstract class DowningProvider {
 

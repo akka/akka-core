@@ -1,14 +1,15 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.event
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import scala.annotation.nowarn
+
 import akka.actor._
 import akka.event.Logging.simpleName
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -79,7 +80,7 @@ private[akka] object ActorClassificationUnsubscriber {
       system: ActorSystem,
       busName: String,
       unsubscribe: ActorRef => Unit,
-      @unused debug: Boolean = false): ActorRef = {
+      @nowarn("msg=never used") debug: Boolean = false): ActorRef = {
     val debug = system.settings.config.getBoolean("akka.actor.debug.event-stream")
     system
       .asInstanceOf[ExtendedActorSystem]

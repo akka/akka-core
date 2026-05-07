@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -20,9 +20,7 @@ import akka.cluster.MemberStatus._
 import akka.remote.testkit.MultiNodeConfig
 import akka.remote.testkit.MultiNodeSpec
 import akka.testkit._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object RestartFirstSeedNodeMultiJvmSpec extends MultiNodeConfig {
   val seed1 = role("seed1")
   val seed2 = role("seed2")
@@ -79,8 +77,8 @@ abstract class RestartFirstSeedNodeSpec
       runOn(seed2, seed3) {
         system.actorOf(Props(new Actor {
           def receive = {
-            case a: Address =>
-              seedNode1Address = a
+            case ad: Address =>
+              seedNode1Address = ad
               sender() ! "ok"
           }
         }).withDeploy(Deploy.local), name = "address-receiver")

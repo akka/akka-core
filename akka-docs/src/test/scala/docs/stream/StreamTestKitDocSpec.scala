@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -29,9 +29,6 @@ class StreamTestKitDocSpec extends AkkaSpec {
 
   "grouped part of infinite stream" in {
     //#grouped-infinite
-    import system.dispatcher
-    import akka.pattern.pipe
-
     val sourceUnderTest = Source.repeat(1).map(_ * 2)
 
     val future = sourceUnderTest.take(10).runWith(Sink.seq)

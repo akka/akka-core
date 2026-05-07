@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.typed
@@ -30,6 +30,15 @@ object DispatchersDocSpec {
         throughput = 1
       }
        //#config
+      # doesn't override everything in the executor config, to make sure that adding
+      # config options (since haven't added in many years) doesn't break user code
+      custom-fork-join {
+        type = Dispatcher
+        executor = "fork-join-executor"
+        fork-join-executor {
+          parallelism-min = 1
+        }
+      }
     """.stripMargin)
 
   case class WhichDispatcher(replyTo: ActorRef[Dispatcher])
@@ -82,6 +91,12 @@ class DispatchersDocSpec
 
       withCustom.futureValue ! WhichDispatcher(probe.ref)
       probe.receiveMessage().id shouldEqual "your-dispatcher"
+
+      val withCustomFJP: Future[ActorRef[WhichDispatcher]] =
+        actor.ask(Spawn(giveMeYourDispatcher, "default", DispatcherSelector.fromConfig("custom-fork-join"), _))
+
+      withCustomFJP.futureValue ! WhichDispatcher(probe.ref)
+      probe.receiveMessage().id shouldEqual "custom-fork-join"
     }
   }
 }

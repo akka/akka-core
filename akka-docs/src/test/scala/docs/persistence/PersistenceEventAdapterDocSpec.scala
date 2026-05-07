@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.persistence
@@ -10,7 +10,7 @@ import akka.persistence.{ PersistentActor, RecoveryCompleted }
 import akka.testkit.{ AkkaSpec, TestProbe }
 import com.google.gson.{ Gson, JsonElement }
 
-import scala.collection.immutable
+import scala.annotation.nowarn
 
 class PersistenceEventAdapterDocSpec(config: String) extends AkkaSpec(config) {
 
@@ -95,7 +95,7 @@ class PersistenceEventAdapterDocSpec(config: String) extends AkkaSpec(config) {
       p.expectMsg(m1)
       p.expectMsg(m2)
 
-      val p2 = system.actorOf(props)
+      system.actorOf(props)
       p.expectMsg(m1)
       p.expectMsg(m2)
     }
@@ -130,7 +130,7 @@ class PersistenceEventAdapterDocSpec(config: String) extends AkkaSpec(config) {
       p.expectMsg(m1)
       p.expectMsg(m2)
 
-      val p2 = system.actorOf(props)
+      system.actorOf(props)
       p.expectMsg(m1)
       p.expectMsg(m2)
     }
@@ -144,6 +144,7 @@ case class Box(length: Int) extends DomainEvent
 case class MyTaggingJournalModel(payload: Any, tags: Set[String])
 
 //#identity-event-adapter
+@nowarn("msg=never used") // required constructor parameter
 class MyEventAdapter(system: ExtendedActorSystem) extends EventAdapter {
   override def manifest(event: Any): String =
     "" // when no manifest needed, return ""
@@ -177,6 +178,7 @@ class MyAutoJsonEventAdapter(system: ExtendedActorSystem) extends EventAdapter {
   }
 }
 
+@nowarn("msg=never used") // sample snippets
 class MyUpcastingEventAdapter(system: ExtendedActorSystem) extends EventAdapter {
   override def manifest(event: Any): String = ""
 
@@ -215,6 +217,7 @@ class MyManualJsonEventAdapter(system: ExtendedActorSystem) extends EventAdapter
   }
 }
 
+@nowarn("msg=never used")
 class MyTaggingEventAdapter(system: ExtendedActorSystem) extends EventAdapter {
   override def manifest(event: Any): String = ""
 

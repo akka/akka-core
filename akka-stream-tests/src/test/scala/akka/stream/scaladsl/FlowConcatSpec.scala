@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -185,13 +185,14 @@ abstract class AbstractFlowConcatSpec extends BaseTwoStreamsSetup {
          else Flow[Int].concatLazyMat(s2)(Keep.both)).grouped(1000)
       Await.result(s1.viaMat(testFlow)(Keep.both).runWith(Sink.head), 3.seconds) should ===(1 to 10)
 
-      val sink = testFlow.concatMat(Source(1 to 5))(Keep.both).to(Sink.ignore).mapMaterializedValue[String] {
-        case ((m1, m2), m3) =>
-          m1.isInstanceOf[NotUsed] should be(true)
-          m2.isInstanceOf[NotUsed] should be(true)
-          m3.isInstanceOf[NotUsed] should be(true)
-          "boo"
-      }
+      val sink =
+        testFlow.concatMat(Source(1 to 5).map(n => Seq(n)))(Keep.both).to(Sink.ignore).mapMaterializedValue[String] {
+          case ((m1, m2), m3) =>
+            m1.isInstanceOf[NotUsed] should be(true)
+            m2.isInstanceOf[NotUsed] should be(true)
+            m3.isInstanceOf[NotUsed] should be(true)
+            "boo"
+        }
       Source(10 to 15).runWith(sink) should be("boo")
     }
 

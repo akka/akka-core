@@ -1,34 +1,34 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
 
 import akka.annotation.InternalApi
-
 import java.util.concurrent.CompletionStage
 import java.util.regex.Pattern
+
 import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.immutable
-import scala.compat.java8.FutureConverters
+import scala.concurrent.ExecutionContext
+import scala.jdk.FutureConverters.FutureOps
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.language.implicitConversions
 import scala.util.Success
-import akka.dispatch.ExecutionContexts
+
 import akka.pattern.ask
 import akka.routing.MurmurHash
-import akka.util.{ Helpers, JavaDurationConverters, Timeout }
-import akka.util.ccompat._
+import akka.util.{ Helpers, Timeout }
 
 /**
  * An ActorSelection is a logical view of a section of an ActorSystem's tree of Actors,
  * allowing for broadcasting of messages to that section.
  */
 @SerialVersionUID(1L)
-@ccompatUsedUntil213
 abstract class ActorSelection extends Serializable {
   this: ScalaActorSelection =>
 
@@ -66,7 +66,7 @@ abstract class ActorSelection extends Serializable {
    * [[ActorRef]].
    */
   def resolveOne()(implicit timeout: Timeout): Future[ActorRef] = {
-    implicit val ec = ExecutionContexts.parasitic
+    implicit val ec = ExecutionContext.parasitic
     val p = Promise[ActorRef]()
     this.ask(Identify(None)).onComplete {
       case Success(ActorIdentity(_, Some(ref))) => p.success(ref)
@@ -98,8 +98,7 @@ abstract class ActorSelection extends Serializable {
    *
    */
   def resolveOne(timeout: java.time.Duration): CompletionStage[ActorRef] = {
-    import JavaDurationConverters._
-    FutureConverters.toJava[ActorRef](resolveOne(timeout.asScala))
+    resolveOne(timeout.toScala).asJava
   }
 
   override def toString: String = {

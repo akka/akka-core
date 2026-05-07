@@ -1,12 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
 
 import scala.collection.immutable
-
-import akka.util.ccompat._
 
 /**
  * Typeclass which describes a classification hierarchy. Observe the contract between `isEqual` and `isSubclass`!
@@ -79,7 +77,6 @@ private[akka] object SubclassifiedIndex {
  * cache, e.g. HashMap, is faster than tree traversal which must use linear
  * scan at each level. Therefore, no value traversals are published.
  */
-@ccompatUsedUntil213
 private[akka] class SubclassifiedIndex[K, V] private (protected var values: Set[V])(implicit sc: Subclassification[K]) {
 
   import SubclassifiedIndex._

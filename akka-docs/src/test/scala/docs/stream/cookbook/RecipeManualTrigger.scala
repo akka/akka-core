@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.cookbook
@@ -28,7 +28,7 @@ class RecipeManualTrigger extends RecipeSpec {
         val zip = builder.add(Zip[Message, Trigger]())
         elements ~> zip.in0
         triggerSource ~> zip.in1
-        zip.out ~> Flow[(Message, Trigger)].map { case (msg, trigger) => msg } ~> sink
+        zip.out ~> Flow[(Message, Trigger)].map { case (msg, _) => msg } ~> sink
         ClosedShape
       })
       //#manually-triggered-stream
@@ -64,7 +64,7 @@ class RecipeManualTrigger extends RecipeSpec {
       //#manually-triggered-stream-zipwith
       val graph = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder =>
         import GraphDSL.Implicits._
-        val zip = builder.add(ZipWith((msg: Message, trigger: Trigger) => msg))
+        val zip = builder.add(ZipWith((msg: Message, _: Trigger) => msg))
 
         elements ~> zip.in0
         triggerSource ~> zip.in1

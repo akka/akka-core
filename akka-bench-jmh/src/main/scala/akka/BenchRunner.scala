@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -10,7 +10,7 @@ import org.openjdk.jmh.runner.options.CommandLineOptions
 
 object BenchRunner {
   def main(args: Array[String]) = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     val args2 = args.toList.flatMap {
       case "quick"    => "-i 1 -wi 1 -f1 -t1".split(" ").toList

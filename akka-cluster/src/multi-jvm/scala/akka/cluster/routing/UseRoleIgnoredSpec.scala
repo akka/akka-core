@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.routing
@@ -77,7 +77,7 @@ abstract class UseRoleIgnoredSpec
    */
   private def fullAddress(actorRef: ActorRef): Address = actorRef.path.address match {
     case Address(_, _, None, None) => cluster.selfAddress
-    case a                         => a
+    case address                   => address
   }
 
   def currentRoutees(router: ActorRef) =

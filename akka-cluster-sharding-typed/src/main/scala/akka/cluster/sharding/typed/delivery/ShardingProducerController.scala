@@ -1,13 +1,14 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed.delivery
 
 import java.util.Optional
 
-import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
+import scala.jdk.OptionConverters._
 import scala.reflect.ClassTag
 
 import com.typesafe.config.Config
@@ -23,7 +24,6 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.annotation.ApiMayChange
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.delivery.internal.ShardingProducerControllerImpl
-import akka.util.JavaDurationConverters._
 
 /**
  * Reliable delivery between a producer actor sending messages to sharded consumer
@@ -142,13 +142,13 @@ object ShardingProducerController {
 
     /** Java API */
     def getEntitiesWithDemand: java.util.Set[String] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       entitiesWithDemand.asJava
     }
 
     /** Java API */
     def getBufferedForEntitiesWithoutDemand: java.util.Map[String, Integer] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       bufferedForEntitiesWithoutDemand.iterator.map { case (k, v) => k -> v.asInstanceOf[Integer] }.toMap.asJava
     }
   }
@@ -175,9 +175,9 @@ object ShardingProducerController {
     def apply(config: Config): Settings = {
       new Settings(
         bufferSize = config.getInt("buffer-size"),
-        config.getDuration("internal-ask-timeout").asScala,
-        config.getDuration("cleanup-unused-after").asScala,
-        config.getDuration("resend-first-unconfirmed-idle-timeout").asScala,
+        config.getDuration("internal-ask-timeout").toScala,
+        config.getDuration("cleanup-unused-after").toScala,
+        config.getDuration("resend-first-unconfirmed-idle-timeout").toScala,
         ProducerController.Settings(config))
     }
 
@@ -217,19 +217,19 @@ object ShardingProducerController {
       copy(internalAskTimeout = newInternalAskTimeout)
 
     def withInternalAskTimeout(newInternalAskTimeout: java.time.Duration): Settings =
-      copy(internalAskTimeout = newInternalAskTimeout.asScala)
+      copy(internalAskTimeout = newInternalAskTimeout.toScala)
 
     def withCleanupUnusedAfter(newCleanupUnusedAfter: FiniteDuration): Settings =
       copy(cleanupUnusedAfter = newCleanupUnusedAfter)
 
     def withCleanupUnusedAfter(newCleanupUnusedAfter: java.time.Duration): Settings =
-      copy(cleanupUnusedAfter = newCleanupUnusedAfter.asScala)
+      copy(cleanupUnusedAfter = newCleanupUnusedAfter.toScala)
 
     def withResendFirstUnconfirmedIdleTimeout(newResendFirstUnconfirmedIdleTimeout: FiniteDuration): Settings =
       copy(resendFirstUnconfirmedIdleTimeout = newResendFirstUnconfirmedIdleTimeout)
 
     def withResendFirstUnconfirmedIdleTimeout(newResendFirstUnconfirmedIdleTimeout: java.time.Duration): Settings =
-      copy(resendFirstUnconfirmedIdleTimeout = newResendFirstUnconfirmedIdleTimeout.asScala)
+      copy(resendFirstUnconfirmedIdleTimeout = newResendFirstUnconfirmedIdleTimeout.toScala)
 
     @deprecated("use resendFirstUnconfirmedIdleTimeout", "2.6.19")
     def withResendFirsUnconfirmedIdleTimeout(newResendFirstUnconfirmedIdleTimeout: FiniteDuration): Settings =
@@ -237,7 +237,7 @@ object ShardingProducerController {
 
     @Deprecated
     def withResendFirsUnconfirmedIdleTimeout(newResendFirstUnconfirmedIdleTimeout: java.time.Duration): Settings =
-      copy(resendFirstUnconfirmedIdleTimeout = newResendFirstUnconfirmedIdleTimeout.asScala)
+      copy(resendFirstUnconfirmedIdleTimeout = newResendFirstUnconfirmedIdleTimeout.toScala)
 
     def withProducerControllerSettings(newProducerControllerSettings: ProducerController.Settings): Settings =
       copy(producerControllerSettings = newProducerControllerSettings)
@@ -287,7 +287,7 @@ object ShardingProducerController {
       producerId: String,
       region: ActorRef[ShardingEnvelope[ConsumerController.SequencedMessage[A]]],
       durableQueueBehavior: Optional[Behavior[DurableProducerQueue.Command[A]]]): Behavior[Command[A]] = {
-    apply(producerId, region, durableQueueBehavior.asScala)(ClassTag(messageClass))
+    apply(producerId, region, durableQueueBehavior.toScala)(ClassTag(messageClass))
   }
 
   /**
@@ -299,7 +299,7 @@ object ShardingProducerController {
       region: ActorRef[ShardingEnvelope[ConsumerController.SequencedMessage[A]]],
       durableQueueBehavior: Optional[Behavior[DurableProducerQueue.Command[A]]],
       settings: Settings): Behavior[Command[A]] = {
-    apply(producerId, region, durableQueueBehavior.asScala, settings)(ClassTag(messageClass))
+    apply(producerId, region, durableQueueBehavior.toScala, settings)(ClassTag(messageClass))
   }
 
   // TODO maybe there is a need for variant taking message extractor instead of ShardingEnvelope

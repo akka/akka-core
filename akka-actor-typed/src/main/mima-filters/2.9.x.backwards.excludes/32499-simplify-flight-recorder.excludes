@@ -1,0 +1,8 @@
+# #32499 chore: Simplify flight recorder interactions
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.internal.DeliveryFlightRecorder")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.internal.NoOpActorFlightRecorder")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.internal.NoOpActorFlightRecorder$")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.internal.NoOpDeliveryFlightRecorder")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.internal.NoOpDeliveryFlightRecorder$")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.internal.jfr.JFRActorFlightRecorder")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.internal.jfr.JFRDeliveryFlightRecorder")

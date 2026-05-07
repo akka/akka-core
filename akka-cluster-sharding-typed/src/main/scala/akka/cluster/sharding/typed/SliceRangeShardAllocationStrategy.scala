@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2024-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -43,7 +43,7 @@ object SliceRangeShardAllocationStrategy {
 }
 
 /**
- * Intended to be used with database sharding, https://doc.akka.io/docs/akka-persistence-r2dbc/current/data-partition.html,
+ * Intended to be used with database sharding, https://doc.akka.io/libraries/akka-persistence-r2dbc/current/data-partition.html,
  * with a cluster of many Akka nodes. To avoid that each Akka node has database connections to all databases it is
  * preferred to collocate entities with the same slice and contiguous range of slices to the same Akka node. Thereby
  * the connections from one Akka node will go to one or a few databases since the database sharding is based on

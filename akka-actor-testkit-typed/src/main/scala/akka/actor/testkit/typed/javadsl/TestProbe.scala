@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.javadsl
@@ -7,6 +7,8 @@ package akka.actor.testkit.typed.javadsl
 import java.time.Duration
 import java.util.{ List => JList }
 import java.util.function.Supplier
+
+import scala.annotation.nowarn
 
 import akka.actor.testkit.typed.FishingOutcome
 import akka.actor.testkit.typed.TestKitSettings
@@ -17,7 +19,6 @@ import akka.actor.typed.RecipientRef
 import akka.actor.typed.internal.InternalRecipientRef
 import akka.annotation.DoNotInherit
 import akka.japi.function.Creator
-import akka.util.unused
 
 object FishingOutcomes {
 
@@ -47,13 +48,13 @@ object TestProbe {
   def create[M](system: ActorSystem[_]): TestProbe[M] =
     create(name = "testProbe", system)
 
-  def create[M](@unused clazz: Class[M], system: ActorSystem[_]): TestProbe[M] =
+  def create[M](@nowarn("msg=never used") clazz: Class[M], system: ActorSystem[_]): TestProbe[M] =
     create(system)
 
   def create[M](name: String, system: ActorSystem[_]): TestProbe[M] =
     new TestProbeImpl[M](name, system)
 
-  def create[M](name: String, @unused clazz: Class[M], system: ActorSystem[_]): TestProbe[M] =
+  def create[M](name: String, @nowarn("msg=never used") clazz: Class[M], system: ActorSystem[_]): TestProbe[M] =
     new TestProbeImpl[M](name, system)
 }
 

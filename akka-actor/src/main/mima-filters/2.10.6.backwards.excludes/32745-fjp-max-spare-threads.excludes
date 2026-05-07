@@ -1,0 +1,2 @@
+# Internal APIs
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.dispatch.ForkJoinExecutorConfigurator#AkkaForkJoinPool.this")

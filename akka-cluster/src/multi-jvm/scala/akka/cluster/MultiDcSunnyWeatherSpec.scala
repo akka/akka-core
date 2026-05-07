@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.collection.immutable.SortedSet
 import scala.concurrent.duration._
@@ -60,6 +61,7 @@ class MultiDcSunnyWeatherMultiJvmNode3 extends MultiDcSunnyWeatherSpec
 class MultiDcSunnyWeatherMultiJvmNode4 extends MultiDcSunnyWeatherSpec
 class MultiDcSunnyWeatherMultiJvmNode5 extends MultiDcSunnyWeatherSpec
 
+@nowarn("msg=Use Akka Distributed Cluster")
 abstract class MultiDcSunnyWeatherSpec extends MultiNodeClusterSpec(MultiDcSunnyWeatherMultiJvmSpec) {
 
   "A normal cluster" must {

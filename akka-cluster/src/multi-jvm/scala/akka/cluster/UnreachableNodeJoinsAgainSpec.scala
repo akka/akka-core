@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -19,9 +19,7 @@ import akka.remote.testconductor.RoleName
 import akka.remote.testkit.Direction
 import akka.remote.testkit.MultiNodeConfig
 import akka.testkit._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object UnreachableNodeJoinsAgainMultiNodeConfig extends MultiNodeConfig {
   val first = role("first")
   val second = role("second")

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.routing
@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.immutable
 import scala.concurrent.{ ExecutionContext, Promise }
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.util.Random
 
 import com.typesafe.config.Config
@@ -18,7 +19,6 @@ import akka.dispatch.Dispatchers
 import akka.japi.Util.immutableSeq
 import akka.pattern.{ ask, pipe, AskTimeoutException }
 import akka.util.Helpers.ConfigOps
-import akka.util.JavaDurationConverters._
 import akka.util.Timeout
 
 /**
@@ -187,7 +187,7 @@ final case class TailChoppingPool(
    * @param interval duration after which next routee will be picked
    */
   def this(nr: Int, within: java.time.Duration, interval: java.time.Duration) =
-    this(nr, within.asScala, interval.asScala)
+    this(nr, within.toScala, interval.toScala)
 
   override def createRouter(system: ActorSystem): Router =
     new Router(
@@ -281,7 +281,7 @@ final case class TailChoppingGroup(
    * @param interval duration after which next routee will be picked
    */
   def this(routeePaths: java.lang.Iterable[String], within: java.time.Duration, interval: java.time.Duration) =
-    this(immutableSeq(routeePaths), within.asScala, interval.asScala)
+    this(immutableSeq(routeePaths), within.toScala, interval.toScala)
 
   override def createRouter(system: ActorSystem): Router =
     new Router(

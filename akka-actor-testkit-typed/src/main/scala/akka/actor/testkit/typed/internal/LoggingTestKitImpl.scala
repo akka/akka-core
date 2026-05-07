@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed.internal
@@ -150,7 +150,7 @@ import akka.testkit.TestKit
     copy(mdc = newMdc)
 
   override def withMdc(newMdc: java.util.Map[String, String]): javadsl.LoggingTestKit = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     withMdc(newMdc.asScala.toMap)
   }
 

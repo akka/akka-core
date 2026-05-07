@@ -1,13 +1,16 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
 
 import akka.stream.scaladsl.{ Sink, Source }
-import akka.stream.{ SubstreamCancelStrategy }
+import akka.stream.SubstreamCancelStrategy
 import akka.testkit.AkkaSpec
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 class SubstreamDocSpec extends AkkaSpec {
 
   "generate substreams by groupBy" in {

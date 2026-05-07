@@ -33,10 +33,10 @@ declare author_count=$(echo "$authors" | wc -l | grep -o '[1-9].*')
 declare diff_short=$(git diff --shortstat $tag_range | grep -o '[1-9].*')
 
 declare script_user_agent="User-Agent: Akka-Stats-Script"
-declare open_milestones=$(curl -s -H "$script_user_agent" "https://api.github.com/repos/akka/akka/milestones?state=open")
-declare closed_milestones=$(curl -s -H "$script_user_agent" "https://api.github.com/repos/akka/akka/milestones?state=closed")
+declare open_milestones=$(curl -s -H "$script_user_agent" "https://api.github.com/repos/akka/akka-core/milestones?state=open")
+declare closed_milestones=$(curl -s -H "$script_user_agent" "https://api.github.com/repos/akka/akka-core/milestones?state=closed")
 declare milestone_id=$(echo "$open_milestones$closed_milestones" | sed 's/"description"/\n/g' | perl -ne 'm/number":([0-9]+),"title":"(.+?)",/ && print "$1,$2\n"' | grep "$milestone_name" | cut -d"," -f 1)
-declare tickets=$(curl -s -H "$script_user_agent" "https://api.github.com/repos/akka/akka/issues?milestone=$milestone_id&state=all&per_page=100" | sed 's/"comments"/\n/g' | perl -ne 'm/number":([0-9]+),"title":"(.+?)",/ && print " - *$1* $2\n"' | sort -n)
+declare tickets=$(curl -s -H "$script_user_agent" "https://api.github.com/repos/akka/akka-core/issues?milestone=$milestone_id&state=all&per_page=100" | sed 's/"comments"/\n/g' | perl -ne 'm/number":([0-9]+),"title":"(.+?)",/ && print " - *$1* $2\n"' | sort -n)
 declare ticket_count=$(echo "$tickets" | wc -l | grep -o '[1-9].*')
 
 echo "$tag1 compared to Akka $tag2":

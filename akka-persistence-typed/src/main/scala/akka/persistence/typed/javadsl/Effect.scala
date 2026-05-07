@@ -1,8 +1,14 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.javadsl
+
+import java.util.Collections
+import java.util.Optional
+import java.util.concurrent.CompletionStage
+
+import scala.concurrent.ExecutionContext
 
 import akka.actor.typed.ActorRef
 import akka.annotation.DoNotInherit
@@ -10,7 +16,11 @@ import akka.annotation.InternalApi
 import akka.japi.function
 import akka.persistence.typed.internal._
 import akka.persistence.typed.internal.SideEffect
-import akka.util.ccompat.JavaConverters._
+import akka.persistence.typed.scaladsl
+import scala.jdk.CollectionConverters._
+import scala.reflect.ClassTag
+
+import akka.persistence.CompositeMetadata
 
 /**
  * INTERNAL API: see `class EffectFactories`
@@ -26,16 +36,32 @@ import akka.util.ccompat.JavaConverters._
 @DoNotInherit sealed class EffectFactories[Event, State] {
 
   /**
-   * Persist a single event
+   * Persist a single event.
    */
-  final def persist(event: Event): EffectBuilder[Event, State] = Persist(event)
+  final def persist(event: Event): EffectBuilder[Event, State] = Persist(event, Nil)
 
   /**
-   * Persist all of a the given events. Each event will be applied through `applyEffect` separately but not until
-   * all events has been persisted. If `callback` is added through [[EffectBuilder.thenRun]] that will invoked
+   * Persist multiple events. If `callback` is added through [[EffectBuilder.thenRun]] that will invoked
    * after all the events has been persisted.
    */
-  final def persist(events: java.util.List[Event]): EffectBuilder[Event, State] = PersistAll(events.asScala.toVector)
+  final def persist(events: java.util.List[Event]): EffectBuilder[Event, State] =
+    PersistAll(events.asScala.iterator.map(scaladsl.EventWithMetadata(_, Nil)).toVector)
+
+  /**
+   * Persist a single event and additional metadata together with the event.
+   */
+  final def persistWithMetadata(eventWithMetadata: EventWithMetadata[Event]): EffectBuilder[Event, State] =
+    Persist(eventWithMetadata.event, eventWithMetadata.metadataEntries.asScala.toList)
+
+  /**
+   * Persist multiple events and additional metadata together with the events.
+   * If `callback` is added through [[EffectBuilder.thenRun]] that will invoked
+   * after all the events has been persisted.
+   */
+  final def persistWithMetadata(
+      eventsWithMetadata: java.util.List[EventWithMetadata[Event]]): EffectBuilder[Event, State] =
+    PersistAll(
+      eventsWithMetadata.asScala.iterator.map(a => scaladsl.EventWithMetadata(a.event, a.metadataEntries)).toVector)
 
   /**
    * Do not persist anything
@@ -102,6 +128,27 @@ import akka.util.ccompat.JavaConverters._
    */
   def noReply(): ReplyEffect[Event, State] =
     none().thenNoReply()
+
+  /**
+   * Asynchronous command handling. The effect is run when the `CompletionStage` has been completed.
+   * Any incoming commands are stashed and processed later, after current command, when the `CompletionStage` has
+   * been completed.
+   *
+   * This can for example be used for retrieval of external information before validating the command.
+   */
+  def async(effect: CompletionStage[Effect[Event, State]]): Effect[Event, State] = {
+    import scala.jdk.FutureConverters._
+    AsyncEffect[Event, State](effect.asScala.map(_.asInstanceOf[EffectImpl[Event, State]])(ExecutionContext.parasitic))
+  }
+
+  /**
+   * Same as [[EffectFactories.async]] when the `EventSourcedBehavior` is created with
+   * [[EventSourcedBehaviorWithEnforcedReplies]].
+   */
+  def asyncReply(effect: CompletionStage[ReplyEffect[Event, State]]): ReplyEffect[Event, State] = {
+    import scala.jdk.FutureConverters._
+    AsyncEffect[Event, State](effect.asScala.map(_.asInstanceOf[EffectImpl[Event, State]])(ExecutionContext.parasitic))
+  }
 }
 
 /**
@@ -199,4 +246,27 @@ import akka.util.ccompat.JavaConverters._
    * by another `unstashAll`.
    */
   def thenUnstashAll(): ReplyEffect[Event, State]
+
+  /** Stops the actor as a side effect */
+  def thenStop(): ReplyEffect[Event, State]
+}
+
+object EventWithMetadata {
+  def create[E](event: E, metadata: AnyRef) =
+    new EventWithMetadata(event, Collections.singletonList(metadata))
+
+  def create[E](event: E, metadataEntries: java.util.List[AnyRef]) =
+    new EventWithMetadata(event, metadataEntries)
+}
+
+final class EventWithMetadata[E](val event: E, val metadataEntries: java.util.List[AnyRef]) {
+
+  /**
+   * The metadata of a given type that is associated with the event.
+   */
+  def getMetadata[M](metadataType: Class[M]): Optional[M] = {
+    import scala.jdk.OptionConverters._
+    implicit val ct: ClassTag[M] = ClassTag(metadataType)
+    CompositeMetadata.extract[M](metadataEntries.asScala.toSeq).toJava
+  }
 }

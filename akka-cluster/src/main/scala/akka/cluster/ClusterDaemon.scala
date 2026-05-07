@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -332,6 +332,7 @@ private[cluster] object ClusterCoreDaemon {
  * INTERNAL API.
  */
 @InternalApi
+@nowarn("msg=Use Akka Distributed Cluster")
 private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatChecker: JoinConfigCompatChecker)
     extends Actor
     with RequiresMessageQueue[UnboundedMessageQueueSemantics] {
@@ -449,7 +450,7 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
       case None =>
         logInfo(
           "No downing-provider-class configured, manual cluster downing required, see " +
-          "https://doc.akka.io/docs/akka/current/typed/cluster.html#downing")
+          "https://doc.akka.io/libraries/akka-core/current/typed/cluster.html#downing")
     }
 
     if (seedNodes.isEmpty) {
@@ -458,7 +459,7 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
       else
         logInfo(
           "No seed-nodes configured, manual cluster join required, see " +
-          "https://doc.akka.io/docs/akka/current/typed/cluster.html#joining")
+          "https://doc.akka.io/libraries/akka-core/current/typed/cluster.html#joining")
     } else {
       self ! JoinSeedNodes(seedNodes)
     }
@@ -586,7 +587,6 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
   }
 
   // Still supports classic remoting as well
-  @nowarn("msg=Classic remoting is deprecated, use Artery")
   def initialized: Actor.Receive =
     ({
       case msg: GossipEnvelope => receiveGossip(msg)
@@ -965,7 +965,8 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
     latestGossip.members.find(_.address == address).foreach { existingMember =>
       if (existingMember.status == Joining || existingMember.status == WeaklyUp || existingMember.status == Up || existingMember.status == PreparingForShutdown || existingMember.status == ReadyForShutdown) {
         // mark node as LEAVING
-        val newMembers = latestGossip.members - existingMember + existingMember.copy(status = Leaving)
+        val leavingMember = existingMember.copy(status = Leaving)
+        val newMembers = latestGossip.members - existingMember + leavingMember
         val newGossip = latestGossip.copy(members = newMembers)
 
         updateLatestGossip(newGossip)
@@ -977,6 +978,7 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
           Leaving)
         publishMembershipState()
         // immediate gossip to speed up the leaving process
+        gossipToOldest(Set(leavingMember))
         gossip()
       }
     }
@@ -1287,7 +1289,7 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
       latestGossip.overview.seen
         .count(membershipState.isInSameDc) < latestGossip.members.count(_.dataCenter == cluster.selfDataCenter) / 2
     } else {
-      latestGossip.members.exists(m => m.status == Down) ||
+      latestGossip.members.exists(m => m.status == Down || m.status == Leaving || m.status == Exiting) ||
       latestGossip.overview.seen.size < latestGossip.members.size / 2
     }
   }
@@ -1319,6 +1321,23 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
 
       }
     }
+
+  /**
+   * Gossip the Leaving and Exiting changes to the two oldest nodes for quick dissemination to potential Singleton nodes
+   */
+  private def gossipToOldest(changedMembers: Set[Member]): Unit = {
+    val targets = membershipState.gossipTargetsForLeavingAndExitingMembers(changedMembers)
+    if (targets.nonEmpty) {
+
+      if (isDebugEnabled)
+        gossipLogger.logDebug(
+          "Gossip changed members [{}] to the two oldest (per role) [{}] (singleton optimization).",
+          changedMembers.mkString(", "),
+          targets.mkString(", "))
+
+      targets.foreach(m => gossipTo(m.uniqueAddress))
+    }
+  }
 
   /**
    * Runs periodic leader actions, such as member status transitions, assigning partitions etc.
@@ -1529,24 +1548,7 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
     if (pruned ne latestGossip) {
       updateLatestGossip(pruned)
       publishMembershipState()
-      gossipExitingMembersToOldest(changedMembers.filter(_.status == Exiting))
-    }
-  }
-
-  /**
-   * Gossip the Exiting change to the two oldest nodes for quick dissemination to potential Singleton nodes
-   */
-  private def gossipExitingMembersToOldest(exitingMembers: Set[Member]): Unit = {
-    val targets = membershipState.gossipTargetsForExitingMembers(exitingMembers)
-    if (targets.nonEmpty) {
-
-      if (isDebugEnabled)
-        gossipLogger.logDebug(
-          "Gossip exiting members [{}] to the two oldest (per role) [{}] (singleton optimization).",
-          exitingMembers.mkString(", "),
-          targets.mkString(", "))
-
-      targets.foreach(m => gossipTo(m.uniqueAddress))
+      gossipToOldest(changedMembers.filter(_.status == Exiting))
     }
   }
 

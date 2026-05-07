@@ -12,13 +12,9 @@ how the Split Brain Resolver works.
 
 ## Module info
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Akka Split Brain Resolver is part of `akka-cluster` and you probably already have that
 dependency included. Otherwise, add the following dependency in your project:
@@ -396,6 +392,23 @@ If there is a combination of indirectly connected nodes and a clean network part
 above decision with the ordinary decision, e.g. keep majority, after excluding suspicious failure detection
 observations.
 
+### Down all when indirectly connected
+
+Additional precautions are taken for the uncertainty that may follow from indirectly connected nodes.
+If indirectly connected decision would down more than a certain fraction of the cluster members, 
+SBR will instead down all nodes. This threshold can be configured with:
+
+```
+akka.cluster.split-brain-resolver {
+  down-all-when-indirectly-connected = 0.5
+}
+```
+
+The value can be `on`, `off`, or a double threshold between 0.0 and 1.0:
+- `on`: Always down all when there are indirectly connected
+- `off`: Disables the safeguard entirely
+- A double value: if more or equal to this fraction of members would be downed, down all instead
+
 ## Down all when unstable
 
 When reachability observations by the failure detector are changed the SBR decisions
@@ -430,16 +443,6 @@ in the case of a clean network partition followed by continued instability on th
 That could result in that members are removed from one side but are still running on the other side.
 
 @@@
-
-## Multiple data centers
-
-Akka Cluster has @ref:[support for multiple data centers](cluster-dc.md), where the cluster
-membership is managed by each data center separately and independently of network partitions across different
-data centers. The Split Brain Resolver is embracing that strategy and will not count nodes or down nodes in
-another data center.
-
-When there is a network partition across data centers the typical solution is to wait the partition out until it heals, i.e.
-do nothing. Other decisions should be performed by an external monitoring tool or human operator.
 
 ## Cluster Singleton and Cluster Sharding
 

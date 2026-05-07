@@ -1,14 +1,11 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
 
-import scala.annotation.nowarn
-
 import akka.stream.testkit.StreamSpec
 
-@nowarn("msg=deprecated")
 class BoundedBufferSpec extends StreamSpec {
 
   for (size <- List(1, 3, 4)) {

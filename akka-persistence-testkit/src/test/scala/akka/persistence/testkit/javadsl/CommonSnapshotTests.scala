@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit.javadsl
@@ -12,7 +12,7 @@ import akka.japi.Pair
 import akka.persistence._
 import akka.persistence.testkit._
 import akka.testkit.EventFilter
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 trait CommonSnapshotTests extends JavaDslUtils {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor.typed
@@ -8,6 +8,7 @@ import akka.actor.typed.scaladsl._
 import akka.actor.typed.{ ActorRef, Behavior }
 import akka.util.Timeout
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -28,6 +29,8 @@ class SharedMutableStateDocSpec {
       new MyActor(context)
     }
   }
+
+  @nowarn("msg=never used") // sample snippets
   //#mutable-state
   class MyActor(context: ActorContext[MyActor.Command]) extends AbstractBehavior[MyActor.Command](context) {
     import MyActor._

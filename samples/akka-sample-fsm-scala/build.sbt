@@ -1,13 +1,11 @@
 organization := "com.lightbend.akka.samples"
 name := "akka-sample-fsm-scala"
 
-val AkkaVersion = "2.9.4"
-val LogbackClassicVersion = "1.2.11"
+val AkkaVersion = "2.10.17"
+val LogbackClassicVersion = "1.5.1"
 val AkkaDiagnosticsVersion = "2.1.0"
 
-scalaVersion := "2.13.12"
-
-resolvers += "Akka library repository".at("https://repo.akka.io/maven")
+scalaVersion := "2.13.17"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,

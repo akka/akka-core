@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor
@@ -12,7 +12,6 @@ class SharedMutableStateDocSpec {
   import akka.util.Timeout
   import scala.concurrent.Future
   import scala.concurrent.duration._
-  import scala.language.postfixOps
   import scala.collection.mutable
 
   case class Message(msg: String)

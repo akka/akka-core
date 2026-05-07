@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.cluster.sharding.typed
@@ -16,7 +16,7 @@ import akka.persistence.typed.ReplicaId
 import akka.persistence.typed.ReplicationId
 import scala.annotation.nowarn
 
-@nowarn("msg=never used")
+@nowarn("msg=Use Akka Distributed Cluster")
 object ReplicatedShardingCompileOnlySpec {
 
   sealed trait Command

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.ddata
@@ -17,6 +17,7 @@ import scala.collection.immutable.TreeSet
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -58,10 +59,7 @@ import akka.remote.RARP
 import akka.serialization.SerializationExtension
 import akka.util.ByteString
 import akka.util.Helpers.toRootLowerCase
-import akka.util.JavaDurationConverters._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object ReplicatorSettings {
 
   /**
@@ -88,7 +86,7 @@ object ReplicatorSettings {
       else Some(config.getBytes("log-data-size-exceeding").toInt)
     }
 
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     new ReplicatorSettings(
       roles = roleOption(config.getString("role")).toSet,
       gossipInterval = config.getDuration("gossip-interval", MILLISECONDS).millis,
@@ -127,7 +125,7 @@ object ReplicatorSettings {
    * INTERNAL API
    */
   @InternalApi private[akka] def parseExpiry(config: Config): Map[KeyId, FiniteDuration] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val expiryConfig = config.getConfig("expire-keys-after-inactivity")
     expiryConfig.root
       .keySet()
@@ -461,7 +459,7 @@ final class ReplicatorSettings(
    * Java API
    */
   def withDurableKeys(durableKeys: java.util.Set[String]): ReplicatorSettings = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     withDurableKeys(durableKeys.asScala.toSet)
   }
 
@@ -487,8 +485,8 @@ final class ReplicatorSettings(
    * Java API
    */
   def withExpiryKeys(expiryKeys: java.util.Map[String, java.time.Duration]): ReplicatorSettings = {
-    import akka.util.ccompat.JavaConverters._
-    withExpiryKeys(expiryKeys.asScala.iterator.map { case (key, value) => key -> value.asScala }.toMap)
+    import scala.jdk.CollectionConverters._
+    withExpiryKeys(expiryKeys.asScala.iterator.map { case (key, value) => key -> value.toScala }.toMap)
   }
 
   private def copy(
@@ -554,7 +552,7 @@ object Replicator {
     /**
      * Java API
      */
-    def this(n: Int, timeout: java.time.Duration) = this(n, timeout.asScala)
+    def this(n: Int, timeout: java.time.Duration) = this(n, timeout.toScala)
   }
   final case class ReadMajority(timeout: FiniteDuration, minCap: Int = DefaultMajorityMinCap) extends ReadConsistency {
     def this(timeout: FiniteDuration) = this(timeout, DefaultMajorityMinCap)
@@ -562,7 +560,7 @@ object Replicator {
     /**
      * Java API
      */
-    def this(timeout: java.time.Duration) = this(timeout.asScala, DefaultMajorityMinCap)
+    def this(timeout: java.time.Duration) = this(timeout.toScala, DefaultMajorityMinCap)
   }
 
   /**
@@ -576,14 +574,14 @@ object Replicator {
     /**
      * Java API
      */
-    def this(timeout: java.time.Duration, additional: Int) = this(timeout.asScala, additional, DefaultMajorityMinCap)
+    def this(timeout: java.time.Duration, additional: Int) = this(timeout.toScala, additional, DefaultMajorityMinCap)
   }
   final case class ReadAll(timeout: FiniteDuration) extends ReadConsistency {
 
     /**
      * Java API
      */
-    def this(timeout: java.time.Duration) = this(timeout.asScala)
+    def this(timeout: java.time.Duration) = this(timeout.toScala)
   }
 
   sealed trait WriteConsistency {
@@ -598,7 +596,7 @@ object Replicator {
     /**
      * Java API
      */
-    def this(n: Int, timeout: java.time.Duration) = this(n, timeout.asScala)
+    def this(n: Int, timeout: java.time.Duration) = this(n, timeout.toScala)
   }
   final case class WriteMajority(timeout: FiniteDuration, minCap: Int = DefaultMajorityMinCap)
       extends WriteConsistency {
@@ -607,7 +605,7 @@ object Replicator {
     /**
      * Java API
      */
-    def this(timeout: java.time.Duration) = this(timeout.asScala, DefaultMajorityMinCap)
+    def this(timeout: java.time.Duration) = this(timeout.toScala, DefaultMajorityMinCap)
   }
 
   /**
@@ -621,14 +619,14 @@ object Replicator {
     /**
      * Java API
      */
-    def this(timeout: java.time.Duration, additional: Int) = this(timeout.asScala, additional, DefaultMajorityMinCap)
+    def this(timeout: java.time.Duration, additional: Int) = this(timeout.toScala, additional, DefaultMajorityMinCap)
   }
   final case class WriteAll(timeout: FiniteDuration) extends WriteConsistency {
 
     /**
      * Java API
      */
-    def this(timeout: java.time.Duration) = this(timeout.asScala)
+    def this(timeout: java.time.Duration) = this(timeout.toScala)
   }
 
   /**
@@ -655,7 +653,7 @@ object Replicator {
      * Java API
      */
     def getKeyIds: java.util.Set[String] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       keyIds.asJava
     }
   }
@@ -2172,7 +2170,6 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       }))
   }
 
-  @nowarn("msg=deprecated")
   def receiveFlushChanges(): Unit = {
     def notify(keyId: KeyId, subs: Iterator[ActorRef], sendExpiredIfMissing: Boolean): Unit = {
       val key = subscriptionKeys.get(keyId) match {
@@ -2536,7 +2533,6 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   private def dropWildcard(keyId: KeyId): KeyId =
     keyId.dropRight(1)
 
-  @nowarn("msg=deprecated")
   def receiveTerminated(ref: ActorRef): Unit = {
     if (ref == durableStore) {
       log.error("Stopping distributed-data Replicator because durable store terminated")

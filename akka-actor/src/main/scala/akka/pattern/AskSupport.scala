@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
@@ -9,6 +9,7 @@ import java.util.concurrent.TimeoutException
 
 import scala.annotation.nowarn
 import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Future, Promise }
 import scala.language.implicitConversions
 import scala.util.{ Failure, Success }
@@ -16,11 +17,9 @@ import scala.util.control.NoStackTrace
 
 import akka.actor._
 import akka.annotation.{ InternalApi, InternalStableApi }
-import akka.dispatch.ExecutionContexts
 import akka.dispatch.sysmsg._
-import akka.util.{ Timeout, Unsafe }
+import akka.util.Timeout
 import akka.util.ByteString
-import akka.util.unused
 
 /**
  * This is what is used to complete a Future that is returned from an ask/? call,
@@ -511,7 +510,6 @@ private[akka] final class PromiseActorRef(
     _mcn: String,
     refPathPrefix: String)
     extends MinimalActorRef {
-  import AbstractPromiseActorRef.{ stateOffset, watchedByOffset }
   import PromiseActorRef._
 
   // This is necessary for weaving the PromiseActorRef into the asked message, i.e. the replyTo pattern.
@@ -544,11 +542,11 @@ private[akka] final class PromiseActorRef(
 
   @inline
   private[this] def watchedBy: Set[ActorRef] =
-    Unsafe.instance.getObjectVolatile(this, watchedByOffset).asInstanceOf[Set[ActorRef]]
+    AbstractPromiseActorRef.watchedByHandle.getVolatile(this).asInstanceOf[Set[ActorRef]]
 
   @inline
   private[this] def updateWatchedBy(oldWatchedBy: Set[ActorRef], newWatchedBy: Set[ActorRef]): Boolean =
-    Unsafe.instance.compareAndSwapObject(this, watchedByOffset, oldWatchedBy, newWatchedBy)
+    AbstractPromiseActorRef.watchedByHandle.compareAndSet(this, oldWatchedBy, newWatchedBy)
 
   @tailrec // Returns false if the Promise is already completed
   private[this] final def addWatcher(watcher: ActorRef): Boolean = watchedBy match {
@@ -569,14 +567,16 @@ private[akka] final class PromiseActorRef(
   }
 
   @inline
-  private[this] def state: AnyRef = Unsafe.instance.getObjectVolatile(this, stateOffset)
+  private[this] def state: AnyRef =
+    AbstractPromiseActorRef.stateHandle.getVolatile(this)
 
   @inline
   private[this] def updateState(oldState: AnyRef, newState: AnyRef): Boolean =
-    Unsafe.instance.compareAndSwapObject(this, stateOffset, oldState, newState)
+    AbstractPromiseActorRef.stateHandle.compareAndSet(this, oldState, newState)
 
   @inline
-  private[this] def setState(newState: AnyRef): Unit = Unsafe.instance.putObjectVolatile(this, stateOffset, newState)
+  private[this] def setState(newState: AnyRef): Unit =
+    AbstractPromiseActorRef.stateHandle.setVolatile(this, newState)
 
   override def getParent: InternalActorRef = provider.tempContainer
 
@@ -675,22 +675,25 @@ private[akka] final class PromiseActorRef(
   }
 
   @InternalStableApi
-  private[akka] def ask(actorSel: ActorSelection, message: Any, @unused timeout: Timeout): Future[Any] = {
+  private[akka] def ask(
+      actorSel: ActorSelection,
+      message: Any,
+      @nowarn("msg=never used") timeout: Timeout): Future[Any] = {
     actorSel.tell(message, this)
     result.future
   }
 
   @InternalStableApi
-  private[akka] def ask(actorRef: ActorRef, message: Any, @unused timeout: Timeout): Future[Any] = {
+  private[akka] def ask(actorRef: ActorRef, message: Any, @nowarn("msg=never used") timeout: Timeout): Future[Any] = {
     actorRef.tell(message, this)
     result.future
   }
 
   @InternalStableApi
-  private[akka] def onComplete(@unused message: Any, @unused alreadyCompleted: Boolean): Unit = {}
+  private[akka] def onComplete(message: Any, alreadyCompleted: Boolean): Unit = {}
 
   @InternalStableApi
-  private[akka] def onTimeout(@unused timeout: Timeout): Unit = {}
+  private[akka] def onTimeout(timeout: Timeout): Unit = {}
 }
 
 /**
@@ -718,7 +721,7 @@ private[akka] object PromiseActorRef {
     val result = Promise[Any]()
     val scheduler = provider.guardian.underlying.system.scheduler
     val a = new PromiseActorRef(provider, result, messageClassName, refPathPrefix)
-    implicit val ec = ExecutionContexts.parasitic
+    implicit val ec = ExecutionContext.parasitic
     val f = scheduler.scheduleOnce(timeout.duration) {
       val timedOut = result.tryComplete {
         val wasSentBy = if (sender == ActorRef.noSender) "" else s" was sent by [$sender]"

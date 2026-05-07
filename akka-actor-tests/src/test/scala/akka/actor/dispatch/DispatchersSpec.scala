@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.dispatch
@@ -7,6 +7,7 @@ package akka.actor.dispatch
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.annotation.nowarn
 import scala.reflect.ClassTag
 
 import com.typesafe.config.Config
@@ -17,7 +18,6 @@ import akka.actor._
 import akka.dispatch._
 import akka.routing.FromConfig
 import akka.testkit.{ AkkaSpec, ImplicitSender }
-import akka.util.unused
 
 object DispatchersSpec {
   val config = """
@@ -74,7 +74,9 @@ object DispatchersSpec {
     }
   }
 
-  class OneShotMailboxType(@unused settings: ActorSystem.Settings, @unused config: Config)
+  class OneShotMailboxType(
+      @nowarn("msg=never used") settings: ActorSystem.Settings,
+      @nowarn("msg=never used") config: Config)
       extends MailboxType
       with ProducesMessageQueue[DoublingMailbox] {
     val created = new AtomicBoolean(false)
@@ -125,7 +127,7 @@ class DispatchersSpec extends AkkaSpec(DispatchersSpec.config) with ImplicitSend
   val defaultDispatcherConfig = settings.config.getConfig("akka.actor.default-dispatcher")
 
   lazy val allDispatchers: Map[String, MessageDispatcher] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     validTypes
       .map(t => (t, from(ConfigFactory.parseMap(Map(tipe -> t, id -> t).asJava).withFallback(defaultDispatcherConfig))))
@@ -165,7 +167,7 @@ class DispatchersSpec extends AkkaSpec(DispatchersSpec.config) with ImplicitSend
     }
 
     "throw ConfigurationException if type does not exist" in {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       intercept[ConfigurationException] {
         from(
           ConfigFactory

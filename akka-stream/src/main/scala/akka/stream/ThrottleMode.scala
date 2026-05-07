@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
@@ -12,7 +12,7 @@ sealed abstract class ThrottleMode
 object ThrottleMode {
 
   /**
-   *  Tells throttle to make pauses before emitting messages to meet throttle rate
+   *  Tells throttle to make pauses before emitting messages to meet the throttle rate
    */
   case object Shaping extends ThrottleMode
 
@@ -22,7 +22,7 @@ object ThrottleMode {
   case object Enforcing extends ThrottleMode
 
   /**
-   * Java API: Tells throttle to make pauses before emitting messages to meet throttle rate
+   * Java API: Tells throttle to make pauses before emitting messages to meet the throttle rate
    */
   def shaping = Shaping
 

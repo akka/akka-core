@@ -1,11 +1,13 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.remoting
 
 import akka.actor.{ Actor, ActorRef, ActorSystem, ExtendedActorSystem }
 import akka.testkit.{ AkkaSpec, ImplicitSender }
+
+import scala.annotation.nowarn
 //#import
 import akka.actor.{ Address, AddressFromURIString, Deploy, Props }
 import akka.remote.RemoteScope
@@ -19,6 +21,7 @@ object RemoteDeploymentDocSpec {
 
 }
 
+@nowarn("msg=never used") // sample snippets
 class RemoteDeploymentDocSpec extends AkkaSpec("""
     akka.actor.provider = remote
     akka.remote.artery.canonical.port = 0

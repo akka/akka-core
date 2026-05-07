@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
 
-import scala.annotation.nowarn
 import scala.concurrent.Promise
 
 import akka.actor.Actor
@@ -38,7 +37,6 @@ private[akka] object MaterializerGuardian {
 /**
  * INTERNAL API
  */
-@nowarn("msg=deprecated")
 @InternalApi
 private[akka] final class MaterializerGuardian(
     systemMaterializerPromise: Promise[Materializer],

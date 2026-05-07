@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2024 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 package com.lightbend;
 

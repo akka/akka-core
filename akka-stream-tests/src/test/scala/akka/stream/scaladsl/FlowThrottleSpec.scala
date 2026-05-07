@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.scaladsl
@@ -59,7 +59,16 @@ class FlowThrottleSpec extends StreamSpec("""
         .cancel() // We won't wait 100 days, sorry
     }
 
-    "work if there are two throttles in different streams" in {
+    "effectively disable with Int.MaxValue" in {
+      Source(1 to 5)
+        .throttle(Int.MaxValue, 100.days, 1, Shaping)
+        .runWith(TestSink[Int]())
+        .request(5)
+        .expectNext(1, 2, 3, 4, 5)
+        .expectComplete()
+    }
+
+    "have separate counts for two throttles in different streams" in {
       val sharedThrottle = Flow[Int].throttle(1, 1.day, 1, Enforcing)
 
       // If there is accidental shared state then we would not be able to pass through the single element
@@ -67,7 +76,6 @@ class FlowThrottleSpec extends StreamSpec("""
 
       // It works with a new stream, too
       Source.single(2).via(sharedThrottle).via(sharedThrottle).runWith(Sink.seq).futureValue should ===(Seq(2))
-
     }
 
     "emit single element per tick" in {
@@ -401,6 +409,50 @@ class FlowThrottleSpec extends StreamSpec("""
       ref ! "done"
 
       Await.result(done, 20.seconds) should ===(Done)
+    }
+
+    "use same ThrottleControl in different streams" in {
+      val sharedControl = new ThrottleControl(1, 1.day, 1, Enforcing)
+      val sharedThrottle = Flow[Int].throttle(sharedControl)
+
+      Source.single(1).via(sharedThrottle).runWith(Sink.seq).futureValue should ===(Seq(1))
+
+      // but a second element, in a different stream, exceeds the enforced rate
+      Source.single(2).via(sharedThrottle).runWith(Sink.seq).failed.futureValue.getClass should ===(
+        classOf[RateExceededException])
+    }
+
+    "change throttle rate with shared ThrottleControl" in {
+      val sharedControl = new ThrottleControl(1, 100.millis)
+      val upstream = TestPublisher.probe[Int]()
+      val downstream = TestSubscriber.probe[Int]()
+
+      Source.fromPublisher(upstream).throttle(sharedControl).runWith(Sink.fromSubscriber(downstream))
+
+      downstream.request(20)
+
+      val t0 = System.nanoTime()
+      (1 to 10).foreach { n =>
+        upstream.sendNext(n)
+      }
+      downstream.expectNextN(10)
+      val t1 = System.nanoTime()
+      (t1 - t0) shouldBe >(800.millis.toNanos)
+      (t1 - t0) shouldBe <(1800.millis.toNanos)
+
+      sharedControl.update(1, 200.millis)
+
+      val t2 = System.nanoTime()
+      (1 to 10).foreach { n =>
+        upstream.sendNext(n)
+      }
+      downstream.expectNextN(10)
+      val t3 = System.nanoTime()
+      (t3 - t2) shouldBe >(1800.millis.toNanos)
+      (t3 - t2) shouldBe <(2800.millis.toNanos)
+
+      upstream.sendComplete()
+      downstream.expectComplete()
     }
 
   }

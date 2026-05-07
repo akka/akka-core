@@ -1,8 +1,10 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.cluster.typed
+
+import scala.annotation.nowarn
 
 import akka.actor.typed.{ ActorRef, ActorSystem, Behavior, SupervisorStrategy }
 import akka.actor.typed.scaladsl.Behaviors
@@ -10,6 +12,7 @@ import scala.concurrent.duration._
 
 import akka.cluster.typed.ClusterSingletonSettings
 
+@nowarn("msg=Use Akka Distributed Cluster")
 object SingletonCompileOnlySpec {
 
   val system = ActorSystem(Behaviors.empty, "Singleton")

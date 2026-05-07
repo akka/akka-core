@@ -1,14 +1,18 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
 
+import akka.actor.ClassicActorSystemProvider
+
+import java.util.concurrent.ThreadLocalRandom
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.{ Duration, FiniteDuration }
+import scala.util.Try
 import scala.util.control.NonFatal
-
 import akka.actor.Scheduler
+import akka.pattern.RetrySupport.calculateExponentialBackoffDelay
 import akka.util.ConstantFun
 
 /**
@@ -106,7 +110,7 @@ trait RetrySupport {
     retry(
       attempt,
       attempts,
-      attempted => Some(BackoffSupervisor.calculateDelay(attempted, minBackoff, maxBackoff, randomFactor)))
+      attempted => Some(calculateExponentialBackoffDelay(attempted, minBackoff, maxBackoff, randomFactor)))
   }
 
   /**
@@ -148,7 +152,7 @@ trait RetrySupport {
       attempt,
       shouldRetry,
       attempts,
-      attempted => Some(BackoffSupervisor.calculateDelay(attempted, minBackoff, maxBackoff, randomFactor)))
+      attempted => Some(calculateExponentialBackoffDelay(attempted, minBackoff, maxBackoff, randomFactor)))
   }
 
   /**
@@ -247,6 +251,31 @@ trait RetrySupport {
       delayFunction: Int => Option[FiniteDuration])(implicit ec: ExecutionContext, scheduler: Scheduler): Future[T] = {
     RetrySupport.retry(attempt, attempts, delayFunction, attempted = 0, shouldRetry)
   }
+
+  /**
+   * Given a function from Unit to Future, returns an internally retrying Future.
+   * The first attempt will be made immediately, any subsequent attempt will be made based on provided [[RetrySettings]].
+   *
+   * <b>Example usage:</b>
+   *
+   * // retry with backoff
+   * {{{
+   * protected val sendAndReceive: HttpRequest => Future[HttpResponse] = { (req) => ??? }
+   * private val sendReceiveRetry: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => retry[HttpResponse](
+   *   RetrySettings(10)) {
+   *      () => sendAndReceive(req)
+   *   }
+   * }}}
+   */
+  def retry[T](retrySettings: RetrySettings)(attempt: () => Future[T])(
+      implicit system: ClassicActorSystemProvider): Future[T] = {
+    RetrySupport.retry(
+      attempt,
+      retrySettings.maxRetries,
+      retrySettings.delayFunction,
+      attempted = 0,
+      retrySettings.shouldRetry)(system.classicSystem.dispatcher, system.classicSystem.scheduler)
+  }
 }
 
 object RetrySupport extends RetrySupport {
@@ -301,4 +330,21 @@ object RetrySupport extends RetrySupport {
       tryAttempt()
     }
   }
+
+  /**
+   * Calculates an exponential back off delay.
+   */
+  def calculateExponentialBackoffDelay(
+      attempt: Int,
+      minBackoff: FiniteDuration,
+      maxBackoff: FiniteDuration,
+      randomFactor: Double): FiniteDuration = {
+    val rnd = 1.0 + ThreadLocalRandom.current().nextDouble() * randomFactor
+    val calculatedDuration = Try(maxBackoff.min(minBackoff * math.pow(2, attempt)) * rnd).getOrElse(maxBackoff)
+    calculatedDuration match {
+      case f: FiniteDuration => f
+      case _                 => maxBackoff
+    }
+  }
+
 }

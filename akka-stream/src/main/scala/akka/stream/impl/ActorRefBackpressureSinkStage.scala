@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -84,7 +84,7 @@ import akka.stream.stage._
       }
 
       override def onUpstreamFinish(): Unit = {
-        if (buffer.isEmpty) finish()
+        if (buffer.isEmpty && acknowledgementReceived) finish()
         else completeReceived = true
       }
 

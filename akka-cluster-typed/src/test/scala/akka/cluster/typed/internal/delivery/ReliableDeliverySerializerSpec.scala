@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.typed.internal.delivery
 
 import org.scalatest.wordspec.AnyWordSpecLike
-
 import akka.actor.ExtendedActorSystem
 import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
@@ -34,7 +33,7 @@ class ReliableDeliverySerializerSpec extends ScalaTestWithActorTestKit with AnyW
       "Ack" -> ProducerControllerImpl.Ack(5L),
       "Request" -> ProducerControllerImpl.Request(5L, 25L, true, true),
       "Resend" -> ProducerControllerImpl.Resend(5L),
-      "RegisterConsumer" -> ProducerController.RegisterConsumer(ref),
+      "RegisterConsumer" -> ProducerController.RegisterConsumer[Any](ref),
       "DurableProducerQueue.MessageSent-1" -> DurableProducerQueue.MessageSent(3L, "msg03", false, "", timestamp),
       "DurableProducerQueue.MessageSent-2" -> DurableProducerQueue.MessageSent(3L, "msg03", true, "q1", timestamp),
       "DurableProducerQueue.Confirmed" -> DurableProducerQueue.Confirmed(3L, "q2", timestamp),

@@ -1,14 +1,14 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.javadsl
 
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 
 import akka.annotation.InternalApi
 import akka.stream.scaladsl
-import akka.util.JavaDurationConverters.JavaDurationOps
 
 /**
  * Allows to manage delay and can be stateful to compute delay for any sequence of elements,
@@ -28,7 +28,7 @@ object DelayStrategy {
   /** INTERNAL API */
   @InternalApi
   private[javadsl] def asScala[T](delayStrategy: DelayStrategy[T]) = new scaladsl.DelayStrategy[T] {
-    override def nextDelay(elem: T): FiniteDuration = delayStrategy.nextDelay(elem).asScala
+    override def nextDelay(elem: T): FiniteDuration = delayStrategy.nextDelay(elem).toScala
   }
 
   /**

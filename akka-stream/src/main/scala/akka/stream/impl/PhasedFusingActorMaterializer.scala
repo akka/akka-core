@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -7,7 +7,6 @@ package akka.stream.impl
 import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.annotation.nowarn
 import scala.collection.immutable.Map
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
@@ -49,9 +48,9 @@ import akka.util.OptionVal
  * INTERNAL API
  */
 @InternalApi private[akka] object PhasedFusingActorMaterializer {
-
-  val Debug = false
-  val Mailbox: String = "akka.stream.materializer.mailbox"
+  // Compile time constant
+  final val Debug = false
+  final val Mailbox = "akka.stream.materializer.mailbox"
 
   val DefaultPhase: Phase[Any] = new Phase[Any] {
     override def apply(
@@ -615,7 +614,6 @@ private final case class SavedIslandData(
   /**
    * INTERNAL API
    */
-  @nowarn("msg=deprecated")
   @InternalApi private[akka] override def actorOf(context: MaterializationContext, props: Props): ActorRef = {
     val effectiveProps = props.dispatcher match {
       case Dispatchers.DefaultDispatcherId =>

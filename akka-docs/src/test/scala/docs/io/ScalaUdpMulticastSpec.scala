@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.io
@@ -12,7 +12,7 @@ import akka.actor.Props
 import akka.io.Udp
 import akka.testkit.SocketUtil
 import akka.testkit.TestKit
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -58,7 +58,7 @@ class ScalaUdpMulticastSpec
           val listener = system.actorOf(Props(classOf[Listener], iface, group, port, sink))
           try {
             expectMsgType[Udp.Bound]
-            val sender = system.actorOf(Props(classOf[Sender], iface, group, port, msg))
+            system.actorOf(Props(classOf[Sender], iface, group, port, msg))
             // fails here, so binding succeeds but sending a message does not
             expectMsg(msg)
             foundOneThatWorked = true

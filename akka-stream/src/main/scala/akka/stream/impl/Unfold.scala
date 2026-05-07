@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -7,6 +7,7 @@ package akka.stream.impl
 import java.util.Optional
 import java.util.concurrent.CompletionStage
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
@@ -69,7 +70,7 @@ import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler }
         future.value match {
           case Some(value) => handle(value)
           case None =>
-            future.onComplete(asyncHandler)(akka.dispatch.ExecutionContexts.parasitic)
+            future.onComplete(asyncHandler)(ExecutionContext.parasitic)
         }
       }
 

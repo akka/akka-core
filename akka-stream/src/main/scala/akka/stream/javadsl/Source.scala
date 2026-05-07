@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.javadsl
@@ -12,8 +12,10 @@ import java.util.function.{ BiFunction, Supplier }
 import scala.annotation.{ nowarn, varargs }
 import scala.annotation.unchecked.uncheckedVariance
 import scala.collection.immutable
-import scala.compat.java8.FutureConverters._
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
+import scala.concurrent.ExecutionContext
+import scala.jdk.DurationConverters._
+import scala.jdk.FutureConverters._
+import scala.jdk.OptionConverters.RichOptional
 import scala.concurrent.{ Future, Promise }
 import scala.reflect.ClassTag
 
@@ -22,15 +24,13 @@ import org.reactivestreams.{ Publisher, Subscriber }
 import akka.{ Done, NotUsed }
 import akka.actor.{ ActorRef, Cancellable, ClassicActorSystemProvider }
 import akka.annotation.ApiMayChange
-import akka.dispatch.ExecutionContexts
 import akka.event.{ LogMarker, LoggingAdapter, MarkerLoggingAdapter }
 import akka.japi.{ function, JavaPartialFunction, Pair }
 import akka.japi.function.Creator
 import akka.stream._
 import akka.stream.impl.{ LinearTraversalBuilder, UnfoldAsyncJava }
 import akka.util._
-import akka.util.JavaDurationConverters._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** Java API */
 object Source {
@@ -45,7 +45,7 @@ object Source {
   /**
    * Create a `Source` with no elements. The result is the same as calling `Source.<O>empty()`
    */
-  def empty[T](@unused clazz: Class[T]): Source[T, NotUsed] = empty[T]()
+  def empty[T](@nowarn("msg=never used") clazz: Class[T]): Source[T, NotUsed] = empty[T]()
 
   /**
    * Create a `Source` which materializes a [[java.util.concurrent.CompletableFuture]] which controls what element
@@ -61,8 +61,7 @@ object Source {
   def maybe[T]: Source[T, CompletableFuture[Optional[T]]] = {
     new Source(scaladsl.Source.maybe[T].mapMaterializedValue { (scalaOptionPromise: Promise[Option[T]]) =>
       val javaOptionPromise = new CompletableFuture[Optional[T]]()
-      scalaOptionPromise.completeWith(
-        javaOptionPromise.toScala.map(_.asScala)(akka.dispatch.ExecutionContexts.parasitic))
+      scalaOptionPromise.completeWith(javaOptionPromise.asScala.map(_.toScala)(ExecutionContext.parasitic))
 
       javaOptionPromise
     })
@@ -231,7 +230,7 @@ object Source {
    * receive new tick elements as soon as it has requested more elements.
    */
   def tick[O](initialDelay: java.time.Duration, interval: java.time.Duration, tick: O): javadsl.Source[O, Cancellable] =
-    new Source(scaladsl.Source.tick(initialDelay.asScala, interval.asScala, tick))
+    new Source(scaladsl.Source.tick(initialDelay.toScala, interval.toScala, tick))
 
   /**
    * Create a `Source` with one element.
@@ -251,7 +250,7 @@ object Source {
    * a pair of the next state `S` and output elements of type `E`.
    */
   def unfold[S, E](s: S, f: function.Function[S, Optional[Pair[S, E]]]): Source[E, NotUsed] =
-    new Source(scaladsl.Source.unfold(s)((s: S) => f.apply(s).asScala.map(_.toScala)))
+    new Source(scaladsl.Source.unfold(s)((s: S) => f.apply(s).toScala.map(_.toScala)))
 
   /**
    * Same as [[unfold]], but uses an async function to generate the next state-element tuple.
@@ -272,7 +271,7 @@ object Source {
    */
   @deprecated("Use 'Source.lazySource' instead", "2.6.0")
   def lazily[T, M](create: function.Creator[Source[T, M]]): Source[T, CompletionStage[M]] =
-    scaladsl.Source.lazily[T, M](() => create.create().asScala).mapMaterializedValue(_.toJava).asJava
+    scaladsl.Source.lazily[T, M](() => create.create().asScala).mapMaterializedValue(_.asJava).asJava
 
   /**
    * Creates a `Source` from supplied future factory that is not called until downstream demand. When source gets
@@ -283,7 +282,7 @@ object Source {
    */
   @deprecated("Use 'Source.lazyCompletionStage' instead", "2.6.0")
   def lazilyAsync[T](create: function.Creator[CompletionStage[T]]): Source[T, Future[NotUsed]] =
-    scaladsl.Source.lazilyAsync[T](() => create.create().toScala).asJava
+    scaladsl.Source.lazilyAsync[T](() => create.create().asScala).asJava
 
   /**
    * Emits a single value when the given Scala `Future` is successfully completed and then completes the stream.
@@ -306,7 +305,7 @@ object Source {
    * If the `CompletionStage` is completed with a failure the stream is failed.
    */
   def completionStage[T](completionStage: CompletionStage[T]): Source[T, NotUsed] =
-    future(completionStage.toScala)
+    future(completionStage.asScala)
 
   /**
    * Turn a `CompletionStage[Source]` into a source that will emit the values of the source when the future completes successfully.
@@ -314,8 +313,8 @@ object Source {
    */
   def completionStageSource[T, M](completionStageSource: CompletionStage[Source[T, M]]): Source[T, CompletionStage[M]] =
     scaladsl.Source
-      .futureSource(completionStageSource.toScala.map(_.asScala)(ExecutionContexts.parasitic))
-      .mapMaterializedValue(_.toJava)
+      .futureSource(completionStageSource.asScala.map(_.asScala)(ExecutionContext.parasitic))
+      .mapMaterializedValue(_.asJava)
       .asJava
 
   /**
@@ -350,7 +349,7 @@ object Source {
    */
   def lazyCompletionStage[T](create: Creator[CompletionStage[T]]): Source[T, NotUsed] =
     scaladsl.Source.lazyFuture { () =>
-      create.create().toScala
+      create.create().asScala
     }.asJava
 
   /**
@@ -370,7 +369,7 @@ object Source {
    * is failed with a [[akka.stream.NeverMaterializedException]]
    */
   def lazySource[T, M](create: Creator[Source[T, M]]): Source[T, CompletionStage[M]] =
-    scaladsl.Source.lazySource(() => create.create().asScala).mapMaterializedValue(_.toJava).asJava
+    scaladsl.Source.lazySource(() => create.create().asScala).mapMaterializedValue(_.asJava).asJava
 
   /**
    *  Defers invoking the `create` function to create a future source until there is downstream demand.
@@ -621,7 +620,7 @@ object Source {
    */
   def fromMaterializer[T, M](
       factory: BiFunction[Materializer, Attributes, Source[T, M]]): Source[T, CompletionStage[M]] =
-    scaladsl.Source.fromMaterializer((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.toJava).asJava
+    scaladsl.Source.fromMaterializer((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.asJava).asJava
 
   /**
    * Defers the creation of a [[Source]] until materialization. The `factory` function
@@ -630,7 +629,7 @@ object Source {
    */
   @deprecated("Use 'fromMaterializer' instead", "2.6.0")
   def setup[T, M](factory: BiFunction[ActorMaterializer, Attributes, Source[T, M]]): Source[T, CompletionStage[M]] =
-    scaladsl.Source.setup((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.toJava).asJava
+    scaladsl.Source.setup((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.asJava).asJava
 
   /**
    * Combines several sources with fan-in strategy like [[Merge]] or [[Concat]] into a single [[Source]].
@@ -673,7 +672,7 @@ object Source {
       case other                                      => other
     }.toSeq
     else immutable.Seq()
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     new Source(scaladsl.Source.combine(seq)(size => fanInStrategy(size)).mapMaterializedValue(_.asJava))
   }
 
@@ -833,7 +832,7 @@ object Source {
       create: function.Creator[S],
       read: function.Function[S, Optional[T]],
       close: function.Procedure[S]): javadsl.Source[T, NotUsed] =
-    new Source(scaladsl.Source.unfoldResource[T, S](create.create _, (s: S) => read.apply(s).asScala, close.apply))
+    new Source(scaladsl.Source.unfoldResource[T, S](create.create _, (s: S) => read.apply(s).toScala, close.apply))
 
   /**
    * Start a new `Source` from some resource which can be opened, read and closed.
@@ -861,9 +860,9 @@ object Source {
       close: function.Function[S, CompletionStage[Done]]): javadsl.Source[T, NotUsed] =
     new Source(
       scaladsl.Source.unfoldResourceAsync[T, S](
-        () => create.create().toScala,
-        (s: S) => read.apply(s).toScala.map(_.asScala)(akka.dispatch.ExecutionContexts.parasitic),
-        (s: S) => close.apply(s).toScala))
+        () => create.create().asScala,
+        (s: S) => read.apply(s).asScala.map(_.toScala)(ExecutionContext.parasitic),
+        (s: S) => close.apply(s).asScala))
 
   /**
    * Upcast a stream of elements to a stream of supertypes of that element. Useful in combination with
@@ -918,7 +917,7 @@ object Source {
  */
 final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[SourceShape[Out], Mat] {
 
-  import akka.util.ccompat.JavaConverters._
+  import scala.jdk.CollectionConverters._
 
   override def shape: SourceShape[Out] = delegate.shape
 
@@ -1057,7 +1056,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * [[akka.stream.SystemMaterializer]] for running the stream.
    */
   def run(materializer: Materializer): CompletionStage[Done] =
-    delegate.run()(materializer).toJava
+    delegate.run()(materializer).asJava
 
   /**
    * Connect this `Source` to the `Sink.ignore` and run it. Elements from the stream will be consumed and discarded.
@@ -1066,7 +1065,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * [[akka.stream.SystemMaterializer]] for running the stream.
    */
   def run(systemProvider: ClassicActorSystemProvider): CompletionStage[Done] =
-    delegate.run()(SystemMaterializer(systemProvider.classicSystem).materializer).toJava
+    delegate.run()(SystemMaterializer(systemProvider.classicSystem).materializer).asJava
 
   /**
    * Connect this `Source` to a `Sink` and run it. The returned value is the materialized value
@@ -2481,7 +2480,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
     new Source(
       delegate.statefulMap(() => create.create())(
         (s: S, out: Out) => f.apply(s, out).toScala,
-        (s: S) => onComplete.apply(s).asScala))
+        (s: S) => onComplete.apply(s).toScala))
 
   /**
    * Transform each stream element with the help of a resource.
@@ -2521,7 +2520,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
     new Source(
       delegate.mapWithResource(() => create.get())(
         (resource, out) => f(resource, out),
-        resource => close.apply(resource).asScala))
+        resource => close.apply(resource).toScala))
 
   /**
    * Transform each input element into an `Iterable` of output elements that is
@@ -2589,7 +2588,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * @see [[#mapAsyncUnordered]]
    */
   def mapAsync[T](parallelism: Int, f: function.Function[Out, CompletionStage[T]]): javadsl.Source[T, Mat] =
-    new Source(delegate.mapAsync(parallelism)(x => f(x).toScala))
+    new Source(delegate.mapAsync(parallelism)(x => f(x).asScala))
 
   /**
    * @see [[akka.stream.javadsl.Flow.mapAsyncPartitioned]]
@@ -2600,7 +2599,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
       partitioner: function.Function[Out, P],
       f: BiFunction[Out, P, CompletionStage[T]]): javadsl.Source[T, Mat] =
     new Source(delegate.mapAsyncPartitioned(parallelism, perPartition)(x => partitioner(x)) { (x, p) =>
-      f(x, p).toScala
+      f(x, p).asScala
     })
 
   /**
@@ -2637,7 +2636,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * @see [[#mapAsync]]
    */
   def mapAsyncUnordered[T](parallelism: Int, f: function.Function[Out, CompletionStage[T]]): javadsl.Source[T, Mat] =
-    new Source(delegate.mapAsyncUnordered(parallelism)(x => f(x).toScala))
+    new Source(delegate.mapAsyncUnordered(parallelism)(x => f(x).asScala))
 
   /**
    * Use the `ask` pattern to send a request-reply message to the target `ref` actor.
@@ -2947,7 +2946,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    */
   def scanAsync[T](zero: T)(f: function.Function2[T, Out, CompletionStage[T]]): javadsl.Source[T, Mat] =
     new Source(delegate.scanAsync(zero) { (out, in) =>
-      f(out, in).toScala
+      f(out, in).asScala
     })
 
   /**
@@ -2997,7 +2996,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    */
   def foldAsync[T](zero: T)(f: function.Function2[T, Out, CompletionStage[T]]): javadsl.Source[T, Mat] =
     new Source(delegate.foldAsync(zero) { (out, in) =>
-      f(out, in).toScala
+      f(out, in).asScala
     })
 
   /**
@@ -3097,7 +3096,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
   def groupedWithin(
       maxNumber: Int,
       duration: java.time.Duration): javadsl.Source[java.util.List[Out @uncheckedVariance], Mat] =
-    new Source(delegate.groupedWithin(maxNumber, duration.asScala).map(_.asJava))
+    new Source(delegate.groupedWithin(maxNumber, duration.toScala).map(_.asJava))
 
   /**
    * Chunk up this stream into groups of elements received within a time window,
@@ -3121,7 +3120,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
       maxWeight: Long,
       costFn: function.Function[Out, java.lang.Long],
       duration: java.time.Duration): javadsl.Source[java.util.List[Out @uncheckedVariance], Mat] =
-    new Source(delegate.groupedWeightedWithin(maxWeight, duration.asScala)(costFn.apply _).map(_.asJava))
+    new Source(delegate.groupedWeightedWithin(maxWeight, duration.toScala)(costFn.apply _).map(_.asJava))
 
   /**
    * Chunk up this stream into groups of elements received within a time window,
@@ -3147,7 +3146,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
       maxNumber: Int,
       costFn: function.Function[Out, java.lang.Long],
       duration: java.time.Duration): javadsl.Source[java.util.List[Out @uncheckedVariance], Mat] =
-    new Source(delegate.groupedWeightedWithin(maxWeight, maxNumber, duration.asScala)(costFn.apply).map(_.asJava))
+    new Source(delegate.groupedWeightedWithin(maxWeight, maxNumber, duration.toScala)(costFn.apply).map(_.asJava))
 
   /**
    * Shifts elements emission in time by a specified amount. It allows to store elements
@@ -3175,7 +3174,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * @param strategy Strategy that is used when incoming elements cannot fit inside the buffer
    */
   def delay(of: java.time.Duration, strategy: DelayOverflowStrategy): Source[Out, Mat] =
-    new Source(delegate.delay(of.asScala, strategy))
+    new Source(delegate.delay(of.toScala, strategy))
 
   /**
    * Shifts elements emission in time by an amount individually determined through delay strategy a specified amount.
@@ -3240,7 +3239,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels
    */
   def dropWithin(duration: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.dropWithin(duration.asScala))
+    new Source(delegate.dropWithin(duration.toScala))
 
   /**
    * Terminate processing (and cancel the upstream publisher) after predicate
@@ -3343,7 +3342,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels or timer fires
    */
   def takeWithin(duration: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.takeWithin(duration.asScala))
+    new Source(delegate.takeWithin(duration.toScala))
 
   /**
    * Allows a faster upstream to progress independently of a slower subscriber by conflating elements into a summary
@@ -3641,7 +3640,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
       f: function.Function[java.lang.Iterable[Out], javadsl.Flow[Out, Out2, Mat2]],
       matF: function.Function2[Mat, CompletionStage[Mat2], Mat3]): javadsl.Source[Out2, Mat3] = {
     val newDelegate = delegate.flatMapPrefixMat(n)(seq => f(seq.asJava).asScala) { (m1, fm2) =>
-      matF(m1, fm2.toJava)
+      matF(m1, fm2.asJava)
     }
     new javadsl.Source(newDelegate)
   }
@@ -3915,7 +3914,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels
    */
   def initialTimeout(timeout: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.initialTimeout(timeout.asScala))
+    new Source(delegate.initialTimeout(timeout.toScala))
 
   /**
    * If the completion of the stream does not happen until the provided timeout, the stream is failed
@@ -3930,7 +3929,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels
    */
   def completionTimeout(timeout: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.completionTimeout(timeout.asScala))
+    new Source(delegate.completionTimeout(timeout.toScala))
 
   /**
    * If the time between two processed elements exceeds the provided timeout, the stream is failed
@@ -3946,7 +3945,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels
    */
   def idleTimeout(timeout: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.idleTimeout(timeout.asScala))
+    new Source(delegate.idleTimeout(timeout.toScala))
 
   /**
    * If the time between the emission of an element and the following downstream demand exceeds the provided timeout,
@@ -3962,7 +3961,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels
    */
   def backpressureTimeout(timeout: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.backpressureTimeout(timeout.asScala))
+    new Source(delegate.backpressureTimeout(timeout.toScala))
 
   /**
    * Injects additional elements if upstream does not emit for a configured amount of time. In other words, this
@@ -3982,18 +3981,18 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels
    */
   def keepAlive(maxIdle: java.time.Duration, injectedElem: function.Creator[Out]): javadsl.Source[Out, Mat] =
-    new Source(delegate.keepAlive(maxIdle.asScala, injectedElem.create _))
+    new Source(delegate.keepAlive(maxIdle.toScala, injectedElem.create _))
 
   /**
-   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator set the maximum rate
+   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator sets the maximum rate
    * for emitting messages. This operator works for streams where all elements have the same cost or length.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and
    * started.
    *
    * The burst size is calculated based on the given rate (`cost/per`) as 0.1 * rate, for example:
@@ -4002,8 +4001,8 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * - rate 100/second => burst size 10
    * - rate 200/second => burst size 20
    *
-   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which makes pauses before emitting messages to
-   * meet throttle rate.
+   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which pauses before emitting messages to
+   * meet the throttle rate.
    *
    * '''Emits when''' upstream emits an element and configured time per each element elapsed
    *
@@ -4015,21 +4014,21 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    *
    */
   def throttle(elements: Int, per: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.throttle(elements, per.asScala))
+    new Source(delegate.throttle(elements, per.toScala))
 
   /**
-   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator set the maximum rate
+   * Sends elements downstream with speed limited to `elements/per`. In other words, this operator sets the maximum rate
    * for emitting messages. This operator works for streams where all elements have the same cost or length.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and started.
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and started.
    *
    * Parameter `mode` manages behavior when upstream is faster than throttle rate:
-   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet throttle rate
+   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet the throttle rate
    *  - [[akka.stream.ThrottleMode.Enforcing]] fails with exception when upstream is faster than throttle rate
    *
    * It is recommended to use non-zero burst sizes as they improve both performance and throttling precision by allowing
@@ -4058,7 +4057,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
       per: java.time.Duration,
       maximumBurst: Int,
       mode: ThrottleMode): javadsl.Source[Out, Mat] =
-    new Source(delegate.throttle(elements, per.asScala, maximumBurst, mode))
+    new Source(delegate.throttle(elements, per.toScala, maximumBurst, mode))
 
   /**
    * Sends elements downstream with speed limited to `cost/per`. Cost is
@@ -4067,11 +4066,11 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * Streams of `ByteString` for example.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and
    * started.
    *
    * The burst size is calculated based on the given rate (`cost/per`) as 0.1 * rate, for example:
@@ -4080,8 +4079,8 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * - rate 100/second => burst size 10
    * - rate 200/second => burst size 20
    *
-   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which makes pauses before emitting messages to
-   * meet throttle rate.
+   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which pauses before emitting messages to
+   * meet the throttle rate.
    *
    * '''Emits when''' upstream emits an element and configured time per each element elapsed
    *
@@ -4096,7 +4095,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
       cost: Int,
       per: java.time.Duration,
       costCalculation: function.Function[Out, Integer]): javadsl.Source[Out, Mat] =
-    new Source(delegate.throttle(cost, per.asScala, costCalculation.apply _))
+    new Source(delegate.throttle(cost, per.toScala, costCalculation.apply _))
 
   /**
    * Sends elements downstream with speed limited to `cost/per`. Cost is
@@ -4105,14 +4104,14 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * Streams of `ByteString` for example.
    *
    * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
-   * Tokens drops into the bucket at a given rate and can be `spared` for later use up to bucket capacity
-   * to allow some burstiness. Whenever stream wants to send an element, it takes as many
-   * tokens from the bucket as element costs. If there isn't any, throttle waits until the
-   * bucket accumulates enough tokens. Elements that costs more than the allowed burst will be delayed proportionally
-   * to their cost minus available tokens, meeting the target rate. Bucket is full when stream just materialized and started.
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and started.
    *
    * Parameter `mode` manages behavior when upstream is faster than throttle rate:
-   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet throttle rate
+   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet the throttle rate
    *  - [[akka.stream.ThrottleMode.Enforcing]] fails with exception when upstream is faster than throttle rate. Enforcing
    *  cannot emit elements that cost more than the maximumBurst
    *
@@ -4143,7 +4142,86 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
       maximumBurst: Int,
       costCalculation: function.Function[Out, Integer],
       mode: ThrottleMode): javadsl.Source[Out, Mat] =
-    new Source(delegate.throttle(cost, per.asScala, maximumBurst, costCalculation.apply _, mode))
+    new Source(delegate.throttle(cost, per.toScala, maximumBurst, costCalculation.apply _, mode))
+
+  /**
+   * The `ThrottleControl` can be updated to change the throttle rate from the outside of the stream
+   * and share a total rate limit between several streams.
+   * Sends elements downstream with speed limited to `elements/per` as defined in the `ThrottleControl`.
+   * In other words, this operator sets the maximum rate for emitting messages. This operator works for streams
+   * where all elements have the same cost or length.
+   *
+   * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size).
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and
+   * started.
+   *
+   * The burst size is calculated based on the given rate (`cost/per`) as 0.1 * rate, for example:
+   * - rate < 20/second => burst size 1
+   * - rate 20/second => burst size 2
+   * - rate 100/second => burst size 10
+   * - rate 200/second => burst size 20
+   *
+   * The throttle `mode` is [[akka.stream.ThrottleMode.Shaping]], which pauses before emitting messages to
+   * meet the throttle rate.
+   *
+   * '''Emits when''' upstream emits an element and configured time per each element elapsed
+   *
+   * '''Backpressures when''' downstream backpressures or the incoming rate is higher than the speed limit
+   *
+   * '''Completes when''' upstream completes
+   *
+   * '''Cancels when''' downstream cancels
+   */
+  def throttle(control: ThrottleControl): javadsl.Source[Out, Mat] =
+    new Source(delegate.throttle(control.asScala))
+
+  /**
+   * The `ThrottleControl` can be updated to change the throttle rate from the outside of the stream
+   * and share a total rate limit between several streams.
+   * Sends elements downstream with speed limited to `cost/per` as defined in the `ThrottleControl`. Cost is
+   * calculating for each element individually by calling `calculateCost` function.
+   * This operator works for streams when elements have different cost(length).
+   * Streams of `ByteString` for example.
+   *
+   * Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
+   * Tokens drop into the bucket at a given rate and can be kept for later use up to bucket capacity
+   * to allow some burstiness. Whenever the stream wants to send an element, it takes as many
+   * tokens from the bucket as the element costs. If there isn't any, throttle waits until the
+   * bucket accumulates enough tokens. Elements that cost more than the allowed burst will be delayed proportionally
+   * to their cost minus available tokens, meeting the target rate. Bucket is full when the stream is first materialized and started.
+   *
+   * Parameter `mode` manages behavior when upstream is faster than throttle rate:
+   *  - [[akka.stream.ThrottleMode.Shaping]] makes pauses before emitting messages to meet the throttle rate
+   *  - [[akka.stream.ThrottleMode.Enforcing]] fails with exception when upstream is faster than throttle rate. Enforcing
+   *  cannot emit elements that cost more than the maximumBurst
+   *
+   * It is recommended to use non-zero burst sizes as they improve both performance and throttling precision by allowing
+   * the implementation to avoid using the scheduler when input rates fall below the enforced limit and to reduce
+   * most of the inaccuracy caused by the scheduler resolution (which is in the range of milliseconds).
+   *
+   *  WARNING: Be aware that throttle is using scheduler to slow down the stream. This scheduler has minimal time of triggering
+   *  next push. Consequently it will slow down the stream as it has minimal pause for emitting. This can happen in
+   *  case burst is 0 and speed is higher than 30 events per second. You need to increase the `maximumBurst`  if
+   *  elements arrive with small interval (30 milliseconds or less). Use the overloaded `throttle` method without
+   *  `maximumBurst` parameter to automatically calculate the `maximumBurst` based on the given rate (`cost/per`).
+   *  In other words the throttler always enforces the rate limit when `maximumBurst` parameter is given, but in
+   *  certain cases (mostly due to limited scheduler resolution) it enforces a tighter bound than what was prescribed.
+   *
+   * '''Emits when''' upstream emits an element and configured time per each element elapsed
+   *
+   * '''Backpressures when''' downstream backpressures or the incoming rate is higher than the speed limit
+   *
+   * '''Completes when''' upstream completes
+   *
+   * '''Cancels when''' downstream cancels
+   *
+   */
+  def throttle(control: ThrottleControl, costCalculation: function.Function[Out, Integer]): javadsl.Source[Out, Mat] =
+    new Source(delegate.throttle(control.asScala, elem => costCalculation.apply(elem).intValue()))
 
   /**
    * Detaches upstream demand from downstream demand without detaching the
@@ -4164,9 +4242,12 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * The Future completes with success when received complete message from upstream or cancel
    * from downstream. It fails with the same error when received error message from
    * downstream.
+   *
+   * It is recommended to use the internally optimized `Keep.left` and `Keep.right` combiners
+   * where appropriate instead of manually writing functions that pass through one of the values.
    */
   def watchTermination[M]()(matF: function.Function2[Mat, CompletionStage[Done], M]): javadsl.Source[Out, M] =
-    new Source(delegate.watchTermination()((left, right) => matF(left, right.toJava)))
+    new Source(delegate.watchTermination()((left, right) => matF(left, right.asJava)))
 
   /**
    * Materializes to `FlowMonitor[Out]` that allows monitoring of the current flow. All events are propagated
@@ -4202,7 +4283,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
    * '''Cancels when''' downstream cancels
    */
   def initialDelay(delay: java.time.Duration): javadsl.Source[Out, Mat] =
-    new Source(delegate.initialDelay(delay.asScala))
+    new Source(delegate.initialDelay(delay.toScala))
 
   /**
    * Replace the attributes of this [[Source]] with the given ones. If this Source is a composite
@@ -4462,7 +4543,7 @@ final class Source[Out, Mat](delegate: scaladsl.Source[Out, Mat]) extends Graph[
         aggregate = (agg, out) => aggregate.apply(agg, out).toScala,
         harvest = agg => harvest.apply(agg),
         emitOnTimer = Option(emitOnTimer).map {
-          case Pair(predicate, duration) => (agg => predicate.test(agg), duration.asScala)
+          case Pair(predicate, duration) => (agg => predicate.test(agg), duration.toScala)
         })
       .asJava
 

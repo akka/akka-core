@@ -1,0 +1,6 @@
+# #32499 chore: Simplify flight recorder interactions
+ProblemFilters.exclude[MissingClassProblem]("akka.cluster.sharding.NoOpShardingFlightRecorder")
+ProblemFilters.exclude[MissingClassProblem]("akka.cluster.sharding.NoOpShardingFlightRecorder$")
+ProblemFilters.exclude[MissingClassProblem]("akka.cluster.sharding.ShardingFlightRecorder")
+ProblemFilters.exclude[MissingClassProblem]("akka.cluster.sharding.ShardingFlightRecorder$")
+ProblemFilters.exclude[MissingClassProblem]("akka.cluster.sharding.internal.jfr.JFRShardingFlightRecorder")

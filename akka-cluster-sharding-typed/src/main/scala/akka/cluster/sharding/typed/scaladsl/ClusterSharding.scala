@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -206,12 +206,21 @@ trait ClusterSharding extends Extension { javadslSelf: javadsl.ClusterSharding =
    *
    * For in-depth documentation of its semantics, see [[EntityRef]].
    */
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def entityRefFor[M](typeKey: EntityTypeKey[M], entityId: String, dataCenter: DataCenter): EntityRef[M]
 
   /**
    * Actor for querying Cluster Sharding state
    */
   def shardState: ActorRef[ClusterShardingQuery]
+
+  /**
+   * Access to the `ActorRef` to send `ShardCommand` for a given entity type. For example
+   * [[ClusterSharding.Passivate]] can be sent to this `ActorRef`. Note that this `ActorRef`
+   * is also available in the [[EntityContext]]. The entity type must first be initialized
+   * with the [[ClusterSharding.init]] method.
+   */
+  def shard(typeKey: EntityTypeKey[_]): ActorRef[ClusterSharding.ShardCommand]
 
   /**
    * The default `ShardAllocationStrategy` is configured by `least-shard-allocation-strategy` properties.
@@ -313,6 +322,7 @@ final class Entity[M, E] private[akka] (
    * dataCenter does not match the data center of the current node the `ShardRegion` will be started
    * in proxy mode.
    */
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def withDataCenter(newDataCenter: DataCenter): Entity[M, E] = copy(dataCenter = Some(newDataCenter))
 
   private def copy(
@@ -438,6 +448,7 @@ object EntityTypeKey {
    * The specified datacenter of the incarnation of the particular entity referenced by this EntityRef,
    * if a datacenter was specified.
    */
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def dataCenter: Option[String]
 
   /**

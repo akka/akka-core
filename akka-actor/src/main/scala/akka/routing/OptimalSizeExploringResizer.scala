@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.routing
@@ -9,13 +9,13 @@ import java.util.concurrent.ThreadLocalRandom
 
 import scala.collection.immutable
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 
 import OptimalSizeExploringResizer._
 import com.typesafe.config.Config
 
 import akka.actor._
 import akka.annotation.InternalApi
-import akka.util.JavaDurationConverters._
 
 trait OptimalSizeExploringResizer extends Resizer {
 
@@ -61,8 +61,8 @@ case object OptimalSizeExploringResizer {
       lowerBound = resizerCfg.getInt("lower-bound"),
       upperBound = resizerCfg.getInt("upper-bound"),
       chanceOfScalingDownWhenFull = resizerCfg.getDouble("chance-of-ramping-down-when-full"),
-      actionInterval = resizerCfg.getDuration("action-interval").asScala,
-      downsizeAfterUnderutilizedFor = resizerCfg.getDuration("downsize-after-underutilized-for").asScala,
+      actionInterval = resizerCfg.getDuration("action-interval").toScala,
+      downsizeAfterUnderutilizedFor = resizerCfg.getDuration("downsize-after-underutilized-for").toScala,
       numOfAdjacentSizesToConsiderDuringOptimization = resizerCfg.getInt("optimization-range"),
       exploreStepSize = resizerCfg.getDouble("explore-step-size"),
       explorationProbability = resizerCfg.getDouble("chance-of-exploration"),
@@ -153,6 +153,14 @@ case class DefaultOptimalSizeExploringResizer(
    */
   @InternalApi
   private[routing] var stopExploring = false
+
+  /**
+   * INTERNAL API
+   *
+   * Introduced to avoid changing downsizeAfterUnderutilizedFor to FiniteDuration
+   */
+  @InternalApi
+  private val downsizeAfterUnderutilizedDuration = downsizeAfterUnderutilizedFor.asInstanceOf[FiniteDuration].toJava
 
   private def random = ThreadLocalRandom.current()
 
@@ -259,7 +267,7 @@ case class DefaultOptimalSizeExploringResizer(
     val currentSize = currentRoutees.length
     val now = LocalDateTime.now
     val proposedChange =
-      if (record.underutilizationStreak.fold(false)(_.start.isBefore(now.minus(downsizeAfterUnderutilizedFor.asJava)))) {
+      if (record.underutilizationStreak.fold(false)(_.start.isBefore(now.minus(downsizeAfterUnderutilizedDuration)))) {
         val downsizeTo = (record.underutilizationStreak.get.highestUtilization * downsizeRatio).toInt
         Math.min(downsizeTo - currentSize, 0)
       } else if (performanceLog.isEmpty || record.underutilizationStreak.isDefined) {

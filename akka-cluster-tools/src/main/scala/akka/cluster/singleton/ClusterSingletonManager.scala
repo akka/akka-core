@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.singleton
@@ -8,6 +8,7 @@ import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.util.control.NonFatal
 
 import com.typesafe.config.Config
@@ -39,7 +40,6 @@ import akka.event.Logging
 import akka.event.MarkerLoggingAdapter
 import akka.pattern.ask
 import akka.pattern.pipe
-import akka.util.JavaDurationConverters._
 import akka.util.Timeout
 
 object ClusterSingletonManagerSettings {
@@ -65,7 +65,7 @@ object ClusterSingletonManagerSettings {
         Some(
           new LeaseUsageSettings(
             leaseConfigPath,
-            config.getDuration("lease-retry-interval").asScala,
+            config.getDuration("lease-retry-interval").toScala,
             leaseName = "" // intentionally not in config because would be high risk of not using unique names
           ))
     }

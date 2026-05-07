@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed.internal
@@ -7,13 +7,17 @@ package akka.cluster.sharding.typed.internal
 import java.util.Optional
 import java.util.function.IntFunction
 
-import scala.compat.java8.OptionConverters._
+import scala.annotation.nowarn
+import scala.jdk.OptionConverters._
 import scala.reflect.ClassTag
 
 import akka.actor.typed.ActorRef
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.Behavior
 import akka.annotation.InternalApi
+import akka.cluster.ddata.Replicator.ReadAll
+import akka.cluster.ddata.Replicator.ReadConsistency
+import akka.cluster.ddata.Replicator.ReadMajorityPlus
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
 import akka.cluster.sharding.ShardRegion.EntityId
@@ -36,6 +40,7 @@ import akka.cluster.typed.SingletonActor
  * INTERNAL API
  */
 @InternalApi
+@nowarn("msg=Use Akka Distributed Cluster")
 private[akka] final class ShardedDaemonProcessImpl(system: ActorSystem[_])
     extends javadsl.ShardedDaemonProcess
     with scaladsl.ShardedDaemonProcess {
@@ -164,13 +169,21 @@ private[akka] final class ShardedDaemonProcessImpl(system: ActorSystem[_])
         shardingBaseSettings.leaseSettings)
     }
 
+    val stateReadConsistency: ReadConsistency =
+      shardingSettings.tuningParameters.coordinatorStateReadMajorityPlus match {
+        case Int.MaxValue => ReadAll(shardingSettings.tuningParameters.waitingForStateTimeout)
+        case additional =>
+          val majorityMinCap =
+            system.settings.config.getInt("akka.cluster.sharding.distributed-data.majority-min-cap")
+          ReadMajorityPlus(shardingSettings.tuningParameters.waitingForStateTimeout, additional, majorityMinCap)
+      }
+
     val entity = Entity(entityTypeKey) { ctx =>
       val decodedId = decodeEntityId(ctx.entityId, initialNumberOfProcesses = numberOfInstances)
       val sdContext =
         ShardedDaemonProcessContextImpl(decodedId.processNumber, decodedId.totalCount, name, decodedId.revision)
-      if (supportsRescale) verifyRevisionBeforeStarting(behaviorFactory)(sdContext)
-      else
-        behaviorFactory(sdContext)
+      if (supportsRescale) verifyRevisionBeforeStarting(stateReadConsistency, behaviorFactory)(sdContext)
+      else behaviorFactory(sdContext)
     }.withSettings(shardingSettings).withMessageExtractor(new MessageExtractor())
 
     val entityWithStop = stopMessage match {
@@ -228,7 +241,7 @@ private[akka] final class ShardedDaemonProcessImpl(system: ActorSystem[_])
       behaviorFactory: IntFunction[Behavior[T]],
       settings: ShardedDaemonProcessSettings,
       stopMessage: Optional[T]): Unit =
-    init(name, numberOfInstances, n => behaviorFactory(n), settings, stopMessage.asScala, None)(ClassTag(messageClass))
+    init(name, numberOfInstances, n => behaviorFactory(n), settings, stopMessage.toScala, None)(ClassTag(messageClass))
 
   override def init[T](
       messageClass: Class[T],
@@ -243,8 +256,8 @@ private[akka] final class ShardedDaemonProcessImpl(system: ActorSystem[_])
       numberOfInstances,
       n => behaviorFactory(n),
       settings,
-      stopMessage.asScala,
-      shardAllocationStrategy.asScala)(ClassTag(messageClass))
+      stopMessage.toScala,
+      shardAllocationStrategy.toScala)(ClassTag(messageClass))
 
   override def initWithContext[T](
       messageClass: Class[T],
@@ -293,8 +306,8 @@ private[akka] final class ShardedDaemonProcessImpl(system: ActorSystem[_])
       initialNumberOfInstances,
       behaviorFactory.apply,
       Some(settings),
-      stopMessage.asScala,
-      shardAllocationStrategy.asScala,
+      stopMessage.toScala,
+      shardAllocationStrategy.toScala,
       supportsRescale = true)(classTag)
   }
 }

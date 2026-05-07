@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -7,7 +7,6 @@ package akka.actor
 import scala.annotation.nowarn
 
 import akka.testkit.AkkaSpec
-import akka.util.unused
 
 object PropsCreationSpec {
 
@@ -15,11 +14,11 @@ object PropsCreationSpec {
 
   final class B
 
-  class OneParamActor(@unused blackhole: A) extends Actor {
+  class OneParamActor(@nowarn("msg=never used") blackhole: A) extends Actor {
     override def receive = Actor.emptyBehavior
   }
 
-  class TwoParamActor(@unused blackhole1: A, @unused blackhole2: B) extends Actor {
+  class TwoParamActor(@nowarn("msg=never used") blackhole1: A, @nowarn("msg=never used") blackhole2: B) extends Actor {
     override def receive = Actor.emptyBehavior
   }
 

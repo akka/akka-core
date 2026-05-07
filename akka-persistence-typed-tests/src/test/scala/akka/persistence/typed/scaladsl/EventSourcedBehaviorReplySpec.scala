@@ -1,10 +1,13 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.scaladsl
 
 import java.util.concurrent.atomic.AtomicInteger
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 import org.scalatest.wordspec.AnyWordSpecLike
 
@@ -25,6 +28,7 @@ object EventSourcedBehaviorReplySpec {
   final case class IncrementReplyLater(replyTo: ActorRef[Done]) extends Command[Done]
   final case class ReplyNow(replyTo: ActorRef[Done]) extends Command[Done]
   final case class GetValue(replyTo: ActorRef[State]) extends Command[State]
+  final case class AsyncIncrementAndReply(when: Future[Done], replyTo: ActorRef[State]) extends Command[State]
 
   sealed trait Event extends CborSerializable
   final case class Incremented(delta: Int) extends Event
@@ -54,6 +58,11 @@ object EventSourcedBehaviorReplySpec {
 
           case GetValue(replyTo) =>
             Effect.reply(replyTo)(state)
+
+          case AsyncIncrementAndReply(when, replyTo) =>
+            implicit val ec: ExecutionContext = ctx.executionContext
+            Effect.asyncReply[Event, State](when.map(_ =>
+              Effect.persist(Incremented(1)).thenReply(replyTo)(newState => newState)))
 
         },
       eventHandler = (state, evt) =>

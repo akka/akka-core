@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
@@ -667,7 +667,7 @@ private[persistence] trait Eventsourced
    * @param replayMax maximum number of messages to replay.
    * @param timeout recovery event timeout
    */
-  private def recoveryStarted(replayMax: Long, timeout: FiniteDuration) = new State {
+  private def recoveryStarted(replayMax: Long, timeout: FiniteDuration): State = new State {
 
     val timeoutCancellable = {
       import context.dispatcher
@@ -783,7 +783,7 @@ private[persistence] trait Eventsourced
    *
    * All incoming messages are stashed.
    */
-  private def recovering(recoveryBehavior: Receive, timeout: FiniteDuration) =
+  private def recovering(recoveryBehavior: Receive, timeout: FiniteDuration): State =
     new State {
 
       // protect against snapshot stalling forever because of journal overloaded and such

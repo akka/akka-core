@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.typed
@@ -8,13 +8,11 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.ActorRef
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.scaladsl.TimerScheduler
 import akka.actor.typed.SupervisorStrategy
 
 import scala.concurrent.duration.FiniteDuration
 import akka.Done
-import scala.annotation.nowarn
 
 //#oo-style
 //#fun-style
@@ -128,7 +126,7 @@ object StyleGuideDocExamples {
               Behaviors.same
             case Increment =>
               val newValue = n + 1
-              context.log.debug2("[{}] Incremented counter to [{}]", name, newValue)
+              context.log.debug("[{}] Incremented counter to [{}]", name, newValue)
               counter(name, timers, newValue)
             case GetValue(replyTo) =>
               replyTo ! Value(n)
@@ -162,7 +160,7 @@ object StyleGuideDocExamples {
       private def counter(setup: Setup, n: Int): Behavior[Command] =
         Behaviors.receiveMessage {
           case IncrementRepeatedly(interval) =>
-            setup.context.log.debugN(
+            setup.context.log.debug(
               "[{}] Starting repeated increments with interval [{}], current count is [{}]",
               setup.name,
               interval,
@@ -171,7 +169,7 @@ object StyleGuideDocExamples {
             Behaviors.same
           case Increment =>
             val newValue = n + 1
-            setup.context.log.debug2("[{}] Incremented counter to [{}]", setup.name, newValue)
+            setup.context.log.debug("[{}] Incremented counter to [{}]", setup.name, newValue)
             counter(setup, newValue)
           case GetValue(replyTo) =>
             replyTo ! Value(n)
@@ -209,7 +207,7 @@ object StyleGuideDocExamples {
       private def counter(n: Int): Behavior[Command] =
         Behaviors.receiveMessage {
           case IncrementRepeatedly(interval) =>
-            context.log.debugN(
+            context.log.debug(
               "[{}] Starting repeated increments with interval [{}], current count is [{}]",
               name,
               interval,
@@ -218,7 +216,7 @@ object StyleGuideDocExamples {
             Behaviors.same
           case Increment =>
             val newValue = n + 1
-            context.log.debug2("[{}] Incremented counter to [{}]", name, newValue)
+            context.log.debug("[{}] Incremented counter to [{}]", name, newValue)
             counter(newValue)
           case GetValue(replyTo) =>
             replyTo ! Value(n)
@@ -245,7 +243,7 @@ object StyleGuideDocExamples {
             def counter(n: Int): Behavior[Command] =
               Behaviors.receiveMessage {
                 case IncrementRepeatedly(interval) =>
-                  context.log.debugN(
+                  context.log.debug(
                     "[{}] Starting repeated increments with interval [{}], current count is [{}]",
                     name,
                     interval,
@@ -254,7 +252,7 @@ object StyleGuideDocExamples {
                   Behaviors.same
                 case Increment =>
                   val newValue = n + 1
-                  context.log.debug2("[{}] Incremented counter to [{}]", name, newValue)
+                  context.log.debug("[{}] Incremented counter to [{}]", name, newValue)
                   counter(newValue)
                 case GetValue(replyTo) =>
                   replyTo ! Value(n)
@@ -355,11 +353,11 @@ object StyleGuideDocExamples {
         Behaviors.receiveMessage {
           case Increment =>
             val newValue = n + 1
-            context.log.debug2("[{}] Incremented counter to [{}]", name, newValue)
+            context.log.debug("[{}] Incremented counter to [{}]", name, newValue)
             counter(newValue)
           case Tick =>
             val newValue = n + 1
-            context.log.debug2("[{}] Incremented counter by background tick to [{}]", name, newValue)
+            context.log.debug("[{}] Incremented counter by background tick to [{}]", name, newValue)
             counter(newValue)
           case GetValue(replyTo) =>
             replyTo ! Value(n)
@@ -406,11 +404,11 @@ object StyleGuideDocExamples {
         Behaviors.receiveMessage {
           case Increment =>
             val newValue = n + 1
-            context.log.debug2("[{}] Incremented counter to [{}]", name, newValue)
+            context.log.debug("[{}] Incremented counter to [{}]", name, newValue)
             counter(newValue)
           case Tick =>
             val newValue = n + 1
-            context.log.debug2("[{}] Incremented counter by background tick to [{}]", name, newValue)
+            context.log.debug("[{}] Incremented counter by background tick to [{}]", name, newValue)
             counter(newValue)
           case GetValue(replyTo) =>
             replyTo ! Value(n)
@@ -477,7 +475,6 @@ object StyleGuideDocExamples {
       }
       //#pattern-match-unhandled
 
-      @nowarn
       object partial {
         //#pattern-match-partial
         val zero: Behavior[Command] = {

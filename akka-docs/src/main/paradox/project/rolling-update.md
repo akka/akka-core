@@ -20,11 +20,11 @@ is completely different. It will require a full cluster shutdown and new startup
 
 ### 2.5.0 Several changes in minor release
 
-See [migration guide](https://doc.akka.io/docs/akka/2.5/project/migration-guide-2.4.x-2.5.x.html#rolling-update) when updating from 2.4.x to 2.5.x.
+See [migration guide](https://doc.akka.io/libraries/akka-core/2.5/project/migration-guide-2.4.x-2.5.x.html#rolling-update) when updating from 2.4.x to 2.5.x.
 
 ### 2.5.10 Joining regression
 
-Issue: [#24622](https://github.com/akka/akka/issues/24622)
+Issue: [#24622](https://github.com/akka/akka-core/issues/24622)
 
 Incompatible change was introduced in 2.5.10 and fixed in 2.5.11.
 
@@ -32,7 +32,7 @@ This means that you can't do a rolling update from 2.5.9 to 2.5.10 and must inst
 
 ### 2.5.10 Joining old versions
 
-Issue: [#25491](https://github.com/akka/akka/issues/25491)
+Issue: [#25491](https://github.com/akka/akka-core/issues/25491)
 
 Incompatibility was introduced in in 2.5.10 and fixed in 2.5.15.
 
@@ -41,7 +41,7 @@ join 2.5.9 nodes during the update phase.
 
 ### 2.5.14 Distributed Data serializer for `ORSet[ActorRef]`
 
-Issue: [#23703](https://github.com/akka/akka/issues/23703)
+Issue: [#23703](https://github.com/akka/akka-core/issues/23703)
 
 Intentional change was done in 2.5.14.
 
@@ -56,7 +56,7 @@ versions 2.5.14, 2.5.15, or 2.5.16.
 
 ### 2.5.22 ClusterSharding serializer for `ShardRegionStats`
 
-Issue: [#25348](https://github.com/akka/akka/issues/25348)
+Issue: [#25348](https://github.com/akka/akka-core/issues/25348)
 
 Intentional change was done in 2.5.22.
 
@@ -76,7 +76,7 @@ See @ref:[migration guide](migration-guide-2.5.x-2.6.x.md) when updating from 2.
 
 ### 2.6.2 ClusterMessageSerializer manifests change
 
-Issue: [#23654](https://github.com/akka/akka/issues/13654)
+Issue: [#23654](https://github.com/akka/akka-core/issues/13654)
 
 In preparation of switching away from class based manifests to more efficient letter codes the `ClusterMessageSerializer`
 has been prepared to accept those shorter forms but still emits the old long manifests.
@@ -89,7 +89,7 @@ This means that a rolling update will have to go through at least one of 2.6.2, 
 
 ### 2.6.5 JacksonCborSerializer
 
-Issue: [#28918](https://github.com/akka/akka/issues/28918). JacksonCborSerializer was using plain JSON format
+Issue: [#28918](https://github.com/akka/akka-core/issues/28918). JacksonCborSerializer was using plain JSON format
 instead of CBOR.
 
 If you have `jackson-cbor` in your `serialization-bindings` a rolling update will have to go through 2.6.5 when

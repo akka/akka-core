@@ -1,8 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.serialization
+
+import scala.annotation.nowarn
 
 import akka.actor.ExtendedActorSystem
 import akka.remote.MessageSerializer
@@ -11,7 +13,6 @@ import akka.remote.WireFormats.SerializedMessage
 import akka.remote.protobuf.v3.ProtobufProtocolV3.MyMessageV3
 import akka.serialization.SerializationExtension
 import akka.testkit.AkkaSpec
-import akka.util.unused
 
 // those must be defined as top level classes, to have static parseFrom
 case class MaliciousMessage() {}
@@ -22,25 +23,25 @@ object ProtobufSerializerSpec {
 }
 
 object AnotherMessage {
-  def parseFrom(@unused bytes: Array[Byte]): AnotherMessage =
+  def parseFrom(@nowarn("msg=never used") bytes: Array[Byte]): AnotherMessage =
     new AnotherMessage
 }
 case class AnotherMessage() {}
 
 object AnotherMessage2 {
-  def parseFrom(@unused bytes: Array[Byte]): AnotherMessage2 =
+  def parseFrom(@nowarn("msg=never used") bytes: Array[Byte]): AnotherMessage2 =
     new AnotherMessage2
 }
 case class AnotherMessage2() extends ProtobufSerializerSpec.AnotherInterface {}
 
 object AnotherMessage3 {
-  def parseFrom(@unused bytes: Array[Byte]): AnotherMessage3 =
+  def parseFrom(@nowarn("msg=never used") bytes: Array[Byte]): AnotherMessage3 =
     new AnotherMessage3
 }
 case class AnotherMessage3() extends ProtobufSerializerSpec.AnotherBase {}
 
 object MaliciousMessage {
-  def parseFrom(@unused bytes: Array[Byte]): MaliciousMessage =
+  def parseFrom(@nowarn("msg=never used") bytes: Array[Byte]): MaliciousMessage =
     new MaliciousMessage
 }
 

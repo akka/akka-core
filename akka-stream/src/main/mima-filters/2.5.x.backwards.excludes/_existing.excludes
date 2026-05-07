@@ -126,7 +126,7 @@ ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.scaladsl.Sink.ac
 ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.SinkQueueAdapter")
 ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.SourceQueueAdapter")
 
-# Remove deprecated features since 2.5.0 https://github.com/akka/akka/issues/26492
+# Remove deprecated features since 2.5.0 https://github.com/akka/akka-core/issues/26492
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.ActorMaterializerSettings.withAutoFusing")
 
 # Add attributes to constructor of internal class

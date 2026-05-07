@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
 import java.util.concurrent.TimeUnit
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.immutable
 
@@ -22,7 +23,6 @@ import akka.event.ActorWithLogClass
 import akka.event.Logging
 import akka.remote.FailureDetectorRegistry
 import akka.remote.HeartbeatMessage
-import akka.util.ccompat._
 
 /**
  * INTERNAL API.
@@ -30,7 +30,6 @@ import akka.util.ccompat._
  * Receives Heartbeat messages and replies.
  */
 @InternalApi
-@ccompatUsedUntil213
 private[cluster] final class ClusterHeartbeatReceiver(getCluster: () => Cluster) extends Actor {
   import ClusterHeartbeatSender._
 
@@ -97,6 +96,7 @@ private[cluster] object ClusterHeartbeatSender {
  * a few other nodes, which will reply and then this actor updates the
  * failure detector.
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 private[cluster] class ClusterHeartbeatSender extends Actor {
   import ClusterHeartbeatSender._
 

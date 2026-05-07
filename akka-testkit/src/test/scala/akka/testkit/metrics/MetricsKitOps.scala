@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.testkit.metrics
@@ -102,7 +102,7 @@ private[metrics] trait MetricsPrefix extends MetricSet {
 
   abstract override def getMetrics: util.Map[String, Metric] = {
     // does not have to be fast, is only called once during registering registry
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     (super.getMetrics.asScala.map { case (k, v) => (prefix / k).toString -> v }).asJava
   }
 }

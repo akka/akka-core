@@ -1,21 +1,25 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.javadsl
 
-import java.util.Collections
-import java.util.Optional
+import akka.Done
 import akka.actor.typed
 import akka.actor.typed.BackoffSupervisorStrategy
 import akka.actor.typed.Behavior
 import akka.actor.typed.internal.BehaviorImpl.DeferredBehavior
 import akka.actor.typed.javadsl.ActorContext
 import akka.annotation.InternalApi
-import akka.persistence.typed._
 import akka.persistence.typed.EventAdapter
+import akka.persistence.typed._
 import akka.persistence.typed.internal._
-import akka.util.unused
+import java.util.Collections
+import java.util.Optional
+import java.util.concurrent.CompletionStage
+
+import scala.annotation.nowarn
+import scala.reflect.ClassTag
 
 /**
  * For projects using Java 17 and newer, also see [[EventSourcedOnCommandBehavior]]
@@ -57,6 +61,9 @@ abstract class EventSourcedBehavior[Command, Event, State] private[akka] (
    * This object will be passed into this behaviors handlers, until a new state replaces it.
    *
    * Also known as "zero state" or "neutral state".
+   *
+   * If the state is mutable, it is important that this creates a new State instance each time it is called
+   * to ensure that the state is recreated in case of failure restarts.
    */
   protected def emptyState: State
 
@@ -152,7 +159,7 @@ abstract class EventSourcedBehavior[Command, Event, State] private[akka] (
    * @return `true` if snapshot should be saved at the given `state`, `event` and `sequenceNr` when the event has
    *         been successfully persisted
    */
-  def shouldSnapshot(@unused state: State, @unused event: Event, @unused sequenceNr: Long): Boolean = false
+  def shouldSnapshot(state: State, event: Event, sequenceNr: Long): Boolean = false
 
   /**
    * Can be used to delete events after `shouldSnapshot`.
@@ -174,21 +181,21 @@ abstract class EventSourcedBehavior[Command, Event, State] private[akka] (
    * Override to change the strategy for recovery of snapshots and events.
    * By default, snapshots and events are recovered.
    */
-  def recovery: Recovery = Recovery.default
+  def recovery: Recovery = Recovery.enabled
 
   /**
    * Return tags to store for the given event, the tags can then be used in persistence query.
    *
    * If [[tagsFor(Event, State)]] is overriden this method is ignored.
    */
-  def tagsFor(@unused event: Event): java.util.Set[String] = Collections.emptySet()
+  def tagsFor(@nowarn("msg=never used") event: Event): java.util.Set[String] = Collections.emptySet()
 
   /**
    * Return tags to store for the given event and state, the tags can then be used in persistence query.
    * The state passed to the tagger allows for toggling a tag with one event but keep all events after it tagged
    * based on a property or the type of the state.
    */
-  def tagsFor(@unused state: State, event: Event): java.util.Set[String] =
+  def tagsFor(@nowarn("msg=never used") state: State, event: Event): java.util.Set[String] =
     tagsFor(event)
 
   /**
@@ -212,12 +219,11 @@ abstract class EventSourcedBehavior[Command, Event, State] private[akka] (
   /**
    * INTERNAL API
    */
-  @InternalApi private[akka] final def createEventSourcedBehavior()
-      : scaladsl.EventSourcedBehavior[Command, Event, State] = {
+  @InternalApi private[akka] def createEventSourcedBehavior(): scaladsl.EventSourcedBehavior[Command, Event, State] = {
     val snapshotWhen: (State, Event, Long) => Boolean = (state, event, seqNr) => shouldSnapshot(state, event, seqNr)
 
     val tagger: (State, Event) => Set[String] = { (state, event) =>
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       val tags = tagsFor(state, event)
       if (tags.isEmpty) Set.empty
       else tags.asScala.toSet
@@ -225,9 +231,9 @@ abstract class EventSourcedBehavior[Command, Event, State] private[akka] (
 
     val commandHandlerInstance = commandHandler()
     val eventHandlerInstance = eventHandler()
-    val behavior = new internal.EventSourcedBehaviorImpl[Command, Event, State](
+    var behavior = new internal.EventSourcedBehaviorImpl[Command, Event, State](
       persistenceId,
-      emptyState,
+      () => emptyState,
       (state, cmd) => commandHandlerInstance(state, cmd).asInstanceOf[EffectImpl[Event, State]],
       eventHandlerInstance(_, _),
       getClass)
@@ -241,22 +247,10 @@ abstract class EventSourcedBehavior[Command, Event, State] private[akka] (
       .withRecovery(recovery.asScala)
 
     val handler = signalHandler()
-    val behaviorWithSignalHandler =
-      if (handler.isEmpty) behavior
-      else behavior.receiveSignal(handler.handler)
-
-    val withSignalHandler =
-      if (onPersistFailure.isPresent)
-        behaviorWithSignalHandler.onPersistFailure(onPersistFailure.get)
-      else
-        behaviorWithSignalHandler
-
-    if (stashCapacity.isPresent) {
-      withSignalHandler.withStashCapacity(stashCapacity.get)
-    } else {
-      withSignalHandler
-    }
-
+    if (!handler.isEmpty) behavior = behavior.receiveSignal(handler.handler)
+    onPersistFailure.ifPresent(opf => behavior = behavior.onPersistFailure(opf))
+    stashCapacity.ifPresent(sc => behavior = behavior.withStashCapacity(sc))
+    behavior
   }
 
   /**
@@ -267,11 +261,34 @@ abstract class EventSourcedBehavior[Command, Event, State] private[akka] (
   }
 
   /**
+   * The metadata of the given type that was persisted with an event, if any.
+   * Can only be called from inside the event handler or `RecoveryCompleted` of an `EventSourcedBehavior`.
+   */
+  def getCurrentMetadata[M](ctx: ActorContext[_], metadataType: Class[M]): Optional[M] = {
+    import scala.jdk.OptionConverters._
+    implicit val ct: ClassTag[M] = ClassTag(metadataType)
+    scaladsl.EventSourcedBehavior.currentMetadata(ctx.asScala).toJava
+  }
+
+  /**
    * Override to define a custom stash capacity per entity.
    * If not defined, the default `akka.persistence.typed.stash-capacity` will be used.
    */
   def stashCapacity: Optional[java.lang.Integer] = Optional.empty()
 
+}
+
+@FunctionalInterface
+trait ReplicationInterceptor[Event, State] {
+
+  /**
+   * @param state Current state
+   * @param event The replicated event
+   * @param originReplica The replica where the event came from
+   * @param sequenceNumber The local sequence number the event will get when persisted
+   * @return
+   */
+  def intercept(state: State, event: Event, originReplica: ReplicaId, sequenceNumber: Long): CompletionStage[Done]
 }
 
 /**

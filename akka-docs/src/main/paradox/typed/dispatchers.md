@@ -10,13 +10,9 @@ You are viewing the documentation for the new actor APIs, to view the Akka Class
 Dispatchers are part of core Akka, which means that they are part of the `akka-actor` dependency. This
 page describes how to use dispatchers with `akka-actor-typed`.
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 Additionally, add the dependency as below.
 
@@ -123,8 +119,14 @@ section and the `default-dispatcher` section of the @ref:[configuration](../gene
 
 The `parallelism-max` for the `fork-join-executor` does not set the upper bound on the total number of threads
 allocated by the ForkJoinPool. It is a setting specifically talking about the number of *hot*
-threads the pool will keep running in order to reduce the latency of handling a new incoming task.
-You can read more about parallelism in the JDK's [ForkJoinPool documentation](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.html).
+threads the pool will keep running in order to reduce the latency of handling a new incoming task.  Threads may use
+`ManagedBlocker` (used by (among others) @scala[`Await` and `blocking {}`]@java[`CompletableFuture::get` and `CompletableFuture::join`])
+to signal the pool that it might be desirable to add a thread (note that @ref:[this is not really a solution](#non-solution-)).
+Prior to Akka 2.10.7, dispatchers with a `fork-join-executor` did not meaningfully bound the number of the additional threads which might
+be added.  From Akka 2.10.7 onwards, the default if `maximum-spare-threads` is not set in config is "no meaningful bound", but a limit
+can be set.  A future (at least 2.11) version of Akka may change this default behavior.
+
+You can read more about parallelism in the JDK's [ForkJoinPool documentation](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/ForkJoinPool.html).
 
 @@@
 
@@ -232,7 +234,7 @@ leads to thread starvation.
 
 @@@ note
 
-[Thread Starvation Detector](https://doc.akka.io/docs/akka-diagnostics/current/starvation-detector.html)
+[Thread Starvation Detector](https://doc.akka.io/libraries/akka-diagnostics/current/starvation-detector.html)
 will issue warning log statements if it detects any of your dispatchers suffering from starvation and other.
 It is a helpful first step to identify the problem is occurring in a production system,
 and then you can apply the proposed solutions as explained below.
@@ -283,6 +285,20 @@ unless you @ref:[set up a separate dispatcher for the actor](../dispatchers.md#s
 
 @@@
 
+### Non-solution: @scala[`blocking {}`]@java[`ManagedBlocker`]
+
+It may be tempting, if running on a `fork-join-executor`, to signal blocking to the underlying thread pool and allow the
+pool to dynamically add a worker thread when about to block.  Constructs like @scala[`Await`]@java[the `get()` and `join()`
+methods of `CompletableFuture`] will signal the thread pool in this way.  In the very short term, while the thread which
+signaled the pool is blocked, this does keep the dispatcher responsive.  The problem with this approach is that the "spare"
+thread will not be stopped until it has been idle for some period of time (the default is 1 minute): in the mean time, this
+will likely mean that the spare thread will be running even after the blocked thread has become unblocked.  During this
+period, it is further likely that there will be more runnable threads than available processors to run them, which will
+generally mean more context switches by the OS kernel and decreased application throughput with unpredictable latencies.
+Assuming the system remains under load, these spare threads will be kept busy and not become idle; even a relatively
+infrequent use of this mechanism under load may eventually exhaust the ability to add threads, resulting in a crash
+"out of the blue".
+
 ### Solution: Dedicated dispatcher for blocking operations
 
 An efficient method of isolating the blocking behavior, such that it does not impact the rest of the system,
@@ -329,6 +345,28 @@ This is the recommended way of dealing with any kind of blocking in reactive
 applications.
 
 For a similar discussion specifically about Akka HTTP, refer to @extref[Handling blocking operations in Akka HTTP](akka.http:handling-blocking-operations-in-akka-http-routes.html).
+
+### Solution: Virtual threads dispatcher for blocking operations
+
+If running on Java 21 or later, it is possible to use virtual threads for a blocking dispatcher, configure
+the executor of the dispatcher to be `virtual-thread-executor`.
+
+The virtual thread executor will run every task in a virtual thread, which can detach from of the OS-level thread
+when it is waiting for a blocking operation, much like how an async task allows threads to be handed back to
+a thread pool, until some task completes.
+
+Re-configuring the built-in blocking dispatcher to use virtual threads can be done like this:
+
+```ruby
+akka.actor.default-blocking-io-dispatcher {
+  executor = "virtual-thread-executor"
+}
+```
+
+Note that there is a difference in behavior compared to using a thread pool dispatcher in that there is no limit
+to how many virtual threads can block, for example hitting a service and waiting for a response, 
+while the threadpool executor puts an upper limit (16 by default) on how many threads are actually in flight, 
+once that limit has been reached, additional tasks are queued until a thread becomes available.
 
 ### Available solutions to blocking operations
 

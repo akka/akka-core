@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence
@@ -40,7 +40,8 @@ final class SnapshotMetadata(
       timestamp: Long = this.timestamp): SnapshotMetadata =
     SnapshotMetadata(persistenceId, sequenceNr, timestamp, metadata)
 
-  override def toString = s"SnapshotMetadata($persistenceId, $sequenceNr, $timestamp, $metadata)"
+  override def toString =
+    s"SnapshotMetadata($persistenceId, $sequenceNr, $timestamp, ${metadata.map(_.getClass.getName)})"
 
   // Product 3
   override def productPrefix = "SnapshotMetadata"
@@ -192,7 +193,7 @@ object SnapshotSelectionCriteria {
   /**
    * No saved snapshot matches.
    */
-  val None = SnapshotSelectionCriteria(0L, 0L)
+  val None = SnapshotSelectionCriteria(maxSequenceNr = 0L, maxTimestamp = 0L)
 
   /**
    * Java API.
@@ -215,6 +216,7 @@ object SnapshotSelectionCriteria {
    * Java API.
    */
   def none() = None
+
 }
 
 /**

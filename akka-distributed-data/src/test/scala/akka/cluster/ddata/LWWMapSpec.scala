@@ -1,16 +1,18 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.ddata
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import akka.actor.Address
 import akka.cluster.UniqueAddress
 import akka.cluster.ddata.Replicator.Changed
 
+import scala.annotation.nowarn
+
+@nowarn("cat=lint-infer-any")
 class LWWMapSpec extends AnyWordSpec with Matchers {
   import LWWRegister.defaultClock
 

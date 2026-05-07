@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.delivery.internal
@@ -26,7 +26,6 @@ import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.scaladsl.StashBuffer
 import akka.annotation.InternalApi
 import akka.util.Timeout
@@ -292,7 +291,7 @@ private class WorkPullingProducerControllerImpl[A: ClassTag](
     def onMessage(msg: A, wasStashed: Boolean, replyTo: Option[ActorRef[Done]], totalSeqNr: TotalSeqNr): State[A] = {
       val consumersWithDemand = s.out.iterator.filter { case (_, out) => out.askNextTo.isDefined }.toVector
       if (traceEnabled)
-        context.log.traceN(
+        context.log.trace(
           "Received message seqNr [{}], wasStashed [{}], consumersWithDemand [{}], hasRequested [{}].",
           totalSeqNr,
           wasStashed,
@@ -520,7 +519,7 @@ private class WorkPullingProducerControllerImpl[A: ClassTag](
         case Some(outState) =>
           val confirmedSeqNr = w.next.confirmedSeqNr
           if (traceEnabled)
-            context.log.trace2(
+            context.log.trace(
               "Received RequestNext from worker [{}], confirmedSeqNr [{}].",
               w.next.producerId,
               confirmedSeqNr)
@@ -534,7 +533,7 @@ private class WorkPullingProducerControllerImpl[A: ClassTag](
                 .copy(seqNr = w.next.currentSeqNr, unconfirmed = newUnconfirmed, askNextTo = Some(next.askNextTo)))
 
           if (stashBuffer.nonEmpty) {
-            context.log.debug2("Unstash [{}] after RequestNext from worker [{}]", stashBuffer.size, w.next.producerId)
+            context.log.debug("Unstash [{}] after RequestNext from worker [{}]", stashBuffer.size, w.next.producerId)
             stashBuffer.unstashAll(active(s.copy(out = newOut)))
           } else if (s.requested) {
             active(s.copy(out = newOut))
@@ -560,7 +559,7 @@ private class WorkPullingProducerControllerImpl[A: ClassTag](
       val newState = addedWorkers.foldLeft(s) { (acc, c) =>
         val uuid = UUID.randomUUID().toString
         val outKey = s"$producerId-$uuid"
-        context.log.debug2("Registered worker [{}], with producerId [{}].", c, outKey)
+        context.log.debug("Registered worker [{}], with producerId [{}].", c, outKey)
         val p = context.spawn(
           ProducerController[A](outKey, durableQueueBehavior = None, producerControllerSettings),
           uuid,
@@ -573,11 +572,11 @@ private class WorkPullingProducerControllerImpl[A: ClassTag](
       val newState2 = removedWorkers.foldLeft(newState) { (acc, c) =>
         acc.out.find { case (_, outState) => outState.consumerController == c } match {
           case Some((key, outState)) =>
-            context.log.debug2("Deregistered worker [{}], with producerId [{}].", c, key)
+            context.log.debug("Deregistered worker [{}], with producerId [{}].", c, key)
             context.stop(outState.producerController)
             // resend the unconfirmed, sending to self since order of messages for WorkPulling doesn't matter anyway
             if (outState.unconfirmed.nonEmpty)
-              context.log.debugN(
+              context.log.debug(
                 "Resending unconfirmed from deregistered worker with producerId [{}], from seqNr [{}] to [{}].",
                 key,
                 outState.unconfirmed.head.outSeqNr,

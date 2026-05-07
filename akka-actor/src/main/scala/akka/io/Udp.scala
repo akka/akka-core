@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
@@ -16,7 +16,6 @@ import akka.actor._
 import akka.io.Inet.{ SoJavaFactories, SocketOption }
 import akka.util.ByteString
 import akka.util.Helpers.Requiring
-import akka.util.ccompat._
 
 /**
  * UDP Extension for Akka’s IO layer.
@@ -30,7 +29,6 @@ import akka.util.ccompat._
  *
  * The Java API for generating UDP commands is available at [[UdpMessage]].
  */
-@ccompatUsedUntil213
 object Udp extends ExtensionId[UdpExt] with ExtensionIdProvider {
 
   override def lookup = Udp
@@ -249,7 +247,7 @@ object UdpMessage {
 
   import Udp._
 
-  import akka.util.ccompat.JavaConverters._
+  import scala.jdk.CollectionConverters._
 
   /**
    * Each [[Udp.Send]] can optionally request a positive acknowledgment to be sent

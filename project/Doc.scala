@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -36,7 +36,7 @@ object Scaladoc extends AutoPlugin {
         Compile / scalacOptions --= Seq("-release", "8"),
         autoAPIMappings := CliOptions.scaladocAutoAPI.get)) ++
     Seq(
-      // Publishing scala3 docs is broken (https://github.com/akka/akka/issues/30788),
+      // Publishing scala3 docs is broken (https://github.com/akka/akka-core/issues/30788),
       // for now we just skip it:
       Compile / doc / sources := (
           if (scalaVersion.value.startsWith("3.")) Seq()
@@ -65,7 +65,7 @@ object Scaladoc extends AutoPlugin {
       "-doc-version",
       ver,
       "-doc-canonical-base-url",
-      "https://doc.akka.io/api/akka/current/")
+      "https://doc.akka.io/api/akka-core/current/")
     CliOptions.scaladocDiagramsEnabled.ifTrue("-diagrams").toList ::: opts
   }
 
@@ -146,7 +146,7 @@ object UnidocRoot extends AutoPlugin {
         val releaseVersion = if (isSnapshot.value) "snapshot" else version.value
         (Compile / unidoc).value match {
           case Seq(japi, api) =>
-            Seq((japi -> s"www/japi/akka/$releaseVersion"), (api -> s"www/api/akka/$releaseVersion"))
+            Seq((japi -> s"www/japi/akka-core/$releaseVersion"), (api -> s"www/api/akka-core/$releaseVersion"))
         }
       }))
     .getOrElse(Nil)

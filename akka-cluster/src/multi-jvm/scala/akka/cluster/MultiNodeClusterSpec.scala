@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
 import java.util.concurrent.ConcurrentHashMap
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -25,9 +26,7 @@ import akka.remote.testkit.MultiNodeConfig
 import akka.serialization.jackson.CborSerializable
 import akka.testkit._
 import akka.testkit.TestEvent._
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object MultiNodeClusterSpec {
 
   def clusterConfigWithFailureDetectorPuppet: Config =
@@ -90,6 +89,7 @@ object MultiNodeClusterSpec {
   }
 }
 
+@nowarn("msg=Use Akka Distributed Cluster")
 abstract class MultiNodeClusterSpec(multiNodeconfig: MultiNodeConfig)
     extends MultiNodeSpec(multiNodeconfig)
     with Suite

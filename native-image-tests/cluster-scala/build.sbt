@@ -2,11 +2,10 @@ import scala.collection.Seq
 
 name := "cluster-scala"
 version := "1.0"
-scalaVersion := "2.13.14"
-resolvers += "Akka library repository".at("https://repo.akka.io/maven")
+scalaVersion := "2.13.17"
 
 // Note: this default isn't really used anywhere so not important to bump
-lazy val akkaVersion = sys.props.getOrElse("akka.version", "2.9.1")
+lazy val akkaVersion = sys.props.getOrElse("akka.version", "2.10.9")
 
 fork := true
 
@@ -28,6 +27,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-serialization-jackson" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-typed" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
-  "ch.qos.logback" % "logback-classic" % "1.2.13",
+  "ch.qos.logback" % "logback-classic" % "1.5.8",
   "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
   "org.scalatest" %% "scalatest" % "3.2.15" % Test)

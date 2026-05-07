@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sbr
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import akka.actor.Actor
@@ -15,6 +16,7 @@ import akka.cluster.Cluster
 import akka.cluster.sharding.ShardRegion
 import akka.serialization.jackson.CborSerializable
 
+@nowarn("msg=Use Akka Distributed Cluster")
 object GlobalRegistry {
   final case class Register(key: String, address: Address) extends CborSerializable
   final case class Unregister(key: String, address: Address) extends CborSerializable

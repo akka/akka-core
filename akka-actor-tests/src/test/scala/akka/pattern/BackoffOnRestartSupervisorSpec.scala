@@ -1,12 +1,11 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
 
 import java.util.concurrent.{ CountDownLatch, TimeUnit }
 
-import scala.annotation.nowarn
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -153,7 +152,6 @@ class BackoffOnRestartSupervisorSpec extends AkkaSpec("""
 
     "accept commands while child is terminating" in {
       val postStopLatch = new CountDownLatch(1)
-      @nowarn
       val options = BackoffOpts
         .onFailure(Props(new SlowlyFailingActor(postStopLatch)), "someChildName", 1 nanos, 1 nanos, 0.0)
         .withMaxNrOfRetries(-1)

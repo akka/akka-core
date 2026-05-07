@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.serialization
@@ -48,7 +48,7 @@ class ProtobufSerializer(val system: ExtendedActorSystem) extends BaseSerializer
   private val toByteArrayMethodBindingRef = new AtomicReference[Map[Class[_], Method]](Map.empty)
 
   private val allowedClassNames: Set[String] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     system.settings.config.getStringList("akka.serialization.protobuf.allowed-classes").asScala.toSet
   }
 

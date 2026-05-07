@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -9,11 +9,13 @@ import akka.stream._
 import akka.stream.scaladsl._
 import akka.testkit.AkkaSpec
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext
 
+@nowarn("msg=never used") // sample snippets
 class GraphDSLDocSpec extends AkkaSpec {
 
   implicit val ec: ExecutionContext = system.dispatcher

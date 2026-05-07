@@ -2,13 +2,13 @@
 
 ## Commercial Support
 
-Commercial support is provided by [Lightbend](https://www.lightbend.com).
+Commercial support is provided by [Akka](https://akka.io).
 
 ## Sponsors
 
-**Lightbend** is the company behind the Akka Project, Scala Programming Language,
-Play Web Framework, Lagom, sbt and many other open source and source available projects. 
-It also provides the Lightbend Reactive Platform, which is powered by a source available core and commercial Enterprise Suite for building scalable Reactive systems on the JVM. Learn more at [lightbend.com](https://www.lightbend.com).
+**Akka** is the company behind Akka product, Scala Programming Language,
+Play Web Framework, Lagom, sbt and many other open source and source available projects.
+Learn more at [akka.io](https://akka.io).
 
 ## Akka Discuss Forums
 
@@ -16,21 +16,17 @@ It also provides the Lightbend Reactive Platform, which is powered by a source a
 
 ## Source Code
 
-Akka uses Git and is hosted at [Github akka/akka](https://github.com/akka/akka).
+Akka uses Git and is hosted at [Github akka/akka-core](https://github.com/akka/akka-core).
 
 ## Releases Repository
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 ## Snapshots Repository
 
-Snapshot builds are available from the repository at `https://repo.akka.io/snapshots`. All Akka modules that belong to the same build have the same version.
+Snapshot builds are available from the repository at `https://repo.akka.io/TOKEN/secure/snapshots`. All Akka modules that belong to the same build have the same version.
 
 @@@ warning
 
@@ -43,7 +39,7 @@ The use of Akka SNAPSHOTs, nightlies and milestone releases is discouraged unles
 Make sure that you add the repository to the sbt resolvers:
 
 ```
-resolvers += "Akka library snapshot repository".at("https://repo.akka.io/snapshots")
+resolvers += "Akka library snapshot repository".at("https://repo.akka.io/TOKEN/secure/snapshots")
 ```
 
 Define the library dependencies with the complete version. For example:
@@ -64,7 +60,7 @@ Make sure that you add the repository to the Maven repositories in pom.xml:
     <repository>
       <id>akka-repository</id>
       <name>Akka library snapshot repository</name>
-      <url>https://repo.akka.io/snapshots</url>
+      <url>https://repo.akka.io/TOKEN/secure/snapshots</url>
     </repository>
   </repositories>
 </repositories>

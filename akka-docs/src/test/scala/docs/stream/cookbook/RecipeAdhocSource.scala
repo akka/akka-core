@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.cookbook
@@ -23,7 +23,7 @@ class RecipeAdhocSource extends RecipeSpec {
         source
           .backpressureTimeout(timeout)
           .recoverWithRetries(maxRetries, {
-            case t: TimeoutException =>
+            case _: TimeoutException =>
               Source.lazySource(() => source.backpressureTimeout(timeout)).mapMaterializedValue(_ => NotUsed)
           }))
   //#adhoc-source

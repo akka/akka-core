@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.cluster.typed
@@ -24,6 +24,7 @@ import org.scalatest.time.{ Millis, Seconds, Span }
 
 import scala.concurrent.duration._
 
+@nowarn("msg=Use Akka Distributed Cluster")
 object BasicClusterExampleSpec {
   val configSystem1 = ConfigFactory.parseString("""
 akka.loglevel = DEBUG

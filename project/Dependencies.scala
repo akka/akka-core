@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -12,33 +12,30 @@ import scala.language.implicitConversions
 object Dependencies {
   import DependencyHelpers._
 
-  // java8-compat is only used in a couple of places for 2.13,
-  // it is probably possible to remove the dependency if needed.
-  val java8CompatVersion = "1.0.2"
-
   val junitVersion = "4.13.2"
-  val slf4jVersion = "1.7.36"
+  val slf4jVersion = "2.0.17"
   // check agrona version when updating this
-  val aeronVersion = "1.44.1"
+  // Note: 1.46 is JDK 17 only so we cannot bump until we stop supporting JDK 11
+  val aeronVersion = "1.45.2"
   // needs to be inline with the aeron version, check
   // https://github.com/real-logic/aeron/blob/1.x.y/build.gradle
-  val agronaVersion = "1.19.2"
-  val nettyVersion = "4.1.109.Final"
-  val protobufJavaVersion = "3.24.0" // also sync with protocVersion in Protobuf.scala
-  val logbackVersion = "1.2.13"
-  val scalaFortifyVersion = "1.0.22"
-  val fortifySCAVersion = "22.1"
-  val jacksonCoreVersion = "2.15.4" // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
+  // Note: 1.23+ is JDK 17 only so we cannot bump until we stop supporting JDK 11
+  val agronaVersion = "1.22.0"
+  val nettyVersion = "4.2.0.Final"
+  val protobufJavaVersion = "3.25.5" // also sync with protocVersion in Protobuf.scala
+  val logbackVersion = "1.5.18"
+  val jacksonCoreVersion = "2.18.6" // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
   val jacksonDatabindVersion = jacksonCoreVersion // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
 
   // Also update URLs in link-validator.conf
-  val scala213Version = "2.13.14"
-  val scala3Version = "3.3.3"
+  val scala213Version = "2.13.17"
+  val scala3Version = "3.3.7"
+
   val allScalaVersions = Seq(scala213Version, scala3Version)
 
   val reactiveStreamsVersion = "1.0.4"
 
-  val graalVmNativeImageVersion = "24.0.1"
+  val graalVmNativeImageVersion = "24.2.1"
 
   val scalaTestVersion = "3.2.19"
 
@@ -51,8 +48,7 @@ object Dependencies {
 
   object Compile {
     // Compile
-
-    val config = "com.typesafe" % "config" % "1.4.3" // ApacheV2
+    val config = "com.typesafe" % "config" % "1.4.6" // ApacheV2
     val `netty-transport` = "io.netty" % "netty-transport" % nettyVersion // ApacheV2
     val `netty-handler` = "io.netty" % "netty-handler" % nettyVersion // ApacheV2
 
@@ -62,17 +58,14 @@ object Dependencies {
 
     val sigar = "org.fusesource" % "sigar" % "1.6.4" // ApacheV2
 
-    val jctools = "org.jctools" % "jctools-core" % "3.3.0" // ApacheV2
+    val jctools = "org.jctools" % "jctools-core" % "4.0.5" // ApacheV2
 
     // reactive streams
     val reactiveStreams = "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion // MIT-0
 
-    val lmdb = "org.lmdbjava" % "lmdbjava" % "0.8.3" // ApacheV2, OpenLDAP Public License
+    val lmdb = "org.lmdbjava" % "lmdbjava" % "0.9.1" // ApacheV2, OpenLDAP Public License
 
     val junit = "junit" % "junit" % junitVersion // Common Public License 1.0
-
-    // For Java 8 Conversions
-    val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % java8CompatVersion // Scala License
 
     val aeronDriver = "io.aeron" % "aeron-driver" % aeronVersion // ApacheV2
     val aeronClient = "io.aeron" % "aeron-client" % aeronVersion // ApacheV2
@@ -89,20 +82,20 @@ object Dependencies {
     val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonCoreVersion // ApacheV2
     val jacksonParameterNames = "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonCoreVersion // ApacheV2
     val jacksonCbor = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonCoreVersion // ApacheV2
-    val lz4Java = "org.lz4" % "lz4-java" % "1.8.0" // ApacheV2
+    val lz4Java = "at.yawk.lz4" % "lz4-java" % "1.10.2" // ApacheV2
 
     val logback = "ch.qos.logback" % "logback-classic" % logbackVersion // EPL 1.0
   }
   object Docs {
     val sprayJson = "io.spray" %% "spray-json" % "1.3.6" % Test
-    val gson = "com.google.code.gson" % "gson" % "2.11.0" % Test
+    val gson = "com.google.code.gson" % "gson" % "2.13.1" % Test
   }
 
   object TestDependencies {
     val commonsMath = "org.apache.commons" % "commons-math" % "2.2" % Test // ApacheV2
 
-    val commonsIo = "commons-io" % "commons-io" % "2.16.1" % Test // ApacheV2
-    val commonsCodec = "commons-codec" % "commons-codec" % "1.16.1" % Test // ApacheV2
+    val commonsIo = "commons-io" % "commons-io" % "2.19.0" % Test // ApacheV2
+    val commonsCodec = "commons-codec" % "commons-codec" % "1.18.0" % Test // ApacheV2
     val junit = "junit" % "junit" % junitVersion % "test" // Common Public License 1.0
     val logback = Compile.logback % Test // EPL 1.0
 
@@ -128,10 +121,10 @@ object Dependencies {
     val dockerClient = "com.spotify" % "docker-client" % "8.16.0" % Test // ApacheV2
 
     // metrics, measurements, perf testing
-    val metrics = "io.dropwizard.metrics" % "metrics-core" % "4.2.25" % Test // ApacheV2
-    val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % "4.2.25" % Test // ApacheV2
+    val metrics = "io.dropwizard.metrics" % "metrics-core" % "4.2.32" % Test // ApacheV2
+    val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % "4.2.32" % Test // ApacheV2
     val latencyUtils = "org.latencyutils" % "LatencyUtils" % "2.0.3" % Test // Free BSD
-    val hdrHistogram = "org.hdrhistogram" % "HdrHistogram" % "2.2.1" % Test // CC0
+    val hdrHistogram = "org.hdrhistogram" % "HdrHistogram" % "2.2.2" % Test // CC0
     val metricsAll = Seq(metrics, metricsJvm, latencyUtils, hdrHistogram)
 
     // sigar logging
@@ -166,7 +159,7 @@ object Dependencies {
     val protobufRuntime = "com.google.protobuf" % "protobuf-java" % protobufJavaVersion % "optional;provided"
 
     // used for classpath scanning in testkit/tests for native-image metadata
-    val classgraph = "io.github.classgraph" % "classgraph" % "4.8.172" % "optional;provided;test" // MIT
+    val classgraph = "io.github.classgraph" % "classgraph" % "4.8.179" % "optional;provided;test" // MIT
     val jacksonCore = Compile.jacksonCore % "optional;provided;test"
     val jacksonScala = Compile.jacksonScala % "optional;provided;test"
     val optionalForNativeImageMetadata = Seq(classgraph, jacksonCore, jacksonScala)
@@ -178,7 +171,7 @@ object Dependencies {
   // TODO check if `l ++=` everywhere expensive?
   val l = libraryDependencies
 
-  val actor = l ++= Seq(config, java8Compat)
+  val actor = l ++= Seq(config)
 
   val actorTyped = l ++= Seq(slf4jApi)
 

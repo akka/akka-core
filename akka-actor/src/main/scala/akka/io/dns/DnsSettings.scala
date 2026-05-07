@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns
@@ -10,6 +10,7 @@ import java.util
 
 import scala.collection.immutable
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters._
 import scala.util.{ Failure, Success, Try }
 
 import com.typesafe.config.{ Config, ConfigValueType }
@@ -21,13 +22,10 @@ import akka.io.dns.CachePolicy.{ CachePolicy, Forever, Never, Ttl }
 import akka.io.dns.internal.{ ResolvConf, ResolvConfParser }
 import akka.util.Helpers
 import akka.util.Helpers.Requiring
-import akka.util.JavaDurationConverters._
-import akka.util.ccompat._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** INTERNAL API */
 @InternalApi
-@ccompatUsedUntil213
 private[dns] final class DnsSettings(system: ExtendedActorSystem, c: Config) {
 
   import DnsSettings._
@@ -52,7 +50,7 @@ private[dns] final class DnsSettings(system: ExtendedActorSystem, c: Config) {
     }
   }
 
-  val ResolveTimeout: FiniteDuration = c.getDuration("resolve-timeout").asScala
+  val ResolveTimeout: FiniteDuration = c.getDuration("resolve-timeout").toScala
 
   val PositiveCachePolicy: CachePolicy = getTtl("positive-ttl")
   val NegativeCachePolicy: CachePolicy = getTtl("negative-ttl")

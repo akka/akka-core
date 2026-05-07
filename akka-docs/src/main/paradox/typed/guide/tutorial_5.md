@@ -229,11 +229,11 @@ In the context of the IoT system, this guide introduced the following concepts, 
 To continue your journey with Akka, we recommend:
 
 * Start building your own applications with Akka, make sure you [get involved in our amazing community](https://akka.io/get-involved/) for help if you get stuck.
-* If you’d like some additional background, and detail, read the rest of the @ref:[reference documentation](../actors.md) and check out some of the @ref:[books and videos](../../additional/books.md) on Akka.
+* If you’d like some additional background, and detail, read the rest of the @ref:[reference documentation](../actors.md), check out some @ref:[books and videos](../../additional/books.md), or even explore the free online courses @java[[**Akka Basics for Java**](https://akkademy.akka.io/learn/courses/23/akka-basics-for-java)]@scala[[**Akka Basics for Scala**](https://akkademy.akka.io/learn/courses/22/akka-basics-for-scala)].
 * If you are interested in functional programming, read how actors can be defined in a @ref:[functional style](../actors.md#functional-style). In this guide the object-oriented style was used, but you can mix both as you like.
 
 To get from this guide to a complete application you would likely need to provide either an UI or an API. For this we recommend that you look at the following technologies and see what fits you:
 
  * @extref[Microservices with Akka tutorial](platform-guide:microservices-tutorial/) illustrates how to implement an Event Sourced CQRS application with Akka Persistence and Akka Projections 
- * [Akka HTTP](https://doc.akka.io/docs/akka-http/current/introduction.html) is a HTTP server and client library, making it possible to publish and consume HTTP endpoints
- * [Akka gRPC](https://doc.akka.io/docs/akka-grpc/current/) supports fully typed, streaming gRPC servers and clients.
+ * [Akka HTTP](https://doc.akka.io/libraries/akka-http/current/introduction.html) is a HTTP server and client library, making it possible to publish and consume HTTP endpoints
+ * [Akka gRPC](https://doc.akka.io/libraries/akka-grpc/current/) supports fully typed, streaming gRPC servers and clients.

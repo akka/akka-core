@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.javadsl
@@ -64,6 +64,9 @@ abstract class DurableStateBehavior[Command, State] private[akka] (
    * This object will be passed into this behaviors handlers, until a new state replaces it.
    *
    * Also known as "zero state" or "neutral state".
+   *
+   * If the state is mutable, it is important that this creates a new State instance each time it is called
+   * to ensure that the state is recreated in case of failure restarts.
    */
   protected def emptyState: State
 
@@ -137,7 +140,7 @@ abstract class DurableStateBehavior[Command, State] private[akka] (
 
     val behavior = new internal.DurableStateBehaviorImpl[Command, State](
       persistenceId,
-      emptyState,
+      () => emptyState,
       (state, cmd) => commandHandler()(state, cmd).asInstanceOf[EffectImpl[State]],
       getClass).withTag(tag).snapshotAdapter(snapshotAdapter()).withDurableStateStorePluginId(durableStateStorePluginId)
 

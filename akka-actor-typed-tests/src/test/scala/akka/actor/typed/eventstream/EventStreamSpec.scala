@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.eventstream
@@ -65,9 +65,9 @@ class EventStreamSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike wit
       probe.expectMessage("init")
       probe.expectNoMessage(100.millis) // might still be a risk that the eventStream ! Subscribe hasn't arrived
 
-      testKit.system.deadLetters ! "msg1"
-      testKit.system.deadLetters ! "msg2"
-      testKit.system.deadLetters ! "msg3"
+      testKit.system.deadLetters[String] ! "msg1"
+      testKit.system.deadLetters[String] ! "msg2"
+      testKit.system.deadLetters[String] ! "msg3"
 
       probe.expectMessage("msg1")
       probe.expectMessage("msg2")

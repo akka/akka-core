@@ -1,13 +1,14 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor.typed
 
 import akka.actor.typed._
 import akka.actor.typed.scaladsl._
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.ConfigFactory
 
+import scala.annotation.nowarn
 import scala.concurrent.{ ExecutionContext, Future }
 
 // #blocking-in-future
@@ -55,6 +56,7 @@ object SeparateDispatcherFutureActor {
 }
 // #separate-dispatcher
 
+@nowarn("msg=never used") // sample snippets
 object BlockingDispatcherSample {
   def main(args: Array[String]): Unit = {
     // #blocking-main
@@ -70,6 +72,7 @@ object BlockingDispatcherSample {
   }
 }
 
+@nowarn("msg=never used") // sample snippets
 object SeparateDispatcherSample {
   def main(args: Array[String]): Unit = {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.internal
@@ -228,12 +228,17 @@ private[akka] final class DDataRememberEntitiesShardStore(
     // updatesLeft used both to keep track of what work remains and for retrying on timeout up to a limit
     def next(updatesLeft: Map[Set[Evt], (Update[ORSet[EntityId]], Int)]): Receive = {
       case UpdateSuccess(_, Some(evts: Set[Evt] @unchecked)) =>
-        log.debug("Remember entities shard store state was successfully updated for [{}]", evts)
         val remainingAfterThis = updatesLeft - evts
         if (remainingAfterThis.isEmpty) {
+          log.debug("Remember entities shard store state was successfully updated for [{}]", evts)
           requestor ! RememberEntitiesShardStore.UpdateDone(update.started, update.stopped)
           context.become(idle)
         } else {
+          if (log.isDebugEnabled)
+            log.debug(
+              "Remember entities shard store state was successfully updated for [{}], continuing with pending writes [{}]",
+              evts,
+              remainingAfterThis.keys.flatten)
           context.become(next(remainingAfterThis))
         }
 
@@ -266,8 +271,9 @@ private[akka] final class DDataRememberEntitiesShardStore(
         // will trigger shard restart
         context.stop(self)
       case shardStoreUpdate: RememberEntitiesShardStore.Update =>
-        log.warning(
-          "Remember entities shard store got a new update before write of previous completed, dropping update: [{}]",
+        // Note: this is fine, they just go in the next batch
+        log.debug(
+          "Remember entities shard store got a new update before write of previous completed, deferred to next write: [{}]",
           shardStoreUpdate)
     }
 

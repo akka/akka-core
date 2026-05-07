@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.receptionist
@@ -73,8 +73,8 @@ object ReceptionistApiSpec {
         case key.Listing(services) =>
           services.foreach(_ ! "woho")
           Behaviors.same
-        case key.Registered(service) => // ack on Register above
-          service ! "woho"
+        case key.Registered(service2) => // ack on Register above
+          service2 ! "woho"
           Behaviors.same
       }
 

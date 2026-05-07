@@ -34,7 +34,7 @@ Java
 @@@ div { .group-java }
 ## Leveraging Java 21 features
 
-When building durable state entities in a project using Java 21 or newer, the @javadoc[DurableStateOnCommandBehavior](akka.persistence.typed.statejavadsl.DurableStateOnCommandBehavior)
+When building durable state entities in a project using Java 21 or newer, the @javadoc[DurableStateOnCommandBehavior](akka.persistence.typed.state.javadsl.DurableStateOnCommandBehavior)
 base class provides an API that let you leverage the switch pattern match feature. When combined with `sealed` command
 and event top types this gives you a more direct handling of commands and events as well as a compile time completeness
 check that you have handled all kinds of commands and events in your event sourced behavior handler methods:

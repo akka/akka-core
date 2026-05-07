@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.journal
@@ -29,6 +29,9 @@ trait AsyncRecovery {
    * This does imply that this call is always preceded by reading the highest sequence
    * number for the given `persistenceId`.
    *
+   * A special case is `fromSequenceNr` of -1, which means that only the last message if any
+   * should be replayed.
+   *
    * This call is NOT protected with a circuit-breaker because it may take long time
    * to replay all events. The plugin implementation itself must protect against
    * an unresponsive backend store and make sure that the returned Future is
@@ -41,7 +44,6 @@ trait AsyncRecovery {
    * @param max maximum number of messages to be replayed.
    * @param recoveryCallback called to replay a single message. Can be called from any
    *                       thread.
-   *
    * @see [[AsyncWriteJournal]]
    */
   def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
@@ -97,6 +99,9 @@ trait AsyncReplay {
    * returned highest sequence number must still be the highest of all stored messages. In this case
    * the implementation would typically have to read the actual highest sequence number but can skip
    * replay of messages.
+   *
+   * Another special case is `fromSequenceNr` of -1, which means that only the last message if any
+   * should be replayed.
    *
    * This call is NOT protected with a circuit-breaker because it may take long time
    * to replay all events. The plugin implementation itself must protect against

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -92,7 +92,7 @@ object ManifestInfo extends ExtensionId[ManifestInfo] with ExtensionIdProvider {
         s"You can solve this by adding an explicit dependency on version $highestVersion " +
         s"of the [$toBeUpdated] artifacts to your project. " +
         s"Here's a complete collection of detected artifacts: ${groupedByVersion}. " +
-        "See also: https://doc.akka.io/docs/akka/current/common/binary-compatibility-rules.html#mixed-versioning-is-not-allowed")
+        "See also: https://doc.akka.io/libraries/akka-core/current/common/binary-compatibility-rules.html#mixed-versioning-is-not-allowed")
     } else None
   }
 }

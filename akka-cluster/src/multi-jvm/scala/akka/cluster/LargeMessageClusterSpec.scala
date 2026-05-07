@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
 import java.io.NotSerializableException
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.ConfigFactory
@@ -20,7 +21,6 @@ import akka.remote.testconductor.RoleName
 import akka.remote.testkit.MultiNodeConfig
 import akka.serialization.SerializerWithStringManifest
 import akka.testkit._
-import akka.util.unused
 
 object LargeMessageClusterMultiJvmSpec extends MultiNodeConfig {
   val first = role("first")
@@ -64,7 +64,7 @@ object LargeMessageClusterMultiJvmSpec extends MultiNodeConfig {
 
   final case class Slow(payload: Array[Byte])
 
-  class SlowSerializer(@unused system: ExtendedActorSystem) extends SerializerWithStringManifest {
+  class SlowSerializer(@nowarn("msg=never used") system: ExtendedActorSystem) extends SerializerWithStringManifest {
     override def identifier = 999
     override def manifest(o: AnyRef) = "a"
     override def toBinary(o: AnyRef) = o match {

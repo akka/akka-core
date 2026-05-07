@@ -1,9 +1,7 @@
-val AkkaVersion = "2.9.4"
-val AkkaHttpVersion = "10.6.3"
-val AkkaDiagnostics = "2.1.1"
-val LogbackVersion = "1.2.11"
-
-resolvers += "Akka library repository".at("https://repo.akka.io/maven")
+val AkkaVersion = "2.10.17"
+val AkkaHttpVersion = "10.7.1"
+val AkkaDiagnostics = "2.2.1"
+val LogbackVersion = "1.5.18"
 
 lazy val commonScalacOptions =
   Seq("-deprecation", "-feature", "-unchecked", "-Xlint", "-Ywarn-unused:imports", "-encoding", "UTF-8")
@@ -12,7 +10,7 @@ lazy val commonJavacOptions = Seq("-Xlint:unchecked", "-Xlint:deprecation")
 
 lazy val commonSettings = Seq(
   organization := "com.lightbend.akka.samples",
-  scalaVersion := "2.13.14",
+  scalaVersion := "2.13.15",
   Compile / scalacOptions ++= commonScalacOptions,
   Compile / javacOptions ++= commonJavacOptions,
   run / javaOptions ++= Seq("-Xms128m", "-Xmx1024m"),
@@ -24,11 +22,11 @@ lazy val killrweather = project
   .settings(commonSettings)
   .settings(
     mainClass := Some("sample.killrweather.KillrWeather"),
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-cluster-sharding-typed" % AkkaVersion,
         "com.typesafe.akka" %% "akka-serialization-jackson" % AkkaVersion,
         "com.typesafe.akka" %% "akka-distributed-data" % AkkaVersion,
+        "com.typesafe.akka" %% "akka-pki" % AkkaVersion,
         "com.typesafe.akka" %% "akka-slf4j" % AkkaVersion,
         "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion,
         "com.typesafe.akka" %% "akka-http-spray-json" % AkkaHttpVersion,
@@ -39,10 +37,10 @@ lazy val `killrweather-fog` = project
   .settings(commonSettings)
   .settings(
     mainClass := Some("sample.killrweather.fog.Fog"),
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
         "com.typesafe.akka" %% "akka-stream-typed" % AkkaVersion,
+        "com.typesafe.akka" %% "akka-pki" % AkkaVersion,
         "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion,
         "com.typesafe.akka" %% "akka-http-spray-json" % AkkaHttpVersion,
         "com.typesafe.akka" %% "akka-serialization-jackson" % AkkaVersion,

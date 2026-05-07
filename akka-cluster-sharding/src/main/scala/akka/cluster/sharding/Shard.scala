@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding
@@ -7,6 +7,7 @@ package akka.cluster.sharding
 import java.net.URLEncoder
 import java.util
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import akka.actor.Actor
@@ -32,6 +33,7 @@ import akka.cluster.sharding.internal.RememberEntitiesProvider
 import akka.cluster.sharding.internal.RememberEntitiesShardStore
 import akka.cluster.sharding.internal.RememberEntitiesShardStore.GetEntities
 import akka.cluster.sharding.internal.RememberEntityStarterManager
+import akka.cluster.sharding.internal.ShardingFlightRecorder
 import akka.coordination.lease.scaladsl.Lease
 import akka.coordination.lease.scaladsl.LeaseProvider
 import akka.event.LoggingAdapter
@@ -40,7 +42,6 @@ import akka.util.Clock
 import akka.util.MessageBufferMap
 import akka.util.OptionVal
 import akka.util.PrettyDuration._
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -364,7 +365,7 @@ private[akka] object Shard {
       }
     }
 
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     // only called once during handoff
     def activeEntities(): Set[ActorRef] = byRef.keySet.asScala.toSet
 
@@ -418,7 +419,7 @@ private[akka] class Shard(
     entityProps: String => Props,
     settings: ClusterShardingSettings,
     extractEntityId: ShardRegion.ExtractEntityId,
-    @unused extractShardId: ShardRegion.ExtractShardId,
+    @nowarn("msg=never used") extractShardId: ShardRegion.ExtractShardId,
     handOffStopMessage: Any,
     rememberEntitiesProvider: Option[RememberEntitiesProvider],
     rememberEntityStarterManager: ActorRef)
@@ -447,8 +448,6 @@ private[akka] class Shard(
     }
 
   private val rememberEntities: Boolean = rememberEntitiesProvider.isDefined
-
-  private val flightRecorder = ShardingFlightRecorder(context.system)
 
   @InternalStableApi
   private val entities = {
@@ -649,14 +648,13 @@ private[akka] class Shard(
         storingStarts.mkString(", "),
         storingStops.mkString(", "))
 
-    if (flightRecorder != NoOpShardingFlightRecorder) {
-      storingStarts.foreach { entityId =>
-        flightRecorder.rememberEntityAdd(entityId)
-      }
-      storingStops.foreach { id =>
-        flightRecorder.rememberEntityRemove(id)
-      }
+    storingStarts.foreach { entityId =>
+      ShardingFlightRecorder.rememberEntityAdd(entityId)
     }
+    storingStops.foreach { id =>
+      ShardingFlightRecorder.rememberEntityRemove(id)
+    }
+
     val startTimeNanos = System.nanoTime()
     val update = RememberEntitiesShardStore.Update(started = storingStarts, stopped = storingStops)
     store ! update
@@ -681,7 +679,7 @@ private[akka] class Shard(
           storedStarts.mkString(", "),
           storedStops.mkString(", "),
           duration.nanos.toMillis)
-      flightRecorder.rememberEntityOperation(duration)
+      ShardingFlightRecorder.rememberEntityOperation(duration)
       timers.cancel(RememberEntityTimeoutKey)
       onUpdateDone(storedStarts, storedStops)
 
@@ -836,11 +834,17 @@ private[akka] class Shard(
         // but for now
         stash()
       case NoState =>
-        // started manually from the outside, or the shard id extractor was changed since the entity was remembered
-        // we need to store that it was started
-        log.debug("{}: Request to start entity [{}] and ack to [{}]", typeName, entityId, ackTo)
-        entities.rememberingStart(entityId, ackTo)
-        rememberUpdate(add = Set(entityId))
+        if (entities.pendingRememberedEntitiesExist()) {
+          // No actor running and write in progress for some other entity id (can only happen with remember entities enabled)
+          log.debug("{}: Request to start entity [{}] postponed, remember entity write in progress", typeName, entityId)
+          entities.rememberingStart(entityId, ackTo = ackTo)
+        } else {
+          // started manually from the outside, or the shard id extractor was changed since the entity was remembered
+          // we need to store that it was started
+          log.debug("{}: Request to start entity [{}] and ack to [{}]", typeName, entityId, ackTo)
+          entities.rememberingStart(entityId, ackTo)
+          rememberUpdate(add = Set(entityId))
+        }
     }
   }
 
@@ -991,12 +995,13 @@ private[akka] class Shard(
             log.debug("{}: Passivation started for [{}]", typeName, id)
           entities.entityPassivating(id)
           entity ! stopMessage
+
           val passivationTimeout = PassivationTimedOut(entity)
           timers.startSingleTimer(
             passivationTimeout,
             passivationTimeout,
             settings.tuningParameters.passivationStopTimeout)
-          flightRecorder.entityPassivate(id)
+          ShardingFlightRecorder.entityPassivate(id)
         }
       case _ =>
         log.debug("{}: Unknown entity passivating [{}]. Not sending stopMessage back to entity", typeName, entity)
@@ -1051,7 +1056,7 @@ private[akka] class Shard(
         "{}: Entity stopped after passivation [{}], but will be started again due to buffered messages",
         typeName,
         entityId)
-      flightRecorder.entityPassivateRestart(entityId)
+      ShardingFlightRecorder.entityPassivateRestart(entityId)
       if (rememberEntities) {
         // trigger start or batch in case we're already writing to the remember store
         entities.rememberingStart(entityId, None)
@@ -1146,7 +1151,12 @@ private[akka] class Shard(
   def getOrCreateEntity(id: EntityId): ActorRef = {
     entities.entity(id) match {
       case OptionVal.Some(child) => child
-      case _ =>
+      case _                     =>
+        // if we're remembering entities, there's a chance we have a timer to restart, which is now moot
+        if (rememberEntitiesStore.isDefined && entities.entityState(id) == WaitingForRestart) {
+          timers.cancel(RestartTerminatedEntity(id))
+        }
+
         val name = URLEncoder.encode(id, "utf-8")
         val a = context.actorOf(entityProps(id), name)
         context.watchWith(a, EntityTerminated(a))
@@ -1162,7 +1172,7 @@ private[akka] class Shard(
    * of active entities.
    */
   @InternalStableApi
-  def entityCreated(@unused id: EntityId): Int = entities.nrActiveEntities()
+  def entityCreated(@nowarn("msg=never used") id: EntityId): Int = entities.nrActiveEntities()
 
   // ===== buffering while busy saving a start or stop when remembering entities =====
   def appendToMessageBuffer(id: EntityId, msg: Any, snd: ActorRef): Unit = {

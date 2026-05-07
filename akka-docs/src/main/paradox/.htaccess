@@ -29,9 +29,9 @@ RedirectMatch 301 ^(.*[^d])/guide/(.*) $1/typed/guide/$2
 RedirectMatch 301 ^(.*)/additional/rolling-deploys\.html$ $1/additional/rolling-updates.html
 
 RedirectMatch 301 ^(.*)/additional/index\.html$ $1/project/index.html
-RedirectMatch 301 ^(.*)/howto\.html$ https://doc.akka.io/docs/akka/2.5/howto.html
-RedirectMatch 301 ^(.*)/common/duration\.html$ https://doc.akka.io/docs/akka/2.5/common/duration.html
-RedirectMatch 301 ^(.*)/java8-compat\.html$ https://doc.akka.io/docs/akka/2.5/java8-compat.html
+RedirectMatch 301 ^(.*)/howto\.html$ https://doc.akka.io/libraries/akka-core/2.5/howto.html
+RedirectMatch 301 ^(.*)/common/duration\.html$ https://doc.akka.io/libraries/akka-core/2.5/common/duration.html
+RedirectMatch 301 ^(.*)/java8-compat\.html$ https://doc.akka.io/libraries/akka-core/2.5/java8-compat.html
 
 RedirectMatch 301 ^(.*)/common/cluster\.html$ $1/typed/cluster-concepts.html
 RedirectMatch 301 ^(.*)/typed/cluster-specification\.html$ $1/typed/cluster-concepts.html
@@ -41,4 +41,4 @@ RedirectMatch 301 ^(.*)/stream/stream-integrations\.html$ $1/stream/actor-intero
 
 RedirectMatch 301 ^(.*)/additional/deploy\.html$ $1/additional/deploying.html
 
-RedirectMatch 301 ^(.*/akka/[^/]+)/remoting\.html$ $1/remoting-artery.html
+RedirectMatch 301 ^(.*/akka-core/[^/]+)/remoting\.html$ $1/remoting-artery.html

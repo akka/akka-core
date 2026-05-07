@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -11,8 +11,8 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
 
 import scala.annotation.tailrec
-import scala.compat.java8.FutureConverters._
-import scala.compat.java8.OptionConverters._
+import scala.jdk.FutureConverters._
+import scala.jdk.OptionConverters._
 import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
@@ -24,7 +24,6 @@ import com.typesafe.config.ConfigFactory
 
 import akka.Done
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts
 import akka.event.Logging
 import akka.pattern.after
 import akka.util.OptionVal
@@ -258,7 +257,7 @@ object CoordinatedShutdown extends ExtensionId[CoordinatedShutdown] with Extensi
         system.whenTerminated.map { _ =>
           if (exitJvm && !runningJvmHook) System.exit(exitCode)
           Done
-        }(ExecutionContexts.parasitic)
+        }(ExecutionContext.parasitic)
       } else if (exitJvm) {
         System.exit(exitCode)
         Future.successful(Done)
@@ -301,7 +300,7 @@ object CoordinatedShutdown extends ExtensionId[CoordinatedShutdown] with Extensi
    * INTERNAL API
    */
   private[akka] def phasesFromConfig(conf: Config): Map[String, Phase] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val defaultPhaseTimeout = conf.getString("default-phase-timeout")
     val phasesConf = conf.getConfig("phases")
     val defaultPhaseConfig = ConfigFactory.parseString(s"""
@@ -469,7 +468,7 @@ final class CoordinatedShutdown private[akka] (
       override val size: Int = tasks.size
 
       override def run(recoverEnabled: Boolean)(implicit ec: ExecutionContext): Future[Done] = {
-        Future.sequence(tasks.map(_.run(recoverEnabled))).map(_ => Done)(ExecutionContexts.parasitic)
+        Future.sequence(tasks.map(_.run(recoverEnabled))).map(_ => Done)(ExecutionContext.parasitic)
       }
 
       // This method may be run multiple times during the compare-and-set loop of ConcurrentHashMap, so it must be side-effect-free
@@ -489,7 +488,7 @@ final class CoordinatedShutdown private[akka] (
     def get(phaseName: String): Option[PhaseDefinition] = Option(registeredPhases.get(phaseName))
 
     def totalDuration(): FiniteDuration = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       registeredPhases.keySet.asScala.foldLeft(Duration.Zero) {
         case (acc, phase) =>
           acc + timeout(phase)
@@ -564,7 +563,7 @@ final class CoordinatedShutdown private[akka] (
    * to a later stage with confidence that they will be run.
    */
   def addCancellableTask(phase: String, taskName: String, task: Supplier[CompletionStage[Done]]): Cancellable = {
-    addCancellableTask(phase, taskName)(() => task.get().toScala)
+    addCancellableTask(phase, taskName)(() => task.get().asScala)
   }
 
   /**
@@ -604,7 +603,7 @@ final class CoordinatedShutdown private[akka] (
    * and it will be performed.
    */
   def addTask(phase: String, taskName: String, task: Supplier[CompletionStage[Done]]): Unit =
-    addTask(phase, taskName)(() => task.get().toScala)
+    addTask(phase, taskName)(() => task.get().asScala)
 
   /**
    * Scala API: Add an actor termination task to a phase. It doesn't remove
@@ -650,7 +649,7 @@ final class CoordinatedShutdown private[akka] (
    * and it will be performed.
    */
   def addActorTerminationTask(phase: String, taskName: String, actor: ActorRef, stopMsg: Optional[Any]): Unit =
-    addActorTerminationTask(phase, taskName, actor, stopMsg.asScala)
+    addActorTerminationTask(phase, taskName, actor, stopMsg.toScala)
 
   /**
    * The `Reason` for the shutdown as passed to the `run` method. `None` if the shutdown
@@ -662,7 +661,7 @@ final class CoordinatedShutdown private[akka] (
    * The `Reason` for the shutdown as passed to the `run` method. `Optional.empty` if the shutdown
    * has not been started.
    */
-  def getShutdownReason(): Optional[Reason] = shutdownReason().asJava
+  def getShutdownReason(): Optional[Reason] = shutdownReason().toJava
 
   /**
    * Scala API: Run tasks of all phases. The returned
@@ -680,7 +679,7 @@ final class CoordinatedShutdown private[akka] (
    *
    * It's safe to call this method multiple times. It will only run the shutdown sequence once.
    */
-  def runAll(reason: Reason): CompletionStage[Done] = run(reason).toJava
+  def runAll(reason: Reason): CompletionStage[Done] = run(reason).asJava
 
   /**
    * Scala API: Run tasks of all phases including and after the given phase.
@@ -761,7 +760,7 @@ final class CoordinatedShutdown private[akka] (
    * It's safe to call this method multiple times. It will only run the shutdown sequence once.
    */
   def run(reason: Reason, fromPhase: Optional[String]): CompletionStage[Done] =
-    run(reason, fromPhase.asScala).toJava
+    run(reason, fromPhase.toScala).asJava
 
   /**
    * The configured timeout for a given `phase`.

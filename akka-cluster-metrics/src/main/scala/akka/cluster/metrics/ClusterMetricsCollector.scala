@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.metrics
 
 import java.util.concurrent.ThreadLocalRandom
 
-import scala.annotation.nowarn
 import scala.collection.immutable
+import scala.jdk.CollectionConverters._
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
@@ -95,9 +95,7 @@ trait ClusterMetricsEvent
 final case class ClusterMetricsChanged(nodeMetrics: Set[NodeMetrics]) extends ClusterMetricsEvent {
 
   /** Java API */
-  @nowarn("msg=deprecated")
-  def getNodeMetrics: java.lang.Iterable[NodeMetrics] =
-    scala.collection.JavaConverters.asJavaIterableConverter(nodeMetrics).asJava
+  def getNodeMetrics: java.lang.Iterable[NodeMetrics] = nodeMetrics.asJava
 }
 
 /**

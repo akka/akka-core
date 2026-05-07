@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
 
 import com.typesafe.config.ConfigFactory
-
 import akka.actor.{ Actor, Props }
 import akka.testkit.{ AkkaSpec, ImplicitSender }
+import akka.util.JavaVersion
 
 object ForkJoinPoolStarvationSpec {
   val config = ConfigFactory.parseString("""
@@ -52,8 +52,7 @@ class ForkJoinPoolStarvationSpec extends AkkaSpec(ForkJoinPoolStarvationSpec.con
 
     "not starve tasks arriving from external dispatchers under high internal traffic" in {
       // TODO issue #31117: starvation with JDK 17 FJP
-      val javaSpecVersion = System.getProperty("java.specification.version").toInt
-      if (javaSpecVersion >= 17)
+      if (JavaVersion.majorVersion >= 17)
         pending
 
       // Two busy actors that will occupy the threads of the dispatcher

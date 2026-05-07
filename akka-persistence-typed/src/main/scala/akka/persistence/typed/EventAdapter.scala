@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed
@@ -81,7 +81,7 @@ object EventSeq {
 
   /** Java API */
   final def create[A](events: java.util.List[A]): EventSeq[A] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     EventsSeq(events.asScala.toList)
   }
 

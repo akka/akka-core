@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.ddata
 
 import scala.concurrent.duration._
-
 import akka.actor.Actor
 import akka.cluster.ddata._
 import akka.testkit.AkkaSpec
@@ -13,6 +12,8 @@ import akka.testkit.TestProbe
 import akka.actor.ActorRef
 import akka.serialization.SerializationExtension
 import jdocs.ddata
+
+import scala.annotation.nowarn
 
 object DistributedDataDocSpec {
 
@@ -48,11 +49,9 @@ object DistributedDataDocSpec {
   import java.util.concurrent.ThreadLocalRandom
   import akka.actor.Actor
   import akka.actor.ActorLogging
-  import akka.cluster.Cluster
   import akka.cluster.ddata.DistributedData
   import akka.cluster.ddata.ORSet
   import akka.cluster.ddata.ORSetKey
-  import akka.cluster.ddata.Replicator
   import akka.cluster.ddata.Replicator._
 
   object DataBot {
@@ -99,6 +98,7 @@ object DistributedDataDocSpec {
 
 }
 
+@nowarn("msg=never used") // sample snippets
 class DistributedDataDocSpec extends AkkaSpec(DistributedDataDocSpec.config) {
   import Replicator._
 
@@ -396,17 +396,17 @@ class DistributedDataDocSpec extends AkkaSpec(DistributedDataDocSpec.config) {
     val serializer = SerializationExtension(system).findSerializerFor(s1)
     val blob = serializer.toBinary(s1)
     val s2 = serializer.fromBinary(blob, None)
-    s1 should be(s1)
+    s1 should be(s2)
   }
 
   "test japi.TwoPhaseSetSerializer" in {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val s1 = ddata.TwoPhaseSet.create().add("a").add("b").add("c").remove("b")
     s1.getElements.asScala should be(Set("a", "c"))
     val serializer = SerializationExtension(system).findSerializerFor(s1)
     val blob = serializer.toBinary(s1)
-    val s2 = serializer.fromBinary(blob, None)
-    s1 should be(s1)
+    val s2 = serializer.fromBinary(blob, None).asInstanceOf[ddata.TwoPhaseSet]
+    s1.getElements should be(s2.getElements) // no equals on ddata.TwoPhaseSet
   }
 
 }

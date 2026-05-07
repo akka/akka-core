@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
@@ -7,6 +7,7 @@ package akka.dispatch
 import java.util.concurrent.{ ExecutorService, ForkJoinPool, ForkJoinTask, ThreadFactory }
 
 import com.typesafe.config.Config
+import java.util.concurrent.TimeUnit
 
 object ForkJoinExecutorConfigurator {
 
@@ -17,14 +18,25 @@ object ForkJoinExecutorConfigurator {
       parallelism: Int,
       threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory,
       unhandledExceptionHandler: Thread.UncaughtExceptionHandler,
-      asyncMode: Boolean)
-      extends ForkJoinPool(parallelism, threadFactory, unhandledExceptionHandler, asyncMode)
+      asyncMode: Boolean,
+      maxSpareThreads: Int)
+      extends ForkJoinPool(
+        parallelism,
+        threadFactory,
+        unhandledExceptionHandler,
+        asyncMode,
+        0, // corePoolSize effectively equals Math.max(0, parallelism)
+        parallelism + maxSpareThreads, // maximumPoolSize
+        1, // minimumRunnable
+        _ => true, // saturate (don't reject execution)
+        60, // how long to allow a thread to be idle (matches default)
+        TimeUnit.SECONDS) // unit for previous
       with LoadMetrics {
     def this(
         parallelism: Int,
         threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory,
         unhandledExceptionHandler: Thread.UncaughtExceptionHandler) =
-      this(parallelism, threadFactory, unhandledExceptionHandler, asyncMode = true)
+      this(parallelism, threadFactory, unhandledExceptionHandler, asyncMode = true, 256)
 
     override def execute(r: Runnable): Unit =
       if (r ne null)
@@ -75,12 +87,17 @@ class ForkJoinExecutorConfigurator(config: Config, prerequisites: DispatcherPrer
   class ForkJoinExecutorServiceFactory(
       val threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory,
       val parallelism: Int,
-      val asyncMode: Boolean)
+      val asyncMode: Boolean,
+      val maxSpareThreads: Int)
       extends ExecutorServiceFactory {
     def this(threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory, parallelism: Int) =
-      this(threadFactory, parallelism, asyncMode = true)
+      this(threadFactory, parallelism, asyncMode = true, 256)
+
+    def this(threadFactory: ForkJoinPool.ForkJoinWorkerThreadFactory, parallelism: Int, asyncMode: Boolean) =
+      this(threadFactory, parallelism, asyncMode, 256)
+
     def createExecutorService: ExecutorService =
-      new AkkaForkJoinPool(parallelism, threadFactory, MonitorableThreadFactory.doNothing, asyncMode)
+      new AkkaForkJoinPool(parallelism, threadFactory, MonitorableThreadFactory.doNothing, asyncMode, maxSpareThreads)
   }
 
   final def createExecutorServiceFactory(id: String, threadFactory: ThreadFactory): ExecutorServiceFactory = {
@@ -100,12 +117,15 @@ class ForkJoinExecutorConfigurator(config: Config, prerequisites: DispatcherPrer
           """"task-peeking-mode" in "fork-join-executor" section could only set to "FIFO" or "LIFO".""")
     }
 
+    val maxSpareThreads = config.getInt("maximum-spare-threads")
+
     new ForkJoinExecutorServiceFactory(
       validate(tf),
       ThreadPoolConfig.scaledPoolSize(
         config.getInt("parallelism-min"),
         config.getDouble("parallelism-factor"),
         config.getInt("parallelism-max")),
-      asyncMode)
+      asyncMode,
+      maxSpareThreads)
   }
 }

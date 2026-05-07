@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.testkit
@@ -8,9 +8,11 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicLong
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, FiniteDuration }
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 import com.typesafe.config.Config
@@ -18,8 +20,6 @@ import com.typesafe.config.Config
 import akka.actor.Cancellable
 import akka.actor.Scheduler
 import akka.event.LoggingAdapter
-import akka.util.ccompat.JavaConverters._
-import akka.util.unused
 
 /**
  * For testing: scheduler that does not look at the clock, but must be
@@ -31,7 +31,10 @@ import akka.util.unused
  * easier, but these tests might fail to catch race conditions that only
  * happen when tasks are scheduled in parallel in 'real time'.
  */
-class ExplicitlyTriggeredScheduler(@unused config: Config, log: LoggingAdapter, @unused tf: ThreadFactory)
+class ExplicitlyTriggeredScheduler(
+    @nowarn("msg=never used") config: Config,
+    log: LoggingAdapter,
+    @nowarn("msg=never used") tf: ThreadFactory)
     extends Scheduler {
 
   private class Item(val interval: Option[FiniteDuration], val runnable: Runnable)
@@ -56,7 +59,7 @@ class ExplicitlyTriggeredScheduler(@unused config: Config, log: LoggingAdapter, 
    */
   def timePasses(amount: FiniteDuration) = {
     // Give dispatchers time to clear :(. See
-    // https://github.com/akka/akka/pull/24243#discussion_r160985493
+    // https://github.com/akka/akka-core/pull/24243#discussion_r160985493
     // for some discussion on how to deal with this properly.
     Thread.sleep(100)
 

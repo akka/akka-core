@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl.io
@@ -377,7 +377,7 @@ import akka.util.ByteString
     runDelegatedTasks()
     result.getStatus match {
       case OK =>
-        // https://github.com/akka/akka/issues/29922
+        // https://github.com/akka/akka-core/issues/29922
         // It seems to be possible to get the SSLEngine into a state where
         // result.getStatus == OK && getHandshakeStatus == NEED_WRAP but
         // it doesn't make any progress any more.
@@ -411,7 +411,7 @@ import akka.util.ByteString
       case OK =>
         result.getHandshakeStatus match {
           case NEED_WRAP =>
-            // https://github.com/akka/akka/issues/29922
+            // https://github.com/akka/akka-core/issues/29922
             // A second workaround for an infinite loop we have not been able to reproduce/isolate,
             // if you see this, and can reproduce consistently, please report back to the Akka team
             // with a reproducer or details about the client causing it
@@ -420,7 +420,7 @@ import akka.util.ByteString
               throw new IllegalStateException(
                 s"Stuck in unwrap loop, bailing out, last handshake status [$lastHandshakeStatus], " +
                 s"remaining=${transportInBuffer.remaining}, out=${userOutBuffer.position()}, " +
-                "(https://github.com/akka/akka/issues/29922)")
+                "(https://github.com/akka/akka-core/issues/29922)")
             }
             transportInChoppingBlock.putBack(transportInBuffer)
           case FINISHED =>

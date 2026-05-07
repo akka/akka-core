@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -41,7 +41,7 @@ class MembershipStateSpec extends AnyWordSpec with Matchers {
       val gossip = Gossip(SortedSet(a1Exiting, a2, a3, a4))
       val membershipState = MembershipState(gossip, a1.uniqueAddress, "dc-a", 2)
 
-      membershipState.gossipTargetsForExitingMembers(Set(a1Exiting)) should ===(Set(a1Exiting, a2))
+      membershipState.gossipTargetsForLeavingAndExitingMembers(Set(a1Exiting)) should ===(Set(a1Exiting, a2))
     }
 
     "find two oldest in DC as targets for Exiting change" in {
@@ -49,7 +49,7 @@ class MembershipStateSpec extends AnyWordSpec with Matchers {
       val gossip = Gossip(SortedSet(a2, a3, a4Exiting, b1, b2))
       val membershipState = MembershipState(gossip, a1.uniqueAddress, "dc-a", 2)
 
-      membershipState.gossipTargetsForExitingMembers(Set(a4Exiting)) should ===(Set(a2, a3))
+      membershipState.gossipTargetsForLeavingAndExitingMembers(Set(a4Exiting)) should ===(Set(a2, a3))
     }
 
     "find two oldest per role as targets for Exiting change" in {
@@ -99,7 +99,7 @@ class MembershipStateSpec extends AnyWordSpec with Matchers {
       val gossip = Gossip(SortedSet(a1, a2, a3, a4, a5, a6, a7, a8, a9, b1, b2, b3, b5, b6))
       val membershipState = MembershipState(gossip, a1.uniqueAddress, "dc-a", 2)
 
-      membershipState.gossipTargetsForExitingMembers(theExiting) should ===(Set(a1, a2, a5, a6, a9))
+      membershipState.gossipTargetsForLeavingAndExitingMembers(theExiting) should ===(Set(a1, a2, a5, a6, a9))
     }
   }
 }

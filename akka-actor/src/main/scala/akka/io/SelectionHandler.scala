@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
@@ -75,7 +75,7 @@ private[io] object SelectionHandler {
   // Let select return every MaxSelectMillis which will automatically cleanup stale entries in the selection set.
   // Otherwise, an idle Selector might block for a long time keeping a reference to the dead connection actor's ActorRef
   // which might keep other stuff in memory.
-  // See https://github.com/akka/akka/issues/23437
+  // See https://github.com/akka/akka-core/issues/23437
   // As this is basic house-keeping functionality it doesn't seem useful to make the value configurable.
   val MaxSelectMillis = 10000 // wake up once in 10 seconds
 

@@ -1,16 +1,17 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.dispatcher
-
-import language.postfixOps
 
 import akka.testkit.AkkaSpec
 import akka.event.Logging
 import akka.event.LoggingAdapter
 import akka.actor._
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 object DispatcherDocSpec {
   val javaConfig = """
      //#prio-dispatcher-config-java
@@ -59,6 +60,8 @@ object DispatcherDocSpec {
         parallelism-factor = 2.0
         # Max number of threads to cap factor-based parallelism number to
         parallelism-max = 10
+        # Max number of additional threads to spawn by ManagedBlocker
+        maximum-spare-threads = 16
       }
       # Throughput defines the maximum number of messages to be
       # processed per actor before the thread jumps to the next actor.
@@ -285,6 +288,7 @@ object DispatcherDocSpec {
   //#require-mailbox-on-actor
 }
 
+@nowarn("msg=never used") // sample snippets
 class DispatcherDocSpec extends AkkaSpec(DispatcherDocSpec.config) {
 
   import DispatcherDocSpec._

@@ -1,14 +1,17 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.query
 
 import java.util.Optional
 
+import scala.reflect.ClassTag
 import scala.runtime.AbstractFunction4
 
 import akka.annotation.InternalApi
+import akka.annotation.InternalStableApi
+import akka.persistence.CompositeMetadata
 import akka.util.HashCode
 
 // for binary compatibility (used to be a case class)
@@ -47,7 +50,8 @@ final class EventEnvelope(
     val sequenceNr: Long,
     val event: Any,
     val timestamp: Long,
-    val eventMetadata: Option[Any])
+    @deprecatedName("eventMetadata")
+    _eventMetadata: Option[Any])
     extends Product4[Offset, String, Long, Any]
     with Serializable {
 
@@ -60,12 +64,66 @@ final class EventEnvelope(
     this(offset, persistenceId, sequenceNr, event, timestamp, None)
 
   /**
+   * Scala API
+   */
+  @deprecated("Use metadata with metadataType parameter")
+  def eventMetadata: Option[Any] = {
+    // For backwards compatibility this will use the metadata that was added last (ReplicatedEventMetaData)
+    _eventMetadata.collect {
+      case CompositeMetadata(entries) => entries.head
+      case other                      => other
+    }
+  }
+
+  /**
    * Java API
    */
-  def getEventMetaData(): Optional[Any] = {
-    import scala.compat.java8.OptionConverters._
-    eventMetadata.asJava
+  @deprecated("Use getMetadata with metadataType parameter")
+  def getEventMetaData(): Optional[AnyRef] = {
+    import scala.jdk.OptionConverters._
+    eventMetadata.map(_.asInstanceOf[AnyRef]).toJava
   }
+
+  /**
+   * Scala API: The metadata of a given type that is associated with the event.
+   */
+  def metadata[M: ClassTag]: Option[M] =
+    CompositeMetadata.extract[M](_eventMetadata)
+
+  /**
+   * Java API: The metadata of a given type that is associated with the event.
+   */
+  def getMetadata[M](metadataType: Class[M]): Optional[M] = {
+    import scala.jdk.OptionConverters._
+    implicit val ct: ClassTag[M] = ClassTag(metadataType)
+    metadata.toJava
+  }
+
+  /**
+   * Java API: Drop metadata of the given type if present
+   */
+  def removeMetadata(metadataType: Class[_]): EventEnvelope =
+    removeMetadata(ClassTag(metadataType))
+
+  /**
+   * Scala API: Drop metadata of the given type if present
+   */
+  def removeMetadata[M](implicit classTag: ClassTag[M]): EventEnvelope = {
+    internalEventMetadata match {
+      case Some(c: CompositeMetadata) =>
+        val filtered = c.entries.filterNot(_.getClass == classTag.runtimeClass)
+        if (filtered eq c.entries) this
+        else internalCopy(internalEventMetadata = Some(CompositeMetadata(filtered)))
+      case Some(m) if m.getClass == classTag.runtimeClass => internalCopy(internalEventMetadata = None)
+      case _                                              => this
+    }
+  }
+
+  /**
+   * INTERNAL API
+   */
+  @InternalStableApi private[akka] def internalEventMetadata: Option[Any] =
+    _eventMetadata
 
   override def hashCode(): Int = {
     var result = HashCode.SEED
@@ -85,9 +143,10 @@ final class EventEnvelope(
 
   override def toString: String = {
     val eventStr = event.getClass.getName
-    val metaStr = eventMetadata match {
-      case Some(meta) => meta.getClass.getName
-      case None       => ""
+    val metaStr = _eventMetadata match {
+      case Some(CompositeMetadata(entries)) => entries.map(_.getClass.getName).mkString("[", ",", "]")
+      case Some(other)                      => other.getClass.getName
+      case None                             => ""
     }
     s"EventEnvelope($offset,$persistenceId,$sequenceNr,$eventStr,$timestamp,$metaStr)"
   }
@@ -98,11 +157,26 @@ final class EventEnvelope(
       persistenceId: String = this.persistenceId,
       sequenceNr: Long = this.sequenceNr,
       event: Any = this.event): EventEnvelope =
-    new EventEnvelope(offset, persistenceId, sequenceNr, event, timestamp, this.eventMetadata)
+    new EventEnvelope(offset, persistenceId, sequenceNr, event, timestamp, this._eventMetadata)
+
+  private def internalCopy(
+      offset: Offset = this.offset,
+      persistenceId: String = this.persistenceId,
+      sequenceNr: Long = this.sequenceNr,
+      event: Any = this.event,
+      internalEventMetadata: Option[Any]): EventEnvelope =
+    new EventEnvelope(offset, persistenceId, sequenceNr, event, timestamp, internalEventMetadata)
 
   @InternalApi
   private[akka] def withMetadata(metadata: Any): EventEnvelope =
-    new EventEnvelope(offset, persistenceId, sequenceNr, event, timestamp, Some(metadata))
+    _eventMetadata match {
+      case Some(c: CompositeMetadata) =>
+        internalCopy(internalEventMetadata = Some(CompositeMetadata(metadata +: c.entries)))
+      case Some(other) =>
+        internalCopy(internalEventMetadata = Some(CompositeMetadata(metadata :: other :: Nil)))
+      case None =>
+        internalCopy(internalEventMetadata = Option(metadata))
+    }
 
   // Product4, for binary compatibility (used to be a case class)
   override def productPrefix = "EventEnvelope"

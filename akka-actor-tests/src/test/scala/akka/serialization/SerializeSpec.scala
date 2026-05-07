@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.serialization
@@ -21,7 +21,7 @@ import akka.actor._
 import akka.actor.dungeon.SerializationCheckFailedException
 import akka.pattern.ask
 import akka.testkit.{ AkkaSpec, EventFilter }
-import akka.util.{ unused, Timeout }
+import akka.util.Timeout
 import akka.util.ByteString
 
 object SerializationTests {
@@ -92,7 +92,7 @@ object SerializationTests {
 
   class BothTestSerializableAndJavaSerializable(s: String) extends SimpleMessage(s) with Serializable
 
-  class BothTestSerializableAndTestSerializable2(@unused s: String) extends Marker with Marker2
+  class BothTestSerializableAndTestSerializable2(@nowarn("msg=never used") s: String) extends Marker with Marker2
 
   trait A
   trait B
@@ -127,7 +127,7 @@ object SerializationTests {
       receiveBuilder().build()
   }
 
-  class NonSerializableActor(@unused arg: AnyRef) extends Actor {
+  class NonSerializableActor(@nowarn("msg=never used") arg: AnyRef) extends Actor {
     def receive = {
       case s: String => sender() ! s
     }
@@ -670,15 +670,18 @@ private[akka] abstract class ConstructorSerializer extends SerializerWithStringM
     "Test"
 }
 
-private[akka] class Constructor1Serializer(@unused system: ExtendedActorSystem) extends ConstructorSerializer {
+private[akka] class Constructor1Serializer(@nowarn("msg=never used") system: ExtendedActorSystem)
+    extends ConstructorSerializer {
   override def identifier = 100001
 }
 
-private[akka] class Constructor2Serializer(@unused system: ActorSystem) extends ConstructorSerializer {
+private[akka] class Constructor2Serializer(@nowarn("msg=never used") system: ActorSystem)
+    extends ConstructorSerializer {
   override def identifier = 100002
 }
 
-private[akka] class Constructor3Serializer(@unused system: ClassicActorSystemProvider) extends ConstructorSerializer {
+private[akka] class Constructor3Serializer(@nowarn("msg=never used") system: ClassicActorSystemProvider)
+    extends ConstructorSerializer {
   override def identifier = 100003
 }
 
@@ -686,17 +689,23 @@ private[akka] class Constructor4Serializer extends ConstructorSerializer {
   override def identifier = 100004
 }
 
-private[akka] class Constructor5Serializer(@unused system: ExtendedActorSystem, @unused binding: String)
+private[akka] class Constructor5Serializer(
+    @nowarn("msg=never used") system: ExtendedActorSystem,
+    @nowarn("msg=never used") binding: String)
     extends ConstructorSerializer {
   override def identifier = 100005
 }
 
-private[akka] class Constructor6Serializer(@unused system: ActorSystem, @unused binding: String)
+private[akka] class Constructor6Serializer(
+    @nowarn("msg=never used") system: ActorSystem,
+    @nowarn("msg=never used") binding: String)
     extends ConstructorSerializer {
   override def identifier = 100006
 }
 
-private[akka] class Constructor7Serializer(@unused system: ClassicActorSystemProvider, @unused binding: String)
+private[akka] class Constructor7Serializer(
+    @nowarn("msg=never used") system: ClassicActorSystemProvider,
+    @nowarn("msg=never used") binding: String)
     extends ConstructorSerializer {
   override def identifier = 100007
 }

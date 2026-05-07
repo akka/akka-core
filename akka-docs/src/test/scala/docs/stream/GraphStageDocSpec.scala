@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -9,13 +9,15 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.stage._
 import akka.stream._
 import akka.stream.testkit.{ TestPublisher, TestSubscriber }
-import akka.testkit.{ AkkaSpec, TestLatch }
+import akka.testkit.AkkaSpec
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration._
 import scala.collection.immutable.Iterable
 
+@nowarn("msg=never used") // sample snippets
 class GraphStageDocSpec extends AkkaSpec {
 
   "Demonstrate creation of GraphStage boilerplate" in {
@@ -493,7 +495,7 @@ class GraphStageDocSpec extends AkkaSpec {
               override def onUpstreamFinish(): Unit = {
                 if (buffer.nonEmpty) {
                   // emit the rest if possible
-                  emitMultiple(out, buffer.toIterator)
+                  emitMultiple(out, buffer.iterator)
                 }
                 completeStage()
               }

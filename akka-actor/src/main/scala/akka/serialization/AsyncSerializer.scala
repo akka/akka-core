@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.serialization
@@ -66,7 +66,7 @@ abstract class AsyncSerializerWithStringManifest(system: ExtendedActorSystem)
  */
 abstract class AsyncSerializerWithStringManifestCS(system: ExtendedActorSystem)
     extends AsyncSerializerWithStringManifest(system) {
-  import scala.compat.java8.FutureConverters._
+  import scala.jdk.FutureConverters._
 
   def toBinaryAsyncCS(o: AnyRef): CompletionStage[Array[Byte]]
 
@@ -76,11 +76,11 @@ abstract class AsyncSerializerWithStringManifestCS(system: ExtendedActorSystem)
    * Delegates to [[AsyncSerializerWithStringManifestCS#toBinaryAsyncCS]]
    */
   final def toBinaryAsync(o: AnyRef): Future[Array[Byte]] =
-    toBinaryAsyncCS(o).toScala
+    toBinaryAsyncCS(o).asScala
 
   /**
    * Delegates to [[AsyncSerializerWithStringManifestCS#fromBinaryAsyncCS]]
    */
   def fromBinaryAsync(bytes: Array[Byte], manifest: String): Future[AnyRef] =
-    fromBinaryAsyncCS(bytes, manifest).toScala
+    fromBinaryAsyncCS(bytes, manifest).asScala
 }

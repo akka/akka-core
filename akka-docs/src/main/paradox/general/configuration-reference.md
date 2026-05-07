@@ -3,7 +3,7 @@
 Each Akka module has a `reference.conf` file with the default values.
 
 Make your edits/overrides in your `application.conf`. Don't override default values if
-you are not sure of the implications. [Akka Config Checker](https://doc.akka.io/docs/akka-diagnostics/current/config-checker.html)
+you are not sure of the implications. [Akka Config Checker](https://doc.akka.io/libraries/akka-diagnostics/current/config-checker.html)
 is a useful tool for finding potential configuration issues.
 
 The purpose of `reference.conf` files is for libraries, like Akka, to define default values that are used if

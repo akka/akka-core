@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.delivery
@@ -20,7 +20,6 @@ import akka.actor.typed.BehaviorInterceptor
 import akka.actor.typed.TypedActorContext
 import akka.actor.typed.delivery.internal.ProducerControllerImpl
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 
 object ReliableDeliveryRandomSpec {
   val config: Config = ConfigFactory.parseString("""
@@ -82,7 +81,7 @@ class ReliableDeliveryRandomSpec(config: Config)
     val consumerDelay = rnd.nextInt(40).millis
     val producerDelay = rnd.nextInt(40).millis
     val durableDelay = if (durableFailProbability.isDefined) rnd.nextInt(40).millis else Duration.Zero
-    system.log.infoN(
+    system.log.info(
       "Random seed [{}], consumerDropProbability [{}], producerDropProbability [{}], " +
       "consumerDelay [{}], producerDelay [{}], durableFailProbability [{}], durableDelay [{}]",
       rndSeed,

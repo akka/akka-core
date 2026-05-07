@@ -1,6 +1,6 @@
 # Releasing
 
-Create a new issue from the [Release Train Issue Template](scripts/release-train-issue-template.md):
+Create a new issue from the [Release Train Issue Template](akka-docs/release-train-issue-template.md):
 
 ```
 $ sh ./scripts/create-release-issue.sh 0.x.y
@@ -9,16 +9,6 @@ $ sh ./scripts/create-release-issue.sh 0.x.y
 # Manually
 
 ## Prerequisites
-
-### JDK 8 and JDK 11
-
-Releasing Akka requires running on JDK 11, but also having JDK 8
-installed. The reason for this is that we want the Akka artifacts to be
-usable with JRE 8, but also want to compile some classes with JDK11-specific
-types.
-
-In the future we might be able to update the build to work
-without having JDK 8 installed, by using the `-release` option.
 
 ### One Time GPG and sbt-pgp setup
 
@@ -50,7 +40,7 @@ scaladoc generation build task, which is part of the release.
  
 ## Snapshot releases
 
-Snapshot releases are created from `main` and published to https://repo.akka.io/snapshots
+Snapshot releases are created from `main` and published to https://repo.akka.io/TOKEN/secure/snapshots/
 
 To create snapshot versions manually, use `sbt clean publishLocal`.
 If you have access, you can use `+publishSigned` to publish them to

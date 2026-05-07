@@ -1,0 +1,2 @@
+# AsyncCallback is not intended for user extension, so safe
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.stream.stage.AsyncCallback.invokeWithFeedbackCS")

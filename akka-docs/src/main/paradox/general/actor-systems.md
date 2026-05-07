@@ -112,3 +112,9 @@ stopping all running actors.
 
 If you want to execute some operations while terminating @apidoc[ActorSystem](typed.ActorSystem),
 look at @ref:[`CoordinatedShutdown`](../coordinated-shutdown.md).
+
+@@@note
+
+🎓 For a deeper understanding of the Actor Model, consider the free online course [**Actor Fundamentals**](https://akkademy.akka.io/learn/courses/21/actor-fundamentals) in Akkademy.
+
+@@@

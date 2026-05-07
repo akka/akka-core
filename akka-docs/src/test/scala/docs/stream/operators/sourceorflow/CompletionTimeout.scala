@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators.sourceorflow
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{ Flow, Sink, Source }
+import akka.stream.scaladsl.Source
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContextExecutor, Future }

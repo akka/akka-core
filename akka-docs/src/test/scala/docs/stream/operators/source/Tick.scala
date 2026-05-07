@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators.source
@@ -13,9 +13,11 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+@nowarn("msg=never used") // sample snippets
 object Tick {
   // not really a runnable example, these are just pretend
   implicit val system: ActorSystem[Nothing] = null

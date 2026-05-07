@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.control.NoStackTrace
@@ -13,7 +14,7 @@ import akka.Done
 import akka.actor._
 import akka.annotation.InternalStableApi
 import akka.event.LoggingAdapter
-import akka.util.{ unused, OptionVal }
+import akka.util.OptionVal
 
 /**
  * RemoteTransportException represents a general failure within a RemoteTransport,
@@ -83,7 +84,7 @@ private[akka] abstract class RemoteTransport(val system: ExtendedActorSystem, va
    * @param cmd Command message to send to the transports.
    * @return A Future that indicates when the message was successfully handled or dropped.
    */
-  def managementCommand(@unused cmd: Any): Future[Boolean] = { Future.successful(false) }
+  def managementCommand(@nowarn("msg=never used") cmd: Any): Future[Boolean] = { Future.successful(false) }
 
   /**
    * A Logger that can be used to log issues that may occur

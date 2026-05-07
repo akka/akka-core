@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
@@ -279,6 +279,10 @@ class BackoffSupervisorSpec extends AkkaSpec with ImplicitSender with Eventually
             expectedResult: FiniteDuration) =>
           val calculatedValue = BackoffSupervisor.calculateDelay(restartCount, minBackoff, maxBackoff, randomFactor)
           assert(calculatedValue === expectedResult)
+          // and that is the same as
+          val calculatedValue2 =
+            RetrySupport.calculateExponentialBackoffDelay(restartCount, minBackoff, maxBackoff, randomFactor)
+          assert(calculatedValue2 === expectedResult)
       }
     }
 

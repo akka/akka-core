@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.persistence.query
@@ -7,21 +7,21 @@ package docs.persistence.query
 import akka.NotUsed
 import akka.actor._
 import akka.persistence.query._
-import akka.stream.scaladsl.{ Flow, Sink, Source }
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.javadsl
 import akka.testkit.AkkaSpec
 import akka.util.Timeout
 import org.reactivestreams.Subscriber
+
 import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
-
-import akka.Done
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.Behaviors
 import com.typesafe.config.Config
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 object PersistenceQueryDocSpec {
 
   implicit val timeout: Timeout = Timeout(3.seconds)
@@ -129,7 +129,7 @@ object PersistenceQueryDocSpec {
     // possibility to add more plugin specific queries
 
     def byTagsWithMeta(tags: java.util.Set[String]): javadsl.Source[RichEvent, QueryMetadata] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       scaladslReadJournal.byTagsWithMeta(tags.asScala.toSet).asJava
     }
   }
@@ -172,6 +172,7 @@ object PersistenceQueryDocSpec {
 
 }
 
+@nowarn("msg=never used") // sample snippets
 class PersistenceQueryDocSpec(s: String) extends AkkaSpec(s) {
   import PersistenceQueryDocSpec._
 

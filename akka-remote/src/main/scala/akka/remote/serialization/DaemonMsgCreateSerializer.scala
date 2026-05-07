@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.serialization
@@ -16,8 +16,7 @@ import akka.remote.DaemonMsgCreate
 import akka.remote.WireFormats.{ DaemonMsgCreateData, DeployData, PropsData }
 import akka.routing.{ NoRouter, RouterConfig }
 import akka.serialization.{ BaseSerializer, SerializationExtension, SerializerWithStringManifest }
-import akka.util.ccompat._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Serializes Akka's internal DaemonMsgCreate using protobuf
@@ -27,7 +26,6 @@ import akka.util.ccompat.JavaConverters._
  *
  * INTERNAL API
  */
-@ccompatUsedUntil213
 private[akka] final class DaemonMsgCreateSerializer(val system: ExtendedActorSystem) extends BaseSerializer {
   import Deploy.NoDispatcherGiven
   import ProtobufSerializer.deserializeActorRef
@@ -162,7 +160,7 @@ private[akka] final class DaemonMsgCreateSerializer(val system: ExtendedActorSys
     }
 
     def props = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       val protoProps = proto.getProps
       val actorClass = system.dynamicAccess.getClassFor[AnyRef](protoProps.getClazz).get
       val args: Vector[AnyRef] =

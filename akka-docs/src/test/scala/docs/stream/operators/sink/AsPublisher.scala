@@ -1,13 +1,16 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators.sink
 
-import scala.concurrent.{ ExecutionContextExecutor, Future }
+import scala.concurrent.{ ExecutionContextExecutor }
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Sink, Source }
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 object AsPublisher {
   implicit val system: ActorSystem = ???
   implicit val ec: ExecutionContextExecutor = system.dispatcher

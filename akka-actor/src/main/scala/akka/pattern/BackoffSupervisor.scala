@@ -1,17 +1,16 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
 
 import java.util.Optional
-import java.util.concurrent.ThreadLocalRandom
 
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Try
 
 import akka.actor.{ ActorRef, DeadLetterSuppression, Props }
 import akka.annotation.InternalApi
+import akka.annotation.InternalStableApi
 
 object BackoffSupervisor {
 
@@ -96,16 +95,11 @@ object BackoffSupervisor {
    *
    * Calculates an exponential back off delay.
    */
+  @InternalStableApi
   private[akka] def calculateDelay(
       restartCount: Int,
       minBackoff: FiniteDuration,
       maxBackoff: FiniteDuration,
-      randomFactor: Double): FiniteDuration = {
-    val rnd = 1.0 + ThreadLocalRandom.current().nextDouble() * randomFactor
-    val calculatedDuration = Try(maxBackoff.min(minBackoff * math.pow(2, restartCount)) * rnd).getOrElse(maxBackoff)
-    calculatedDuration match {
-      case f: FiniteDuration => f
-      case _                 => maxBackoff
-    }
-  }
+      randomFactor: Double): FiniteDuration =
+    RetrySupport.calculateExponentialBackoffDelay(restartCount, minBackoff, maxBackoff, randomFactor)
 }

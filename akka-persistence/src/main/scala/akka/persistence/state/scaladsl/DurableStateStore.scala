@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.state.scaladsl
 
-import scala.compat.java8.OptionConverters._
+import scala.jdk.OptionConverters._
 import scala.concurrent.Future
 
 import akka.persistence.state.javadsl.{ GetObjectResult => JGetObjectResult }
@@ -23,5 +23,5 @@ trait DurableStateStore[A] {
 }
 
 final case class GetObjectResult[A](value: Option[A], revision: Long) {
-  def toJava: JGetObjectResult[A] = JGetObjectResult(value.asJava, revision)
+  def toJava: JGetObjectResult[A] = JGetObjectResult(value.toJava, revision)
 }

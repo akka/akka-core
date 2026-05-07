@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
 
 import java.util.concurrent.{ BlockingQueue, ConcurrentLinkedQueue }
 
+import scala.annotation.nowarn
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 
@@ -15,7 +16,6 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import akka.actor._
 import akka.testkit.{ AkkaSpec, EventFilter }
-import akka.util.unused
 
 abstract class MailboxSpec extends AkkaSpec with BeforeAndAfterAll with BeforeAndAfterEach {
   def name: String
@@ -231,14 +231,17 @@ object CustomMailboxSpec {
     }
     """
 
-  class MyMailboxType(@unused settings: ActorSystem.Settings, @unused config: Config) extends MailboxType {
+  class MyMailboxType(
+      @nowarn("msg=never used") settings: ActorSystem.Settings,
+      @nowarn("msg=never used") config: Config)
+      extends MailboxType {
     override def create(owner: Option[ActorRef], system: Option[ActorSystem]) = owner match {
       case Some(o) => new MyMailbox(o)
       case None    => throw new Exception("no mailbox owner given")
     }
   }
 
-  class MyMailbox(@unused owner: ActorRef) extends UnboundedQueueBasedMessageQueue {
+  class MyMailbox(@nowarn("msg=never used") owner: ActorRef) extends UnboundedQueueBasedMessageQueue {
     final val queue = new ConcurrentLinkedQueue[Envelope]()
   }
 }

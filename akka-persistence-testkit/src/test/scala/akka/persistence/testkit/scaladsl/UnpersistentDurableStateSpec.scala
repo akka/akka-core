@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2022-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit.scaladsl
@@ -12,7 +12,6 @@ import akka.actor.typed.Behavior
 import akka.actor.typed.RecipientRef
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.state.RecoveryCompleted
 import akka.persistence.typed.state.scaladsl.DurableStateBehavior
@@ -72,7 +71,7 @@ object UnpersistentDurableStateSpec {
           commandHandler = applyCommand(_, _, context))
           .receiveSignal {
             case (state, RecoveryCompleted) =>
-              context.log.debug2("Recovered state for id [{}] is [{}]", id, state)
+              context.log.debug("Recovered state for id [{}] is [{}]", id, state)
               recoveryDone ! Done
           }
           .withTag("count")

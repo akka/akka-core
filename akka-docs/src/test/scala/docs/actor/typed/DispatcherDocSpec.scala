@@ -1,11 +1,14 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor.typed
 
 import akka.actor.typed.scaladsl.ActorContext
 
+import scala.annotation.nowarn
+
+@nowarn("msg=never used") // sample snippets
 object DispatcherDocSpec {
 
   val context: ActorContext[Integer] = ???

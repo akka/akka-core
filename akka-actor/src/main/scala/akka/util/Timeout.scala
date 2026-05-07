@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -38,8 +38,8 @@ object Timeout {
    * Create a Timeout from java.time.Duration.
    */
   def create(duration: java.time.Duration): Timeout = {
-    import JavaDurationConverters._
-    new Timeout(duration.asScala)
+    import scala.jdk.DurationConverters._
+    new Timeout(duration.toScala)
   }
 
   implicit def durationToTimeout(duration: FiniteDuration): Timeout = new Timeout(duration)

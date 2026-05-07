@@ -15,26 +15,34 @@ jobs:
 
   akka-timing-sensitive-tests:
     name: Akka Tests taggedAs TimingTest
-    runs-on: ubuntu-22.04
-    if: github.repository == 'akka/akka'
+    runs-on: Akka-Default
+    if: github.event.repository.fork == false
     steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v6
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
 
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Cache Coursier cache
         # https://github.com/coursier/cache-action/releases
-        # v6.4.5
-        uses: coursier/cache-action@1ff273bff02a8787bc9f1877d347948af647956d
+        uses: coursier/cache-action@v8.1.0
 
       - name: Set up JDK 11
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.11
 
@@ -53,14 +61,14 @@ jobs:
             -Dmultinode.Xms256M \
             -Dmultinode.Xmx256M \
             -Dmultinode.XX:+AlwaysActAsServerClassMachine \
+            -Dakka.warn-on-no-license-key=false \
             clean test
 
       - name: Test Reports
         # Makes it easier to spot failures instead of looking at the logs.
         if: ${{ failure() }}
         # https://github.com/ScaCap/action-surefire-report/releases/
-        # v1.0.13
-        uses: scacap/action-surefire-report@482f012643ed0560e23ef605a79e8e87ca081648
+        uses: scacap/action-surefire-report@v1.9.1
         with:
           report_paths: '**/target/test-reports/TEST-*.xml'
           fail_if_no_tests: false
@@ -68,7 +76,7 @@ jobs:
 
       - name: Email on failure
         if: ${{ failure() }}
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2
+        uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
           server_port: 465
@@ -77,7 +85,8 @@ jobs:
           password: ${{secrets.MAIL_PASSWORD}}
           subject: "Failed: ${{ github.workflow }} / ${{ github.job }}"
           to: ${{secrets.MAIL_SEND_TO}}
-          from: Akka CI
+          from: "Akka CI <no-reply@akka.io>"
+
           body: |
             Job ${{ github.job }} in workflow ${{ github.workflow }} of ${{github.repository}} failed!
             https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}

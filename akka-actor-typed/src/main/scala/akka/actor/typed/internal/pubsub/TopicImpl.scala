@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.internal.pubsub
@@ -15,7 +15,6 @@ import akka.actor.typed.receptionist.ServiceKey
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.actor.typed.scaladsl.StashBuffer
 import akka.actor.typed.scaladsl.TimerScheduler
 import akka.actor.typed.scaladsl.adapter._
@@ -80,7 +79,7 @@ private final class InitialTopicImpl[T](
   private val stash = StashBuffer[Command[T]](context, capacity = 10000)
   private val topicServiceKey = ServiceKey[TopicImpl.Command[T]](topicName)
   if (context.log.isDebugEnabled())
-    context.log.debugN(
+    context.log.debug(
       "Starting up pub-sub topic [{}] for messages of type [{}]{}",
       topicName,
       classTag.runtimeClass.getName,
@@ -95,7 +94,7 @@ private final class InitialTopicImpl[T](
 
   def onMessage(msg: Command[T]): Behavior[Command[T]] = msg match {
     case TopicInstancesUpdated(initialTopicInstances) =>
-      context.log.debugN("Initial topic instance listing received for pub-sub topic [{}], starting", topicName)
+      context.log.debug("Initial topic instance listing received for pub-sub topic [{}], starting", topicName)
       val initializedTopicImpl =
         new TopicImpl[T](topicName, context, topicServiceKey, ttlAndTimers, initialTopicInstances)
       stash.unstashAll(initializedTopicImpl)
@@ -155,7 +154,8 @@ private[akka] final class TopicImpl[T](
       if (topicInstances.isEmpty) {
         if (localSubscribers.isEmpty) {
           context.log.trace("Publishing message of type [{}] but no subscribers, dropping", msg.getClass)
-          context.system.deadLetters ! Dropped(message, "No topic subscribers known", context.self.toClassic)
+          if (context.system.settings.PubSubDeadLettersWhenNoSubscribers)
+            context.system.deadLetters[Dropped] ! Dropped(message, "No topic subscribers known", context.self.toClassic)
         } else {
           context.log.trace(
             "Publishing message of type [{}] to local subscribers only (topic listing not seen yet)",

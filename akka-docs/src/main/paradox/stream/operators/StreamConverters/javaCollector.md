@@ -11,4 +11,4 @@ Create a sink which materializes into a @scala[`Future`] @java[`CompletionStage`
 
 ## Description
 
-TODO: We would welcome help on contributing descriptions and examples, see: https://github.com/akka/akka/issues/25646
+TODO: We would welcome help on contributing descriptions and examples, see: https://github.com/akka/akka-core/issues/25646

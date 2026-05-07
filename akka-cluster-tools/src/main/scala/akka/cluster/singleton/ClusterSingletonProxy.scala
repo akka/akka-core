@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.singleton
 
+import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.duration._
 
@@ -77,9 +78,11 @@ object ClusterSingletonProxySettings {
  *   when new messages are sent viea the proxy. Use 0 to disable buffering, i.e. messages will be dropped
  *   immediately if the location of the singleton is unknown.
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 final class ClusterSingletonProxySettings(
     val singletonName: String,
     val role: Option[String],
+    @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
     val dataCenter: Option[DataCenter],
     val singletonIdentificationInterval: FiniteDuration,
     val bufferSize: Int)
@@ -102,8 +105,10 @@ final class ClusterSingletonProxySettings(
 
   def withRole(role: Option[String]): ClusterSingletonProxySettings = copy(role = role)
 
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def withDataCenter(dataCenter: DataCenter): ClusterSingletonProxySettings = copy(dataCenter = Some(dataCenter))
 
+  @deprecated("Use Akka Distributed Cluster instead", "2.10.0")
   def withDataCenter(dataCenter: Option[DataCenter]): ClusterSingletonProxySettings = copy(dataCenter = dataCenter)
 
   def withSingletonIdentificationInterval(
@@ -158,6 +163,7 @@ object ClusterSingletonProxy {
  * Note that this is a best effort implementation: messages can always be lost due to the distributed nature of the
  * actors involved.
  */
+@nowarn("msg=Use Akka Distributed Cluster")
 final class ClusterSingletonProxy(singletonManagerPath: String, settings: ClusterSingletonProxySettings)
     extends Actor
     with ActorLogging {

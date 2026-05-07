@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.actor.testkit.typed.scaladsl
@@ -71,7 +71,7 @@ object SyncTestingExampleSpec {
         }
         Behaviors.same
       case (context, GotAnAnswer(answer, from)) =>
-        context.log.info2("Got an answer [{}] from {}", answer, from)
+        context.log.info("Got an answer [{}] from {}", answer, from)
         Behaviors.same
       case (context, NoAnswerFrom(from)) =>
         context.log.info("Did not get an answer from {}", from)

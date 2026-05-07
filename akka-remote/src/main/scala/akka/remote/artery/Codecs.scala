@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
 
 import java.util.concurrent.TimeUnit
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -35,7 +36,6 @@ import akka.serialization.Serializers
 import akka.stream._
 import akka.stream.stage._
 import akka.util.OptionVal
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -62,7 +62,7 @@ private[remote] class Encoder(
     system: ExtendedActorSystem,
     outboundEnvelopePool: ObjectPool[ReusableOutboundEnvelope],
     bufferPool: EnvelopeBufferPool,
-    @unused streamId: Int,
+    @nowarn("msg=never used") streamId: Int,
     debugLogSend: Boolean,
     version: Byte)
     extends GraphStageWithMaterializedValue[
@@ -160,12 +160,23 @@ private[remote] class Encoder(
 
           envelope.byteBuffer.flip()
 
-          if (debugLogSendEnabled)
-            log.debug(
-              "sending remote message [{}] to [{}] from [{}]",
-              outboundEnvelope.message,
-              outboundEnvelope.recipient.getOrElse(""),
-              outboundEnvelope.sender.getOrElse(""))
+          if (debugLogSendEnabled) {
+            try {
+              log.debug(
+                "sending remote message [{}] to [{}] from [{}]",
+                outboundEnvelope.message,
+                outboundEnvelope.recipient.getOrElse(""),
+                outboundEnvelope.sender.getOrElse(""))
+            } catch {
+              case NonFatal(_) =>
+                // message.toString threw
+                log.debug(
+                  "sending remote message [{}] to [{}] from [{}]",
+                  WrappedMessage.unwrap(outboundEnvelope.message).getClass.getName,
+                  outboundEnvelope.recipient.getOrElse(""),
+                  outboundEnvelope.sender.getOrElse(""))
+            }
+          }
 
           push(out, envelope)
 
@@ -635,7 +646,7 @@ private[remote] class Decoder(
  * INTERNAL API
  */
 private[remote] class Deserializer(
-    @unused inboundContext: InboundContext,
+    @nowarn("msg=never used") inboundContext: InboundContext,
     system: ExtendedActorSystem,
     bufferPool: EnvelopeBufferPool)
     extends GraphStage[FlowShape[InboundEnvelope, InboundEnvelope]] {

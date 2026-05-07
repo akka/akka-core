@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
@@ -9,7 +9,6 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.Behavior
 import akka.actor.typed.eventstream.EventStream
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
 import akka.persistence.typed.PublishedEvent
@@ -69,7 +68,7 @@ private[akka] object ShardingDirectReplication {
           try {
             val replicationId = ReplicationId.fromString(event.persistenceId.id)
             if (replicationId.typeName == typeName) {
-              context.log.traceN(
+              context.log.trace(
                 "Forwarding event for persistence id [{}] sequence nr [{}] to replicas.",
                 event.persistenceId,
                 event.sequenceNumber)
@@ -84,7 +83,7 @@ private[akka] object ShardingDirectReplication {
                   }
               }
             } else {
-              context.log.traceN(
+              context.log.trace(
                 "Not forwarding event for persistence id [{}] to replicas (wrong type name, expected [{}]).",
                 event.persistenceId,
                 typeName)

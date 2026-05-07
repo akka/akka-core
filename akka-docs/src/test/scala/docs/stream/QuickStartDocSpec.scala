@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream
@@ -7,6 +7,8 @@ package docs.stream
 //#stream-imports
 import akka.stream._
 import akka.stream.scaladsl._
+
+import scala.annotation.nowarn
 //#stream-imports
 
 //#other-imports
@@ -29,6 +31,7 @@ object Main extends App {
 }
 //#main-app
 
+@nowarn("msg=never used") // sample snippets
 class QuickStartDocSpec extends AnyWordSpec with BeforeAndAfterAll with ScalaFutures {
   implicit val patience: PatienceConfig = PatienceConfig(5.seconds)
 

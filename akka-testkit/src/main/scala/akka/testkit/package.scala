@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka
@@ -11,10 +11,8 @@ import scala.concurrent.duration.{ Duration, FiniteDuration }
 import scala.reflect.ClassTag
 
 import akka.actor.ActorSystem
-import akka.util.ccompat._
 
 package object testkit {
-  @ccompatUsedUntil213
   def filterEvents[T](eventFilters: Iterable[EventFilter])(block: => T)(implicit system: ActorSystem): T = {
     def now = System.currentTimeMillis
 

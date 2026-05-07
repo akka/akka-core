@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
 
-import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -107,7 +106,6 @@ object DeathWatchSpec {
   }
 }
 
-@nowarn
 trait DeathWatchSpec { this: AkkaSpec with ImplicitSender with DefaultTimeout =>
 
   import DeathWatchSpec._

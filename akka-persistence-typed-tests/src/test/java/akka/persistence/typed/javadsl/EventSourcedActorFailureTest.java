@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.javadsl;
@@ -65,8 +65,13 @@ class FailingEventSourcedActor extends EventSourcedBehavior<String, String, Stri
   @Override
   public CommandHandler<String, String, String> commandHandler() {
     return (state, command) -> {
-      probe.tell("persisting");
-      return Effect().persist(command);
+      if (command.equals("get")) {
+        probe.tell("state [" + state + "]");
+        return Effect().none();
+      } else {
+        probe.tell("persisting");
+        return Effect().persist(command);
+      }
     };
   }
 
@@ -120,16 +125,24 @@ public class EventSourcedActorFailureTest extends JUnitSuite {
     probe.expectMessage("persisting");
     probe.expectMessage("one");
     probe.expectMessage("starting");
+    c.tell("get");
+    probe.expectMessage("state []");
+
     // fail
     c.tell("two");
     probe.expectMessage("persisting");
     probe.expectMessage("two");
     probe.expectMessage("starting");
+    c.tell("get");
+    probe.expectMessage("state []");
+
     // work
     c.tell("three");
     probe.expectMessage("persisting");
     probe.expectMessage("three");
     // no starting as this one did not fail
     probe.expectNoMessage();
+    c.tell("get");
+    probe.expectMessage("state [three]");
   }
 }

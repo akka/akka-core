@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.testconductor
@@ -302,7 +302,6 @@ private[akka] class ConductorHandler(_createTimeout: Timeout, controller: ActorR
     }
   }
 
-  @nowarn("msg=deprecated")
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {
     log.debug("channel {} exception {}", ctx.channel(), cause)
     ctx.close()

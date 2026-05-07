@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2009-2024 Lightbend Inc. <https://www.lightbend.com>
- */
 package client
 
 import akka.actor.ActorSystem
@@ -25,7 +22,7 @@ object ClientApp extends App {
   while (userId != ":q") {
     println("Enter user id or :q to quit")
     userId = StdIn.readLine()
-    if (userId != ":q") {
+    if (userId != ":q" && userId != null) {
       val runningTotal = Await.result(client.userStats(UserStatsRequest(userId)), Duration.Inf)
       println(
         s"User ${userId} has made ${runningTotal.totalPurchases} purchases for a total of ${runningTotal.amountSpent}p")

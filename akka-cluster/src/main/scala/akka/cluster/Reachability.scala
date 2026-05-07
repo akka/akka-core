@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -7,12 +7,10 @@ package akka.cluster
 import scala.collection.immutable
 
 import akka.annotation.InternalApi
-import akka.util.ccompat._
 
 /**
  * INTERNAL API
  */
-@ccompatUsedUntil213
 private[cluster] object Reachability {
   val empty = new Reachability(Vector.empty, Map.empty)
 

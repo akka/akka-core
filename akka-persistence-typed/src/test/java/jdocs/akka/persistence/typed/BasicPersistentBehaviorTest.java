@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package jdocs.akka.persistence.typed;
@@ -419,6 +419,13 @@ public class BasicPersistentBehaviorTest {
         return Optional.of(100);
       }
       // #custom-stash-buffer
+
+      // #replay-last
+      @Override
+      public Recovery recovery() {
+        return Recovery.replayOnlyLast();
+      }
+      // #replay-last
 
       // #wrapPersistentBehavior
       @Override

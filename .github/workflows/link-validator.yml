@@ -2,7 +2,7 @@ name: Link Validator
 
 on:
   schedule:
-    - cron:  '0 6 * * 1'
+    - cron:  '0 6 1 * *'
   workflow_dispatch:
 
 permissions:
@@ -10,13 +10,24 @@ permissions:
 
 jobs:
   validate-links:
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.event.repository.fork == false
     steps:
+      - name: Checkout Global Scripts
+        uses: actions/checkout@v6
+        with:
+          repository: akka/github-actions-scripts
+          path: scripts
+          fetch-depth: 0
+
+      - name: Setup global resolver
+        run: |
+          chmod +x ./scripts/setup_global_resolver.sh
+          ./scripts/setup_global_resolver.sh
+
       - name: Checkout
         # https://github.com/actions/checkout/releases
-        # v4.1.1
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2000
           fetch-tags: true
@@ -29,17 +40,15 @@ jobs:
 
       - name: Cache Coursier cache
         # https://github.com/coursier/cache-action/releases
-        # v6.4.5
-        uses: coursier/cache-action@1ff273bff02a8787bc9f1877d347948af647956d
+        uses: coursier/cache-action@v8.1.0
 
       - name: Set up JDK 11
         # https://github.com/coursier/setup-action/releases
-        # v1.3.5
-        uses: coursier/setup-action@7bde40eee928896f074dbb76d22dd772eed5c65f
+        uses: coursier/setup-action@v3.0.0
         with:
           jvm: temurin:1.11
           apps: cs
-          
+
       - name: Add additional CA certs
         run: |
           JAVA_HOME=$(cs java-home --jvm adopt:11)
@@ -49,4 +58,4 @@ jobs:
         run: sbt -Dakka.genjavadoc.enabled=true "Javaunidoc/doc; Compile/unidoc; akka-docs/paradox"
 
       - name: Run Link Validator
-        run: cs launch net.runne::site-link-validator:0.2.3 -- scripts/link-validator.conf
+        run: cs launch net.runne::site-link-validator:0.2.5 -- scripts/link-validator.conf

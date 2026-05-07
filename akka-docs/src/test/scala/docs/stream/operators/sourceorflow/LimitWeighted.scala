@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.operators.sourceorflow
@@ -9,8 +9,10 @@ import akka.actor.typed.ActorSystem
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 
+@nowarn("msg=never used") // sample snippets
 object LimitWeighted {
 
   implicit val system: ActorSystem[_] = ???

@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
 
+import scala.annotation.nowarn
 import scala.collection.immutable.SortedSet
 
 import org.scalatest.BeforeAndAfterEach
@@ -27,6 +28,7 @@ object ClusterDomainEventPublisherSpec {
     """
 }
 
+@nowarn("msg=Use Akka Distributed Cluster")
 class ClusterDomainEventPublisherSpec
     extends AkkaSpec(ClusterDomainEventPublisherSpec.config)
     with BeforeAndAfterEach

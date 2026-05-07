@@ -1,10 +1,7 @@
-/*
- * Copyright (C) 2009-2024 Lightbend Inc. <https://www.lightbend.com>
- */
 package sample.distributeddata
 
 import java.time.Duration
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 import akka.actor.testkit.typed.scaladsl.TestProbe
 import akka.actor.typed.ActorSystem

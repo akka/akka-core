@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
@@ -8,8 +8,6 @@ import java.net.DatagramSocket
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.channels.DatagramChannel
-
-import akka.util.unused
 
 object Inet {
 
@@ -22,22 +20,22 @@ object Inet {
     /**
      * Action to be taken for this option before bind() is called
      */
-    def beforeDatagramBind(@unused ds: DatagramSocket): Unit = ()
+    def beforeDatagramBind(ds: DatagramSocket): Unit = ()
 
     /**
      * Action to be taken for this option before bind() is called
      */
-    def beforeServerSocketBind(@unused ss: ServerSocket): Unit = ()
+    def beforeServerSocketBind(ss: ServerSocket): Unit = ()
 
     /**
      * Action to be taken for this option before calling connect()
      */
-    def beforeConnect(@unused s: Socket): Unit = ()
+    def beforeConnect(s: Socket): Unit = ()
 
     /**
      * Action to be taken for this option after connect returned.
      */
-    def afterConnect(@unused s: Socket): Unit = ()
+    def afterConnect(s: Socket): Unit = ()
   }
 
   /**
@@ -51,17 +49,17 @@ object Inet {
     /**
      * Action to be taken for this option after connect returned.
      */
-    def afterBind(@unused s: DatagramSocket): Unit = ()
+    def afterBind(s: DatagramSocket): Unit = ()
 
     /**
      * Action to be taken for this option after connect returned.
      */
-    def afterBind(@unused s: ServerSocket): Unit = ()
+    def afterBind(s: ServerSocket): Unit = ()
 
     /**
      * Action to be taken for this option after connect returned.
      */
-    def afterConnect(@unused s: DatagramSocket): Unit = ()
+    def afterConnect(s: DatagramSocket): Unit = ()
 
   }
 

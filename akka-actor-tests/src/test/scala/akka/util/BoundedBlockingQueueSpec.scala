@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -8,6 +8,7 @@ import java.util
 import java.util.concurrent._
 import java.util.concurrent.locks.{ Condition, LockSupport, ReentrantLock }
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
 import scala.util.control.Exception
@@ -23,7 +24,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import akka.testkit.TimingTest
 import akka.util.DefaultExecutionContext._
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class BoundedBlockingQueueSpec
     extends AnyWordSpec
@@ -827,7 +828,7 @@ trait QueueSetupHelper {
       }
     }
 
-    def manualTimeControl(@unused on: Boolean): Unit =
+    def manualTimeControl(@nowarn("msg=never used") on: Boolean): Unit =
       waiting = Some(Manual())
 
     override def signalAll(): Unit = condition.signalAll()

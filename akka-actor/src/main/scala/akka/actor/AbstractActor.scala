@@ -1,19 +1,18 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
 
+import java.time.{ Duration => JDuration }
 import java.util.Optional
 
-import scala.annotation.nowarn
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.Duration
 import scala.runtime.BoxedUnit
 
 import akka.annotation.DoNotInherit
 import akka.japi.pf.ReceiveBuilder
-import akka.util.JavaDurationConverters
 
 /**
  * Java API: compatible with lambda expressions
@@ -155,8 +154,11 @@ object AbstractActor {
      * than the ordinary actor message processing thread, such as [[java.util.concurrent.CompletionStage]] and [[scala.concurrent.Future]] callbacks.
      */
     def getReceiveTimeout(): java.time.Duration = {
-      import JavaDurationConverters._
-      receiveTimeout.asJava
+      if (receiveTimeout.isFinite) {
+        JDuration.ofNanos(receiveTimeout.toNanos)
+      } else {
+        JDuration.ZERO
+      }
     }
 
     /**
@@ -179,8 +181,8 @@ object AbstractActor {
      * than the ordinary actor message processing thread, such as [[java.util.concurrent.CompletionStage]] and [[scala.concurrent.Future]] callbacks.
      */
     def setReceiveTimeout(timeout: java.time.Duration): Unit = {
-      import JavaDurationConverters._
-      setReceiveTimeout(timeout.asScala)
+      import scala.jdk.DurationConverters._
+      setReceiveTimeout(timeout.toScala)
     }
 
     /**
@@ -272,10 +274,9 @@ abstract class AbstractActor extends Actor {
   // TODO In 2.6.0 we can remove deprecation and make the method final
   @deprecated("Override preRestart with message parameter with Optional type instead", "2.5.0")
   @throws(classOf[Exception])
-  @nowarn("msg=deprecated")
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-    import scala.compat.java8.OptionConverters._
-    preRestart(reason, message.asJava)
+    import scala.jdk.OptionConverters._
+    preRestart(reason, message.toJava)
   }
 
   /**
@@ -286,8 +287,8 @@ abstract class AbstractActor extends Actor {
    */
   @throws(classOf[Exception])
   def preRestart(reason: Throwable, message: Optional[Any]): Unit = {
-    import scala.compat.java8.OptionConverters._
-    super.preRestart(reason, message.asScala)
+    import scala.jdk.OptionConverters._
+    super.preRestart(reason, message.toScala)
   }
 
   /**

@@ -21,13 +21,9 @@ recommendation if you don't have other preferences or constraints.
 
 ## Module info
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Akka Cluster add the following dependency in your project:
 
@@ -289,10 +285,7 @@ automatically unregistered from the router. When new nodes join the cluster, add
 routees are added to the router, according to the configuration.
  
 See @ref:[Cluster Aware Routers](cluster-routing.md) and @ref:[Routers](routing.md).
- 
-@@include[cluster.md](includes/cluster.md) { #cluster-multidc } 
-See @ref:[Cluster Multi-DC](cluster-dc.md).
- 
+
 ### Cluster Metrics
 
 The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes

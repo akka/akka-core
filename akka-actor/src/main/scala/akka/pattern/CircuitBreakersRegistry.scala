@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2022-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.pattern
@@ -16,7 +16,9 @@ import akka.actor.{
 }
 import akka.annotation.InternalApi
 import akka.pattern.internal.CircuitBreakerTelemetryProvider
-import akka.util.ccompat.JavaConverters._
+import com.typesafe.config.Config
+
+import scala.jdk.CollectionConverters._
 
 /**
  * Companion object providing factory methods for Circuit Breaker which runs callbacks in caller's thread
@@ -63,14 +65,26 @@ final class CircuitBreakersRegistry(system: ExtendedActorSystem) extends Extensi
       if (config.hasPath(id)) config.getConfig(id).withFallback(defaultBreakerConfig)
       else defaultBreakerConfig
 
-    val maxFailures = breakerConfig.getInt("max-failures")
-    val callTimeout = breakerConfig.getDuration("call-timeout", MILLISECONDS).millis
-    val resetTimeout = breakerConfig.getDuration("reset-timeout", MILLISECONDS).millis
-    val maxResetTimeout = breakerConfig.getDuration("max-reset-timeout", MILLISECONDS).millis
-    val exponentialBackoffFactor = breakerConfig.getDouble("exponential-backoff")
-    val randomFactor = breakerConfig.getDouble("random-factor")
+    breakerFromConfig(id, breakerConfig)
+  }
 
-    val allowExceptions: Set[String] = breakerConfig.getStringList("exception-allowlist").asScala.toSet
+  /** INTERNAL API */
+  @InternalApi
+  private[akka] def getOrCreate(id: String, config: Config): CircuitBreaker =
+    breakers.computeIfAbsent(id, _ => breakerFromConfig(id, config))
+
+  private[akka] def get(id: String): CircuitBreaker =
+    breakers.computeIfAbsent(id, createCircuitBreaker)
+
+  private def breakerFromConfig(id: String, config: Config): CircuitBreaker = {
+    val maxFailures = config.getInt("max-failures")
+    val callTimeout = config.getDuration("call-timeout", MILLISECONDS).millis
+    val resetTimeout = config.getDuration("reset-timeout", MILLISECONDS).millis
+    val maxResetTimeout = config.getDuration("max-reset-timeout", MILLISECONDS).millis
+    val exponentialBackoffFactor = config.getDouble("exponential-backoff")
+    val randomFactor = config.getDouble("random-factor")
+
+    val allowExceptions: Set[String] = config.getStringList("exception-allowlist").asScala.toSet
 
     val telemetry = CircuitBreakerTelemetryProvider.start(id, system)
     new CircuitBreaker(
@@ -84,12 +98,4 @@ final class CircuitBreakersRegistry(system: ExtendedActorSystem) extends Extensi
       allowExceptions,
       telemetry)(system.dispatcher)
   }
-
-  /** INTERNAL API */
-  @InternalApi
-  private[akka] def getOrCreate(id: String)(customCreate: () => CircuitBreaker): CircuitBreaker =
-    breakers.computeIfAbsent(id, _ => customCreate())
-
-  private[akka] def get(id: String): CircuitBreaker =
-    breakers.computeIfAbsent(id, createCircuitBreaker)
 }

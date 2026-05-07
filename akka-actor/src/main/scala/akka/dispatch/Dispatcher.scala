@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
@@ -38,6 +38,8 @@ class Dispatcher(
     extends MessageDispatcher(_configurator) {
 
   import configurator.prerequisites._
+
+  private val batchingEnabled = !executorServiceFactoryProvider.isInstanceOf[NoBatchingExecutorFactoryProvider]
 
   private class LazyExecutorServiceDelegate(factory: ExecutorServiceFactory) extends ExecutorServiceDelegate {
     lazy val executor: ExecutorService = factory.createExecutorService
@@ -140,6 +142,10 @@ class Dispatcher(
       } else false
     } else false
   }
+
+  override def batchable(runnable: Runnable): Boolean =
+    if (batchingEnabled) super.batchable(runnable)
+    else false
 
   override val toString: String = Logging.simpleName(this) + "[" + id + "]"
 }

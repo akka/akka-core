@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.serialization
@@ -98,20 +98,23 @@ class PrimitivesSerializationSpec extends AkkaSpec(PrimitivesSerializationSpec.t
   }
 
   "Boolean" must {
-    Seq(false, true, java.lang.Boolean.FALSE, java.lang.Boolean.TRUE).map(_.asInstanceOf[AnyRef]).zipWithIndex.foreach {
-      case (item, i) =>
-        s"resolve serializer for value $item ($i)" in {
-          serialization.serializerFor(item.getClass).getClass should ===(classOf[BooleanSerializer])
-        }
+    Seq[Any](false, true, java.lang.Boolean.FALSE, java.lang.Boolean.TRUE)
+      .map(_.asInstanceOf[AnyRef])
+      .zipWithIndex
+      .foreach {
+        case (item, i) =>
+          s"resolve serializer for value $item ($i)" in {
+            serialization.serializerFor(item.getClass).getClass should ===(classOf[BooleanSerializer])
+          }
 
-        s"serialize and de-serialize value $item  ($i)" in {
-          verifySerialization(item)
-        }
+          s"serialize and de-serialize value $item  ($i)" in {
+            verifySerialization(item)
+          }
 
-        s"serialize and de-serialize value $item ($i) using ByteBuffers" in {
-          verifySerializationByteBuffer(item)
-        }
-    }
+          s"serialize and de-serialize value $item ($i) using ByteBuffers" in {
+            verifySerializationByteBuffer(item)
+          }
+      }
 
     "have right serializer id  ($i)" in {
       // checking because moved to akka-actor

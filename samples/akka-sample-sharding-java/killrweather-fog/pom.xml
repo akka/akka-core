@@ -18,18 +18,10 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <akka.version>2.9.4</akka.version>
-        <akka-http.version>10.6.0</akka-http.version>
+        <akka.version>2.10.17</akka.version>
+        <akka-http.version>10.7.0</akka-http.version>
         <akka-diagnostics.version>2.1.0</akka-diagnostics.version>
     </properties>
-
-    <repositories>
-        <repository>
-            <id>akka-repository</id>
-            <name>Akka library repository</name>
-            <url>https://repo.akka.io/maven</url>
-        </repository>
-    </repositories>
 
     <dependencies>
         <dependency>
@@ -40,6 +32,11 @@
         <dependency>
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-stream-typed_2.13</artifactId>
+            <version>${akka.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-pki_2.13</artifactId>
             <version>${akka.version}</version>
         </dependency>
         <dependency>
@@ -66,7 +63,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.13</version>
+            <version>1.5.8</version>
         </dependency>
     </dependencies>
 

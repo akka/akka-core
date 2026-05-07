@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.serialization.jackson
@@ -197,7 +197,7 @@ import akka.util.OptionVal
     }
   }
   private val migrations: Map[String, JacksonMigration] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     conf.getConfig("migrations").root.unwrapped.asScala.toMap.map {
       case (k, v) =>
         val transformer = system.dynamicAccess.createInstanceFor[JacksonMigration](v.toString, Nil).get
@@ -206,7 +206,7 @@ import akka.util.OptionVal
   }
   private val denyList: GadgetClassDenyList = new GadgetClassDenyList
   private val allowedClassPrefix = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     conf.getStringList("allowed-class-prefix").asScala.toVector
   }
   private val typeInManifest: Boolean = conf.getBoolean("type-in-manifest")

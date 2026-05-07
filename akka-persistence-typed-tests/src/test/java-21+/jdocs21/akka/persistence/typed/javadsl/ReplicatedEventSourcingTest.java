@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package jdocs21.akka.persistence.typed.javadsl;
@@ -10,18 +10,22 @@ import akka.actor.testkit.typed.javadsl.TestKitJunitResource;
 import akka.actor.testkit.typed.javadsl.TestProbe;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
+import akka.event.slf4j.Logger;
 import akka.persistence.testkit.PersistenceTestKitPlugin;
 import akka.persistence.testkit.query.javadsl.PersistenceTestKitReadJournal;
 import akka.persistence.typed.ReplicaId;
 import akka.persistence.typed.ReplicationId;
 import akka.persistence.typed.javadsl.*;
 import com.typesafe.config.ConfigFactory;
+import jdocs.akka.persistence.typed.MyReplicatedBehavior;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.scalatestplus.junit.JUnitSuite;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static akka.Done.done;
 import static org.junit.Assert.assertEquals;
@@ -84,6 +88,16 @@ public class ReplicatedEventSourcingTest extends JUnitSuite {
       var updatedSet = new HashSet<>(state.texts);
       updatedSet.add(event);
       return new State(updatedSet);
+    }
+
+
+    @Override
+    public Optional<ReplicationInterceptor<String, State>> replicationInterceptor() {
+      return Optional.of((originReplica, sequenceNumber, state, event) -> {
+        var logger = LoggerFactory.getLogger(TestBehavior.class);
+        logger.info("Intercept side effect for replicated event {}", event);
+        return CompletableFuture.completedFuture(Done.done());
+      });
     }
   }
 

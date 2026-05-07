@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote
 
+import scala.annotation.nowarn
 import scala.util.control.NonFatal
 
 import akka.actor.ExtendedActorSystem
@@ -12,7 +13,6 @@ import akka.protobufv3.internal.ByteString
 import akka.remote.WireFormats._
 import akka.remote.artery.{ EnvelopeBuffer, HeaderBuilder, OutboundEnvelope }
 import akka.serialization._
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -93,8 +93,8 @@ private[akka] object MessageSerializer {
   }
 
   def deserializeForArtery(
-      @unused system: ExtendedActorSystem,
-      @unused originUid: Long,
+      @nowarn("msg=never used") system: ExtendedActorSystem,
+      @nowarn("msg=never used") originUid: Long,
       serialization: Serialization,
       serializer: Int,
       classManifest: String,

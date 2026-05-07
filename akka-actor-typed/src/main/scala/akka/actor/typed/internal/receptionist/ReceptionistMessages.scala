@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.typed.internal.receptionist
@@ -8,7 +8,7 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.receptionist.{ Receptionist, ServiceKey }
 import akka.actor.typed.receptionist.Receptionist.Command
 import akka.annotation.InternalApi
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
  * Internal API

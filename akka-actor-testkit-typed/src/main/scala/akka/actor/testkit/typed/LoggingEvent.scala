@@ -1,17 +1,17 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.testkit.typed
 
 import java.util.Optional
 
-import scala.compat.java8.OptionConverters._
+import scala.jdk.OptionConverters._
 
 import org.slf4j.Marker
 import org.slf4j.event.Level
 
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object LoggingEvent {
 
@@ -39,7 +39,7 @@ object LoggingEvent {
       marker: Optional[Marker],
       throwable: Optional[Throwable],
       mdc: java.util.Map[String, String]) =
-    apply(level, loggerName, threadName, message, timeStamp, marker.asScala, throwable.asScala, mdc.asScala.toMap)
+    apply(level, loggerName, threadName, message, timeStamp, marker.toScala, throwable.toScala, mdc.asScala.toMap)
 }
 
 /**
@@ -60,19 +60,19 @@ final case class LoggingEvent(
    * Java API
    */
   def getMarker: Optional[Marker] =
-    marker.asJava
+    marker.toJava
 
   /**
    * Java API
    */
   def getThrowable: Optional[Throwable] =
-    throwable.asJava
+    throwable.toJava
 
   /**
    * Java API
    */
   def getMdc: java.util.Map[String, String] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     mdc.asJava
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster
@@ -18,6 +18,12 @@ import akka.util.Helpers.{ toRootLowerCase, ConfigOps, Requiring }
 import akka.util.Version
 
 object ClusterSettings {
+
+  /**
+   * deprecated("Use Akka Distributed Cluster instead", "2.10.0")
+   *
+   * Not using `@deprecated` annotation because too many internal warnings
+   */
   type DataCenter = String
 
   /**
@@ -165,7 +171,7 @@ final class ClusterSettings(val config: Config, val systemName: String) {
     cc.getInt("min-nr-of-members")
   }.requiring(_ > 0, "min-nr-of-members must be > 0")
   val MinNrOfMembersOfRole: Map[String, Int] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     cc.getConfig("role")
       .root
       .asScala
@@ -185,7 +191,7 @@ final class ClusterSettings(val config: Config, val systemName: String) {
 
   val ByPassConfigCompatCheck: Boolean = !cc.getBoolean("configuration-compatibility-check.enforce-on-join")
   val ConfigCompatCheckers: Set[String] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     cc.getConfig("configuration-compatibility-check.checkers")
       .root
       .unwrapped
@@ -199,7 +205,7 @@ final class ClusterSettings(val config: Config, val systemName: String) {
   }
 
   val SensitiveConfigPaths = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
     val sensitiveKeys =
       cc.getConfig("configuration-compatibility-check.sensitive-config-paths")

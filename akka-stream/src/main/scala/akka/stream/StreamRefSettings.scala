@@ -1,12 +1,11 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
 
 import java.util.concurrent.TimeUnit
 
-import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.Config
@@ -15,18 +14,17 @@ import akka.actor.ActorSystem
 import akka.annotation.DoNotInherit
 import akka.stream.impl.streamref.StreamRefSettingsImpl
 
-@nowarn("msg=deprecated")
 object StreamRefSettings {
 
   /** Java API */
   @deprecated(
-    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     since = "2.6.0")
   def create(system: ActorSystem): StreamRefSettings = apply(system)
 
   /** Scala API */
   @deprecated(
-    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     since = "2.6.0")
   def apply(system: ActorSystem): StreamRefSettings = {
     apply(system.settings.config.getConfig("akka.stream.materializer.stream-ref"))
@@ -34,13 +32,13 @@ object StreamRefSettings {
 
   /** Java API */
   @deprecated(
-    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     since = "2.6.0")
   def create(c: Config): StreamRefSettings = apply(c)
 
   /** Scala API */
   @deprecated(
-    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html",
+    "Use attributes on the Runnable graph or change the defaults in configuration, see migration guide for details https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html",
     since = "2.6.0")
   def apply(c: Config): StreamRefSettings = {
     StreamRefSettingsImpl(
@@ -56,7 +54,6 @@ object StreamRefSettings {
  * More detailed documentation about each of the settings is available in `reference.conf`.
  */
 @DoNotInherit
-@nowarn("msg=deprecated")
 trait StreamRefSettings {
   @deprecated("Use attribute 'StreamRefAttributes.BufferCapacity' to read the concrete setting value", "2.6.0")
   def bufferCapacity: Int

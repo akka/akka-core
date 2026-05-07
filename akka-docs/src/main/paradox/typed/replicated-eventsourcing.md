@@ -32,14 +32,14 @@ to handle this.
 
 To be able to use Replicated Event Sourcing the journal and snapshot store used is required to have specific support for the metadata that the replication needs (see @ref[Journal Support](#journal-support)).
 
-The [Replicated Event Sourcing video](https://akka.io/blog/news/2020/09/09/replicated-event-sourcing-video)
-is a good starting point describing the use cases and motivation for when to use Replicated Event Sourcing. The second part, [Replicated Event Sourcing data modelling](https://akka.io/blog/news/2020/10/22/replicated-event-sourcing-data-modelling) guides you to find a suitable model for your use-case.
+The [Replicated Event Sourcing video](https://www.youtube.com/watch?v=SuTPY5MxmUM)
+is a good starting point describing the use cases and motivation for when to use Replicated Event Sourcing. The second part, [Replicated Event Sourcing data modelling](https://www.youtube.com/watch?v=8PnJxTlOP6o) guides you to find a suitable model for your use-case.
 
 ## Relaxing the single-writer principle for availability
 
-Taking the example of using Replicated Event Sourcing to run a replica per data center.
+Taking the example of using Replicated Event Sourcing to run a replica per region.
 
-When there is no network partitions and no concurrent writes the events stored by an `EventSourcedBehavior` at one replica can be replicated and consumed by another (corresponding) replica in another data center without any concerns. Such replicated events can simply be applied to the local state.
+When there is no network partitions and no concurrent writes the events stored by an `EventSourcedBehavior` at one replica can be replicated and consumed by another (corresponding) replica in another region without any concerns. Such replicated events can simply be applied to the local state.
 
 ![images/replicated-events1.png](images/replicated-events1.png)
 
@@ -180,8 +180,7 @@ Uses cases for doing side effects in the event handler:
 * A side effect when a conflict has occurred
 
 There is no built in support for knowing an event has been replicated to all replicas but it can be modelled in your state. 
-For some use cases you may need to trigger side effects after consuming replicated events. For example when an auction has been closed in 
-all data centers and all bids have been replicated. 
+For some use cases you may need to trigger side effects after consuming replicated events. For example when an auction has been closed in all regions and all bids have been replicated. 
 
 The @api[ReplicationContext] contains the current replica, the origin replica for the event processes, and if a recovery is running. These can be used to 
 implement side effects that take place once events are fully replicated. If the side effect should happen only once then a particular replica can be
@@ -265,7 +264,7 @@ The @apidoc[SnapshotStoreSpec] in the Persistence TCK provides a capability flag
 
 The following plugins support Replicated Event Sourcing over gRPC:
 
-* [Akka Persistence R2DBC](https://doc.akka.io/docs/akka-persistence-r2dbc/current/) versions 1.1.0+
+* [Akka Persistence R2DBC](https://doc.akka.io/libraries/akka-persistence-r2dbc/current/) versions 1.1.0+
 
 ## Migrating from non-replicated
 

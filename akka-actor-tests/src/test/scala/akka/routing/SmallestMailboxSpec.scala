@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.routing
@@ -19,11 +19,11 @@ class SmallestMailboxSpec extends AkkaSpec with DefaultTimeout with ImplicitSend
       val usedActors = new ConcurrentHashMap[Int, String]()
       val router = system.actorOf(SmallestMailboxPool(3).props(routeeProps = Props(new Actor {
         def receive = {
-          case (busy: TestLatch, receivedLatch: TestLatch) =>
+          case (busyLatch: TestLatch, receivedLatch: TestLatch) =>
             usedActors.put(0, self.path.toString)
             self ! "another in busy mailbox"
             receivedLatch.countDown()
-            Await.ready(busy, TestLatch.DefaultTimeout)
+            Await.ready(busyLatch, TestLatch.DefaultTimeout)
           case (msg: Int, receivedLatch: TestLatch) =>
             usedActors.put(msg, self.path.toString)
             receivedLatch.countDown()

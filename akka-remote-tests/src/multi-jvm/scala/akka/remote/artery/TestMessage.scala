@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -53,7 +53,7 @@ class TestMessageSerializer(val system: ExtendedActorSystem) extends SerializerW
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = {
     val protoMsg = proto.TestMessage.parseFrom(bytes)
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val items = protoMsg.getItemsList.asScala.map { item =>
       TestMessage.Item(item.getId, item.getName)
     }.toVector

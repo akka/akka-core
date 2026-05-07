@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream
 
 import java.util.concurrent.CompletionStage
 
-import scala.compat.java8.FutureConverters
+import scala.jdk.FutureConverters._
 import scala.concurrent.Future
 
 /**
@@ -57,10 +57,10 @@ import scala.concurrent.Future
 package object scaladsl {
   implicit class SourceToCompletionStage[Out, T](val src: Source[Out, Future[T]]) extends AnyVal {
     def toCompletionStage(): Source[Out, CompletionStage[T]] =
-      src.mapMaterializedValue(FutureConverters.toJava)
+      src.mapMaterializedValue(_.asJava)
   }
   implicit class SinkToCompletionStage[In, T](val sink: Sink[In, Future[T]]) extends AnyVal {
     def toCompletionStage(): Sink[In, CompletionStage[T]] =
-      sink.mapMaterializedValue(FutureConverters.toJava)
+      sink.mapMaterializedValue(_.asJava)
   }
 }

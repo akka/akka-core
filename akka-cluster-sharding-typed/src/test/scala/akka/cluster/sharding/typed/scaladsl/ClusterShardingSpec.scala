@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2017-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed.scaladsl
@@ -29,9 +29,7 @@ import akka.cluster.typed.Leave
 import akka.pattern.AskTimeoutException
 import akka.serialization.jackson.CborSerializable
 import akka.util.Timeout
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
 object ClusterShardingSpec {
   val config = ConfigFactory.parseString("""
       akka.actor.provider = cluster
@@ -237,6 +235,27 @@ class ClusterShardingSpec
       stopProbe.expectMessage("PostStop")
 
       shardingRef4 ! ShardingEnvelope(s"test4", ReplyPlz(p.ref))
+      p.expectMessage("Hello!")
+    }
+
+    "be able to passivate via extension shard" in {
+      val stopProbe = TestProbe[String]()
+      val p = TestProbe[String]()
+      val typeKey5 = EntityTypeKey[TestProtocol]("ext-passivate-test")
+
+      val shardingRef5: ActorRef[ShardingEnvelope[TestProtocol]] =
+        sharding.init(
+          Entity(typeKey5)(_ => behavior(ClusterSharding(system).shard(typeKey5), Some(stopProbe.ref)))
+            .withStopMessage(StopPlz()))
+
+      shardingRef5 ! ShardingEnvelope(s"test1", ReplyPlz(p.ref))
+      p.expectMessage("Hello!")
+
+      shardingRef5 ! ShardingEnvelope(s"test1", PassivatePlz())
+      stopProbe.expectMessage("StopPlz")
+      stopProbe.expectMessage("PostStop")
+
+      shardingRef5 ! ShardingEnvelope(s"test1", ReplyPlz(p.ref))
       p.expectMessage("Hello!")
     }
 

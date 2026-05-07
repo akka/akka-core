@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.javadsl
@@ -7,7 +7,7 @@ package akka.persistence.typed.javadsl
 import java.util.Objects
 import java.util.function.{ BiFunction, Predicate, Supplier, Function => JFunction }
 
-import scala.compat.java8.FunctionConverters._
+import scala.jdk.FunctionConverters._
 
 import akka.annotation.InternalApi
 import akka.persistence.typed.internal._
@@ -97,7 +97,7 @@ final class CommandHandlerBuilder[Command, Event, State]() {
    * @return A new, mutable, CommandHandlerBuilderByState
    */
   def forNullState(): CommandHandlerBuilderByState[Command, Event, State, State] = {
-    val predicate: Predicate[State] = asJavaPredicate(s => Objects.isNull(s))
+    val predicate: Predicate[State] = enrichAsJavaPredicate[State](s => Objects.isNull(s)).asJava
     val builder = CommandHandlerBuilderByState.builder[Command, Event, State](predicate)
     builders = builder :: builders
     builder
@@ -113,7 +113,7 @@ final class CommandHandlerBuilder[Command, Event, State]() {
    * @return A new, mutable, CommandHandlerBuilderByState
    */
   def forNonNullState(): CommandHandlerBuilderByState[Command, Event, State, State] = {
-    val predicate: Predicate[State] = asJavaPredicate(s => Objects.nonNull(s))
+    val predicate: Predicate[State] = enrichAsJavaPredicate[State](s => Objects.nonNull(s)).asJava
     val builder = CommandHandlerBuilderByState.builder[Command, Event, State](predicate)
     builders = builder :: builders
     builder
@@ -131,7 +131,7 @@ final class CommandHandlerBuilder[Command, Event, State]() {
    * @return A new, mutable, CommandHandlerBuilderByState
    */
   def forAnyState(): CommandHandlerBuilderByState[Command, Event, State, State] = {
-    val predicate: Predicate[State] = asJavaPredicate(_ => true)
+    val predicate: Predicate[State] = enrichAsJavaPredicate[State](_ => true).asJava
     val builder = CommandHandlerBuilderByState.builder[Command, Event, State](predicate)
     builders = builder :: builders
     builder

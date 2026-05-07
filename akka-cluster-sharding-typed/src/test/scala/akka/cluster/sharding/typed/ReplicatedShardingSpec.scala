@@ -1,10 +1,12 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.typed
 
 import java.util.concurrent.ThreadLocalRandom
+
+import scala.annotation.nowarn
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -16,7 +18,6 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 import akka.cluster.MemberStatus
 import akka.cluster.sharding.typed.ReplicatedShardingSpec.DataCenter
 import akka.cluster.sharding.typed.ReplicatedShardingSpec.MyReplicatedIntSet
@@ -35,9 +36,8 @@ import akka.persistence.typed.scaladsl.Effect
 import akka.persistence.typed.scaladsl.EventSourcedBehavior
 import akka.persistence.typed.scaladsl.ReplicatedEventSourcing
 import akka.serialization.jackson.CborSerializable
-import akka.util.ccompat._
 
-@ccompatUsedUntil213
+@nowarn("msg=Use Akka Distributed Cluster")
 object ReplicatedShardingSpec {
   def commonConfig = ConfigFactory.parseString("""
       akka.loglevel = DEBUG
@@ -185,10 +185,10 @@ object ProxyActor {
       Behaviors.receiveMessage {
         case ForwardToAllString(entityId, cmd) =>
           val entityRefs = replicatedShardingStringSet.entityRefsFor(entityId)
-          ctx.log.infoN("Entity refs {}", entityRefs)
+          ctx.log.info("Entity refs {}", entityRefs)
           entityRefs.foreach {
             case (replica, ref) =>
-              ctx.log.infoN("Forwarding to replica {} ref {}", replica, ref)
+              ctx.log.info("Forwarding to replica {} ref {}", replica, ref)
               ref ! cmd
           }
           Behaviors.same
@@ -290,8 +290,8 @@ abstract class ReplicatedShardingSpec(replicationType: ReplicationType, configA:
 
       // This is also done in 'afterAll', but we do it here as well so we can see the
       // logging to diagnose
-      // https://github.com/akka/akka/issues/30501 and
-      // https://github.com/akka/akka/issues/30502
+      // https://github.com/akka/akka-core/issues/30501 and
+      // https://github.com/akka/akka-core/issues/30502
       ActorTestKit.shutdown(system2)
     }
   }

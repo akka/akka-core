@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor
 
-import language.postfixOps
-
 import akka.testkit.{ AkkaSpec => MyFavoriteTestFrameWorkPlusAkkaTestKit }
 import akka.util.ByteString
+
+import scala.annotation.nowarn
 
 //#test-code
 import akka.actor.Props
@@ -39,12 +39,13 @@ object FSMDocSpec {
   //#test-code
 }
 
+@nowarn("msg=never used") // sample snippets
 class FSMDocSpec extends MyFavoriteTestFrameWorkPlusAkkaTestKit {
   import FSMDocSpec._
 
   //#fsm-code-elided
   //#simple-imports
-  import akka.actor.{ ActorRef, FSM }
+  import akka.actor.FSM
   import scala.concurrent.duration._
   //#simple-imports
   //#simple-fsm
@@ -71,7 +72,7 @@ class FSMDocSpec extends MyFavoriteTestFrameWorkPlusAkkaTestKit {
     //#transition-elided
     //#when-syntax
 
-    when(Active, stateTimeout = 1 second) {
+    when(Active, stateTimeout = 1.second) {
       case Event(Flush | StateTimeout, t: Todo) =>
         goto(Idle).using(t.copy(queue = Vector.empty))
     }
@@ -110,13 +111,13 @@ class FSMDocSpec extends MyFavoriteTestFrameWorkPlusAkkaTestKit {
       //#modifier-syntax
       when(SomeState) {
         case Event(msg, _) =>
-          goto(Processing).using(newData).forMax(5 seconds).replying(WillDo)
+          goto(Processing).using(newData).forMax(5.seconds).replying(WillDo)
       }
       //#modifier-syntax
 
       //#transition-syntax
       onTransition {
-        case Idle -> Active => startTimerWithFixedDelay("timeout", Tick, 1 second)
+        case Idle -> Active => startTimerWithFixedDelay("timeout", Tick, 1.second)
         case Active -> _    => cancelTimer("timeout")
         case x -> Idle      => log.info("entering Idle from " + x)
       }

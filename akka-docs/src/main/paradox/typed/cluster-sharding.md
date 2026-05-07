@@ -7,13 +7,9 @@ You are viewing the documentation for the new actor APIs, to view the Akka Class
 
 ## Module info
 
-The Akka dependencies are available from Akka's library repository. To access them there, you need to configure the URL for this repository.
-
-@@repository [sbt,Maven,Gradle] {
-id="akka-repository"
-name="Akka library repository"
-url="https://repo.akka.io/maven"
-}
+@@@note
+The Akka dependencies are available from Akka’s secure library repository. To access them you need to use a secure, tokenized URL as specified at https://account.akka.io/token.
+@@@
 
 To use Akka Cluster Sharding, you must add the following dependency in your project:
 
@@ -38,7 +34,7 @@ It could for example be actors representing Aggregate Roots in Domain-Driven Des
 Here we call these actors "entities". These actors typically have persistent (durable) state,
 but this feature is not limited to actors with persistent state.
 
-The [Introduction to Akka Cluster Sharding video](https://akka.io/blog/news/2019/12/16/akka-cluster-sharding-intro-video)
+The [Introduction to Akka Cluster Sharding video](https://www.youtube.com/watch?v=SrPubnOKJcQ)
 is a good starting point for learning Cluster Sharding.
 
 Cluster sharding is typically used when you have many stateful actors that together consume
@@ -118,7 +114,7 @@ Java
 ### A note about EntityRef and serialization
 
 If including @apidoc[typed.*.EntityRef]'s in messages or the `State`/`Event`s of an @apidoc[typed.*.EventSourcedBehavior], those `EntityRef`s will need to be serialized.
-The @scala[`entityId`, `typeKey`, and (in multi-DC use-cases) `dataCenter` of an `EntityRef`]@java[`getEntityId`, `getTypeKey`, and (in multi-DC use-cases) `getDataCenter` methods of an `EntityRef`]
+The @scala[`entityId` and `typeKey` of an `EntityRef`]@java[`getEntityId` and `getTypeKey` methods of an `EntityRef`]
 provide exactly the information needed upon deserialization to regenerate an `EntityRef` equivalent to the one serialized, given an expected
 type of messages to send to the entity.
 
@@ -217,7 +213,7 @@ in one rebalance round. The lower result of `rebalance-relative-limit` and `reba
 An alternative allocation strategy is the @apidoc[ExternalShardAllocationStrategy] which allows
 explicit control over where shards are allocated via the @apidoc[ExternalShardAllocation] extension.
 
-This can be used, for example, to match up Kafka Partition consumption with shard locations. The video [How to co-locate Kafka Partitions with Akka Cluster Shards](https://akka.io/blog/news/2020/03/18/akka-sharding-kafka-video) explains a setup for it. Alpakka Kafka provides [an extension for Akka Cluster Sharding](https://doc.akka.io/docs/alpakka-kafka/current/cluster-sharding.html).
+This can be used, for example, to match up Kafka Partition consumption with shard locations. The video [How to co-locate Kafka Partitions with Akka Cluster Shards](https://www.youtube.com/watch?v=Ad2DyOn4dlY) explains a setup for it. Alpakka Kafka provides [an extension for Akka Cluster Sharding](https://doc.akka.io/libraries/alpakka-kafka/current/cluster-sharding.html).
 
 To use it set it as the allocation strategy on your @apidoc[typed.*.Entity]:
 

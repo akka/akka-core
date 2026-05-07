@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.testkit.query.javadsl
@@ -70,7 +70,7 @@ final class PersistenceTestKitReadJournal(delegate: scaladsl.PersistenceTestKitR
     delegate.sliceForPersistenceId(persistenceId)
 
   override def sliceRanges(numberOfRanges: Int): java.util.List[Pair[Integer, Integer]] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     delegate
       .sliceRanges(numberOfRanges)
       .map(range => Pair(Integer.valueOf(range.min), Integer.valueOf(range.max)))

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.impl
@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 
 import akka.Done
 import akka.annotation.InternalApi
-import akka.dispatch.ExecutionContexts.parasitic
+import ExecutionContext.parasitic
 import akka.stream._
 import akka.stream.ActorAttributes.SupervisionStrategy
 import akka.stream.Attributes.SourceLocation

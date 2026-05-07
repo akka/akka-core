@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.dispatch
@@ -10,17 +10,13 @@ import java.util.concurrent.{ Callable, Executor, ExecutorService }
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
+import scala.collection.immutable.{ Iterable => ImmutableIterable }
 import scala.annotation.nowarn
 import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor, ExecutionContextExecutorService, Future, Promise }
 import scala.runtime.{ AbstractPartialFunction, BoxedUnit }
 import scala.util.{ Failure, Success, Try }
 
-import akka.annotation.InternalApi
-import akka.annotation.InternalStableApi
-import akka.compat
-import akka.dispatch.internal.SameThreadExecutionContext
 import akka.japi.{ Procedure, Function => JFunc, Option => JOption }
-import akka.util.unused
 
 /**
  * ExecutionContexts is the Java API for ExecutionContexts
@@ -76,39 +72,13 @@ object ExecutionContexts {
    */
   def global(): ExecutionContextExecutor = ExecutionContext.global
 
-  /**
-   * INTERNAL API
-   *
-   * WARNING: Not A General Purpose ExecutionContext!
-   *
-   * This is an execution context which runs everything on the calling thread.
-   * It is very useful for actions which are known to be non-blocking and
-   * non-throwing in order to save a round-trip to the thread pool.
-   *
-   * Once Scala 2.12 is no longer supported this can be dropped in favour of directly using `ExecutionContext.parasitic`
-   */
-  @InternalStableApi
-  private[akka] val parasitic: ExecutionContext = SameThreadExecutionContext()
-
-  /**
-   * INTERNAL API
-   */
-  @InternalApi
-  @deprecated("Use ExecutionContexts.parasitic instead", "2.6.4")
-  private[akka] object sameThreadExecutionContext extends ExecutionContext with BatchingExecutor {
-    override protected def unbatchedExecute(runnable: Runnable): Unit = parasitic.execute(runnable)
-    override protected def resubmitOnBlock: Boolean = false // No point since we execute on same thread
-    override def reportFailure(t: Throwable): Unit =
-      parasitic.reportFailure(t)
-  }
-
 }
 
 /**
  * Futures is the Java API for Futures and Promises
  */
 object Futures {
-  import akka.util.ccompat.JavaConverters._
+  import scala.jdk.CollectionConverters._
 
   /**
    * Starts an asynchronous computation and returns a `Future` object with the result of that computation.
@@ -155,7 +125,7 @@ object Futures {
       predicate: JFunc[T, java.lang.Boolean],
       executor: ExecutionContext): Future[JOption[T]] = {
     implicit val ec = executor
-    compat.Future.find[T](futures.asScala)(predicate.apply(_))(executor).map(JOption.fromScalaOption)
+    Future.find[T](ImmutableIterable(futures.asScala).flatten)(predicate.apply)(executor).map(JOption.fromScalaOption)
   }
 
   /**
@@ -175,7 +145,7 @@ object Futures {
       futures: JIterable[Future[T]],
       fun: akka.japi.Function2[R, T, R],
       executor: ExecutionContext): Future[R] =
-    compat.Future.fold(futures.asScala)(zero)(fun.apply)(executor)
+    Future.foldLeft(ImmutableIterable(futures.asScala).flatten)(zero)(fun.apply)(executor)
 
   /**
    * Reduces the results of the supplied futures and binary function.
@@ -184,7 +154,7 @@ object Futures {
       futures: JIterable[Future[T]],
       fun: akka.japi.Function2[R, T, R],
       executor: ExecutionContext): Future[R] =
-    compat.Future.reduce[T, R](futures.asScala)(fun.apply)(executor)
+    Future.reduceLeft[T, R](ImmutableIterable(futures.asScala).flatten)(fun.apply)(executor)
 
   /**
    * Simple version of [[#traverse]]. Transforms a JIterable[Future[A]] into a Future[JIterable[A]].
@@ -223,20 +193,20 @@ object japi {
       internal(t)
       BoxedUnit.UNIT
     }
-    protected def internal(@unused result: T): Unit = ()
+    protected def internal(result: T): Unit = ()
   }
 
   @deprecated("Do not use this directly, use 'Recover'", "2.0")
   class RecoverBridge[+T] extends AbstractPartialFunction[Throwable, T] {
     override final def isDefinedAt(t: Throwable): Boolean = true
     override final def apply(t: Throwable): T = internal(t)
-    protected def internal(@unused result: Throwable): T = null.asInstanceOf[T]
+    protected def internal(@nowarn("msg=never used") result: Throwable): T = null.asInstanceOf[T]
   }
 
   @deprecated("Do not use this directly, use subclasses of this", "2.0")
   class BooleanFunctionBridge[-T] extends scala.Function1[T, Boolean] {
     override final def apply(t: T): Boolean = internal(t)
-    protected def internal(@unused result: T): Boolean = false
+    protected def internal(result: T): Boolean = false
   }
 
   @deprecated("Do not use this directly, use subclasses of this", "2.0")
@@ -246,7 +216,7 @@ object japi {
     final def apply$mcLF$sp(f: Float): BoxedUnit = { internal(f.asInstanceOf[T]); BoxedUnit.UNIT }
     final def apply$mcLD$sp(d: Double): BoxedUnit = { internal(d.asInstanceOf[T]); BoxedUnit.UNIT }
     override final def apply(t: T): BoxedUnit = { internal(t); BoxedUnit.UNIT }
-    protected def internal(@unused result: T): Unit = ()
+    protected def internal(result: T): Unit = ()
   }
 }
 
@@ -406,6 +376,6 @@ abstract class Mapper[-T, +R] extends scala.runtime.AbstractFunction1[T, R] {
    * Throws UnsupportedOperation by default.
    */
   @throws(classOf[Throwable])
-  def checkedApply(@unused parameter: T): R =
+  def checkedApply(parameter: T): R =
     throw new UnsupportedOperationException("Mapper.checkedApply has not been implemented")
 }

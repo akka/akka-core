@@ -1,5 +1,5 @@
 # This file contains all excludes added before changing to the subdirectory style
-# Remove JavaTestKit https://github.com/akka/akka/issues/26189
+# Remove JavaTestKit https://github.com/akka/akka-core/issues/26189
 ProblemFilters.exclude[MissingClassProblem]("akka.testkit.JavaTestKit")
 ProblemFilters.exclude[MissingClassProblem]("akka.testkit.JavaTestKit$*")
 ProblemFilters.exclude[MissingClassProblem]("akka.testkit.CachingPartialFunction")

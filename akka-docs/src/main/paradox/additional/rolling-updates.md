@@ -178,11 +178,11 @@ If you need to change any of the following aspects of sharding it will require a
  
 ### Cluster configuration change
 
-* A full restart is required if you change the [SBR strategy](https://doc.akka.io/docs/akka/current/split-brain-resolver.html#strategies)
+* A full restart is required if you change the [SBR strategy](https://doc.akka.io/libraries/akka-core/current/split-brain-resolver.html#strategies)
 
 ### Migrating from PersistentFSM to EventSourcedBehavior
 
-If you've migrated from `PersistentFSM` to `EventSourcedBehavior` (See the [Akka 2.8 migration guide](https://doc.akka.io/docs/akka/2.8/persistence-fsm.html#migration-to-eventsourcedbehavior))
+If you've migrated from `PersistentFSM` to `EventSourcedBehavior` (See the [Akka 2.8 migration guide](https://doc.akka.io/libraries/akka-core/2.8/persistence-fsm.html#migration-to-eventsourcedbehavior))
 and are using PersistenceFSM with Cluster Sharding, a full shutdown is required as shards can move between new and old nodes.
   
 ### Migrating from classic remoting to Artery
@@ -190,7 +190,7 @@ and are using PersistenceFSM with Cluster Sharding, a full shutdown is required 
 If you've migrated from classic remoting to Artery
 which has a completely different protocol, a rolling update is not supported.
 For more details on this migration
-see [the migration guide](https://doc.akka.io/docs/akka/2.6/project/migration-guide-2.5.x-2.6.x.html#migrating-from-classic-remoting-to-artery).
+see [the migration guide](https://doc.akka.io/libraries/akka-core/2.6/project/migration-guide-2.5.x-2.6.x.html#migrating-from-classic-remoting-to-artery).
 
 ### Changing remoting transport
 

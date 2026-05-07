@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2009-2024 Lightbend Inc. <https://www.lightbend.com>
- */
 package sample.sharding.kafka
 
 import akka.actor.typed.scaladsl.adapter._
@@ -100,7 +97,7 @@ object Main {
             Behaviors.stopped
         }
         .receiveSignal {
-          case (ctx, Terminated(`processor`)) =>
+          case (_, Terminated(`processor`)) =>
             ctx.log.warn("Kafka event processor stopped. Shutting down")
             binding.map(_.unbind())(ctx.executionContext)
             Behaviors.stopped

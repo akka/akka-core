@@ -5,22 +5,17 @@
     "parameterTypes" : [ "akka.actor.ActorSystem" ]
   } ]
 }, {
-  "name" : "akka.cluster.sharding.internal.jfr.JFRShardingFlightRecorder",
-  "methods" : [ {
-    "name" : "<init>"
-  } ]
-}, {
   "name" : "akka.cluster.sharding.ClusterSharding$",
   "fields" : [ {
     "name" : "MODULE$"
   } ]
 }, {
-  "name" : "akka.cluster.sharding.ShardingFlightRecorder$",
+  "name" : "akka.cluster.sharding.external.ExternalShardAllocation$",
   "fields" : [ {
     "name" : "MODULE$"
   } ]
 }, {
-  "name" : "akka.cluster.sharding.external.ExternalShardAllocation$",
+  "name" : "akka.cluster.sharding.internal.ClusterShardingInstrumentationProvider$",
   "fields" : [ {
     "name" : "MODULE$"
   } ]

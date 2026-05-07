@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.akka.typed
@@ -56,31 +56,6 @@ object LoggingDocExamples {
       case Failure(exc)    => log.error("Task failed", exc)
     }
     //#logger-factory
-
-  }
-
-  def placeholders(): Unit = {
-    //#info2
-    import akka.actor.typed.scaladsl.LoggerOps
-
-    Behaviors.receive[String] { (context, message) =>
-      context.log.info2("{} received message: {}", context.self.path.name, message)
-      Behaviors.same
-    }
-    //#info2
-
-    //#infoN
-    import akka.actor.typed.scaladsl.LoggerOps
-
-    Behaviors.receive[String] { (context, message) =>
-      context.log.infoN(
-        "{} received message of size {} starting with: {}",
-        context.self.path.name,
-        message.length,
-        message.take(10))
-      Behaviors.same
-    }
-    //#infoN
 
   }
 

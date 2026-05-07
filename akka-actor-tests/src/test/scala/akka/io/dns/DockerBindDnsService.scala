@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io.dns
@@ -15,7 +15,7 @@ import com.typesafe.config.Config
 import org.scalatest.concurrent.Eventually
 
 import akka.testkit.AkkaSpec
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 abstract class DockerBindDnsService(config: Config) extends AkkaSpec(config) with Eventually {
   val client = DefaultDockerClient.fromEnv().build()

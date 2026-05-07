@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor
@@ -10,7 +10,6 @@ import java.util.concurrent.{ CountDownLatch, TimeUnit }
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Random
@@ -598,7 +597,6 @@ object SupervisorHierarchySpec {
     when(Stopping, stateTimeout = 5.seconds.dilated) {
       case this.Event(PongOfDeath, _) => stay()
       case this.Event(Terminated(r), _) if r == hierarchy =>
-        @nowarn
         val undead = children.filterNot(_.isTerminated)
         if (undead.nonEmpty) {
           log.info("undead:\n" + undead.mkString("\n"))

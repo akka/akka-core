@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.state.internal
@@ -21,7 +21,6 @@ import akka.persistence._
 import akka.persistence.state.scaladsl.DurableStateUpdateWithChangeEventStore
 import akka.persistence.state.scaladsl.GetObjectResult
 import akka.util.OptionVal
-import akka.util.unused
 
 /** INTERNAL API */
 @InternalApi
@@ -112,7 +111,7 @@ private[akka] trait DurableStateStoreInteractions[C, S] {
   }
 
   @InternalStableApi
-  private[akka] def onWriteInitiated(@unused ctx: ActorContext[_], @unused cmd: Any): Unit = ()
+  private[akka] def onWriteInitiated(ctx: ActorContext[_], cmd: Any): Unit = ()
 
   protected def requestRecoveryPermit(): Unit = {
     setup.persistence.recoveryPermitter.tell(RecoveryPermitter.RequestRecoveryPermit, setup.selfClassic)

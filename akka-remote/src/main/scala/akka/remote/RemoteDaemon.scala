@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote
@@ -75,7 +75,7 @@ private[akka] class RemoteSystemDaemon(
 
   private val allowListEnabled = system.settings.config.getBoolean("akka.remote.deployment.enable-allow-list")
   private val remoteDeploymentAllowList: immutable.Set[String] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     if (allowListEnabled)
       system.settings.config.getStringList("akka.remote.deployment.allowed-actor-classes").asScala.toSet
     else Set.empty

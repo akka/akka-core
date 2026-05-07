@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.internal
@@ -17,7 +17,7 @@ import akka.persistence.typed.{ javadsl, scaladsl, SnapshotSelectionCriteria }
   /**
    * INTERNAL API
    */
-  override private[akka] def toClassic = akka.persistence.Recovery()
+  override private[akka] def toClassic = akka.persistence.Recovery.default
 }
 
 /**
@@ -31,6 +31,20 @@ import akka.persistence.typed.{ javadsl, scaladsl, SnapshotSelectionCriteria }
    * INTERNAL API
    */
   override private[akka] def toClassic = akka.persistence.Recovery.none
+}
+
+/**
+ * INTERNAL API
+ */
+@InternalApi private[akka] case object ReplayOnlyLastRecovery extends javadsl.Recovery with scaladsl.Recovery {
+  override def asScala: scaladsl.Recovery = this
+  override def asJava: javadsl.Recovery = this
+
+  /**
+   * INTERNAL API
+   */
+  override private[akka] val toClassic =
+    akka.persistence.Recovery(akka.persistence.SnapshotSelectionCriteria.None)
 }
 
 /**

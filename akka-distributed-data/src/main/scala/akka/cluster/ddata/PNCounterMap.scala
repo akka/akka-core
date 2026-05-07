@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.ddata
@@ -54,7 +54,7 @@ final class PNCounterMap[A] private[akka] (private[akka] val underlying: ORMap[A
 
   /** Java API */
   def getEntries: java.util.Map[A, BigInteger] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     underlying.entries.map { case (k, c) => k -> c.value.bigInteger }.asJava
   }
 

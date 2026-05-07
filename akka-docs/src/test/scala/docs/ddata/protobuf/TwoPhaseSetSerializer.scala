@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2015-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.ddata.protobuf
@@ -7,7 +7,7 @@ package docs.ddata.protobuf
 //#serializer
 import java.util.ArrayList
 import java.util.Collections
-import akka.util.ccompat.JavaConverters._
+import scala.jdk.CollectionConverters._
 import akka.actor.ExtendedActorSystem
 import akka.cluster.ddata.GSet
 import akka.cluster.ddata.protobuf.SerializationSupport

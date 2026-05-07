@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote
@@ -36,7 +36,6 @@ import akka.remote.serialization.ActorRefResolveThreadLocalCache
 import akka.serialization.Serialization
 import akka.util.ErrorMessages
 import akka.util.OptionVal
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -261,7 +260,7 @@ private[akka] class RemoteActorRefProvider(
   }
 
   private def checkAeronOnClassPath(system: ActorSystemImpl): Unit = {
-    val arteryLink = "https://doc.akka.io/docs/akka/current/remoting-artery.html"
+    val arteryLink = "https://doc.akka.io/libraries/akka-core/current/remoting-artery.html"
     // using classes that are used so will fail to compile if they get removed from Aeron
     checkClassOrThrow(system, "io.aeron.driver.MediaDriver", "Artery", "Aeron driver", arteryLink)
     checkClassOrThrow(system, "io.aeron.Aeron", "Artery", "Aeron client", arteryLink)
@@ -344,7 +343,8 @@ private[akka] class RemoteActorRefProvider(
     warnOnUnsafe(s"Remote deploy of [$path] is not allowed, falling back to local.")
 
   /** Override to add any additional checks if using `RemoteActorRefProvider` as a superclass. */
-  protected def shouldCreateRemoteActorRef(@unused system: ActorSystem, @unused address: Address): Boolean = true
+  protected def shouldCreateRemoteActorRef(system: ActorSystem, address: Address): Boolean =
+    true
 
   def actorOf(
       system: ActorSystemImpl,

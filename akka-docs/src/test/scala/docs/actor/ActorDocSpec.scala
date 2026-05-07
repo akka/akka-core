@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.actor
@@ -8,6 +8,7 @@ import akka.actor.Kill
 import jdocs.actor.ImmutableMessage
 
 import language.postfixOps
+import scala.annotation.nowarn
 
 //#imports1
 import akka.actor.Actor
@@ -22,7 +23,6 @@ import akka.testkit._
 import akka.util._
 import scala.concurrent.duration._
 import scala.concurrent.Await
-import akka.Done
 import akka.actor.CoordinatedShutdown
 
 //#my-actor
@@ -50,12 +50,16 @@ class FirstActor extends Actor {
 }
 //#context-actorOf
 
+@nowarn("msg=never used") // sample snippets
 class ActorWithArgs(arg: String) extends Actor {
   def receive = { case _ => () }
 }
 
 //#actor-with-value-class-argument
 class Argument(val value: String) extends AnyVal
+//#actor-with-value-class-argument
+@nowarn("msg=never used") // sample snippets
+//#actor-with-value-class-argument
 class ValueClassActor(arg: Argument) extends Actor {
   def receive = { case _ => () }
 }
@@ -87,6 +91,7 @@ class DemoActorWrapper extends Actor {
     }
   }
 
+  @nowarn("msg=never used") // sample snippets
   class SomeOtherActor extends Actor {
     // Props(new DemoActor(42)) would not be safe
     context.actorOf(DemoActor.props(42), "demo")
@@ -283,6 +288,7 @@ case class User(name: String)
 case class Register(user: User)
 //#immutable-message-definition
 
+@nowarn("msg=never used") // sample snippets
 class ActorDocSpec extends AkkaSpec("""
   akka.loglevel = INFO
   akka.loggers = []
@@ -389,7 +395,6 @@ class ActorDocSpec extends AkkaSpec("""
       }
     }
 
-    import scala.language.existentials
     val a: DummyActorProxy = new DummyActorProxy() {
       val applicationContext = this
 
@@ -671,7 +676,7 @@ class ActorDocSpec extends AkkaSpec("""
 
   "using CoordinatedShutdown" in {
     // other snippets moved to docs.actor.typed.CoordinatedActorShutdownSpec
-    { // https://github.com/akka/akka/issues/29056
+    { // https://github.com/akka/akka-core/issues/29056
       val someActor = system.actorOf(Props(classOf[Replier], this))
       someActor ! PoisonPill
       //#coordinated-shutdown-addActorTerminationTask

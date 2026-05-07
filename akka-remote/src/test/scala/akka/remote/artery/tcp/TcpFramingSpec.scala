@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2016-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.remote.artery
@@ -20,7 +20,8 @@ class TcpFramingSpec extends AkkaSpec("""
   """) with ImplicitSender {
   import TcpFraming.encodeFrameHeader
 
-  private val framingFlow = Flow[ByteString].via(new TcpFraming)
+  private val maxFrameLength = 100
+  private val framingFlow = Flow[ByteString].via(new TcpFraming(maxFrameLength))
 
   private val payload5 = ByteString((1 to 5).map(_.toByte).toArray)
 
@@ -96,6 +97,14 @@ class TcpFramingSpec extends AkkaSpec("""
     "work with empty stream" in {
       val frames = Source.empty.via(framingFlow).runWith(Sink.seq).futureValue
       frames.size should ===(0)
+    }
+
+    "reject too long frame" in {
+      val payload = ByteString((1 to maxFrameLength + 1).map(_.toByte).toArray)
+      val bytes = TcpFraming.encodeConnectionHeader(3) ++ encodeFrameHeader(payload.size) ++ payload
+      val failed = Source(List(bytes)).via(framingFlow).runWith(Sink.seq).failed.futureValue
+      failed shouldBe a[FramingException]
+      failed.getMessage should startWith("Too long frame")
     }
 
   }

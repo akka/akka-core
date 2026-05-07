@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package jdocs.akka.cluster.sharding.typed;
@@ -204,6 +204,8 @@ interface ShardingCompileOnlyTest {
 
     shardRegion.tell(new ShardingEnvelope<>("counter-1", Counter.Increment.INSTANCE));
     // #send
+
+    ActorRef<ClusterSharding.ShardCommand> shard = sharding.shard(typeKey);
   }
 
   public static void roleExample() {

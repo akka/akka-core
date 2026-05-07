@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2023-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.query.typed.internal
@@ -9,9 +9,11 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
+import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 import scala.util.control.NoStackTrace
 
 import com.typesafe.config.Config
@@ -49,9 +51,7 @@ import akka.stream.stage.GraphStageLogic
 import akka.stream.stage.InHandler
 import akka.stream.stage.OutHandler
 import akka.stream.stage.StageLogging
-import akka.util.JavaDurationConverters._
 import akka.util.OptionVal
-import akka.util.unused
 
 /**
  * INTERNAL API
@@ -99,10 +99,10 @@ import akka.util.unused
       Settings(
         delegateQueryPluginId = delegateQueryPluginId(config),
         broadcastBufferSize = config.getInt("broadcast-buffer-size"),
-        firehoseLingerTimeout = config.getDuration("firehose-linger-timeout").asScala,
+        firehoseLingerTimeout = config.getDuration("firehose-linger-timeout").toScala,
         catchupOverlap = config.getDuration("catchup-overlap"),
         deduplicationCapacity = config.getInt("deduplication-capacity"),
-        slowConsumerReaperInterval = config.getDuration("slow-consumer-reaper-interval").asScala,
+        slowConsumerReaperInterval = config.getDuration("slow-consumer-reaper-interval").toScala,
         slowConsumerLagThreshold = config.getDuration("slow-consumer-lag-threshold"),
         abortSlowConsumerAfter = config.getDuration("abort-slow-consumer-after"),
         verboseLogging = config.getBoolean("verbose-debug-logging"))
@@ -155,7 +155,7 @@ import akka.util.unused
     private val sliceRangeStr = s"${firehoseKey.sliceRange.min}-${firehoseKey.sliceRange.max}"
 
     private def consumerTrackingValues(): Vector[ConsumerTracking] = {
-      import akka.util.ccompat.JavaConverters._
+      import scala.jdk.CollectionConverters._
       consumerTracking.values.iterator.asScala.filter(h => h.history.nonEmpty && h.firehoseOnly).toVector
     }
 
@@ -548,7 +548,7 @@ import akka.util.unused
       minSlice: Int,
       maxSlice: Int,
       offset: Offset,
-      @unused firehose: Boolean): Source[EventEnvelope[Event], NotUsed] = {
+      @nowarn("msg=never used") firehose: Boolean): Source[EventEnvelope[Event], NotUsed] = {
     PersistenceQuery(system)
       .readJournalFor[EventsBySliceQuery](pluginId)
       .eventsBySlices(entityType, minSlice, maxSlice, offset)

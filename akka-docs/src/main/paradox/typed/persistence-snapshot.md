@@ -121,6 +121,14 @@ Deleting events in Event Sourcing based applications is typically either not use
 By deleting events you will lose the history of how the system changed before it reached current state, which is
 one of the main reasons for using Event Sourcing in the first place.
 
+Immediate event deletion should not be used together with Projections and for @ref:[Replicated Event Sourcing](replicated-eventsourcing.md)
+event deletion via snapshot predicate or retention criteria is not allowed. Deleting all events immediately when an
+entity has reached its terminal deleted state would have the consequence that Projections might not have consumed all
+previous events yet and will not be notified of the deleted event. Instead, it's recommended to emit a final deleted
+event and store the fact that the entity is deleted separately via a Projection. Then a background task can clean up
+the events and snapshots for the deleted entities. The entity itself knows about the terminal state from the deleted
+event and should not emit further events after that and typically stop itself if it receives more commands.
+
 If snapshots are triggered using the predicate-based api (@scala[`snapshotWhen`]@java[`shouldSnapshot`]), events are not deleted 
 by default. Event deletion can be enabled using the following api:
 

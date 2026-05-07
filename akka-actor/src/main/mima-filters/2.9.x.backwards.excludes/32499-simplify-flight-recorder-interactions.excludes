@@ -1,0 +1,3 @@
+# #32499 chore: Simplify flight recorder interactions
+ProblemFilters.exclude[MissingClassProblem]("akka.util.FlightRecorderLoader")
+ProblemFilters.exclude[MissingClassProblem]("akka.util.FlightRecorderLoader$")

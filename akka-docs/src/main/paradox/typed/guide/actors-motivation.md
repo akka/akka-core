@@ -144,6 +144,12 @@ that the thread was currently working on, is no longer in the shared memory loca
 the task state is fully lost! **We have lost a message even though this is local communication with no networking
 involved (where message losses are to be expected).**
 
+@@@note
+
+🎓 For a deeper understanding of the Actor Model, consider the free online course [**Actor Fundamentals**](https://akkademy.akka.io/learn/courses/21/actor-fundamentals) in Akkademy.
+
+@@@
+
 **In summary:**
 
  * **To achieve any meaningful concurrency and performance on current systems, threads must delegate tasks among each

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package typed.tutorial_5
@@ -12,7 +12,6 @@ import akka.actor.typed.Signal
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
 
 object Device {
   def apply(groupId: String, deviceId: String): Behavior[Command] =
@@ -37,12 +36,12 @@ class Device(context: ActorContext[Device.Command], groupId: String, deviceId: S
 
   var lastTemperatureReading: Option[Double] = None
 
-  context.log.info2("Device actor {}-{} started", groupId, deviceId)
+  context.log.info("Device actor {}-{} started", groupId, deviceId)
 
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
       case RecordTemperature(id, value, replyTo) =>
-        context.log.info2("Recorded temperature reading {} with {}", value, id)
+        context.log.info("Recorded temperature reading {} with {}", value, id)
         lastTemperatureReading = Some(value)
         replyTo ! TemperatureRecorded(id)
         this
@@ -58,7 +57,7 @@ class Device(context: ActorContext[Device.Command], groupId: String, deviceId: S
 
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
     case PostStop =>
-      context.log.info2("Device actor {}-{} stopped", groupId, deviceId)
+      context.log.info("Device actor {}-{} stopped", groupId, deviceId)
       this
   }
 

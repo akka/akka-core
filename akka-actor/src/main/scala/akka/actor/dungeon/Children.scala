@@ -1,19 +1,22 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.actor.dungeon
 
 import java.util.Optional
+
 import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.util.control.NonFatal
+import scala.jdk.CollectionConverters._
+
 import akka.actor._
 import akka.annotation.InternalApi
 import akka.annotation.InternalStableApi
 import akka.serialization.{ Serialization, SerializationExtension, Serializers }
-import akka.util.{ Helpers, Unsafe }
+import akka.util.Helpers
 
 /**
  * INTERNAL API
@@ -36,12 +39,11 @@ private[akka] trait Children { this: ActorCell =>
   private var _childrenRefsDoNotCallMeDirectly: ChildrenContainer = EmptyChildrenContainer
 
   def childrenRefs: ChildrenContainer =
-    Unsafe.instance.getObjectVolatile(this, AbstractActorCell.childrenOffset).asInstanceOf[ChildrenContainer]
+    AbstractActorCell.childrenHandle.getVolatile(this).asInstanceOf[ChildrenContainer]
 
   final def children: immutable.Iterable[ActorRef] = childrenRefs.children
-  @nowarn("msg=deprecated")
-  final def getChildren(): java.lang.Iterable[ActorRef] =
-    scala.collection.JavaConverters.asJavaIterableConverter(children).asJava
+
+  final def getChildren(): java.lang.Iterable[ActorRef] = children.asJava
 
   final def child(name: String): Option[ActorRef] = Option(getChild(name))
   final def getChild(name: String): ActorRef = childrenRefs.getByName(name) match {
@@ -61,7 +63,7 @@ private[akka] trait Children { this: ActorCell =>
 
   @nowarn @volatile private var _functionRefsDoNotCallMeDirectly = Map.empty[String, FunctionRef]
   private def functionRefs: Map[String, FunctionRef] =
-    Unsafe.instance.getObjectVolatile(this, AbstractActorCell.functionRefsOffset).asInstanceOf[Map[String, FunctionRef]]
+    AbstractActorCell.functionRefsHandle.getVolatile(this).asInstanceOf[Map[String, FunctionRef]]
 
   private[akka] def getFunctionRefOrNobody(name: String, uid: Int = ActorCell.undefinedUid): InternalActorRef =
     functionRefs.getOrElse(name, Children.GetNobody()) match {
@@ -80,7 +82,7 @@ private[akka] trait Children { this: ActorCell =>
     @tailrec def rec(): Unit = {
       val old = functionRefs
       val added = old.updated(childPath.name, ref)
-      if (!Unsafe.instance.compareAndSwapObject(this, AbstractActorCell.functionRefsOffset, old, added)) rec()
+      if (!AbstractActorCell.functionRefsHandle.compareAndSet(this, old, added)) rec()
     }
     rec()
 
@@ -95,7 +97,7 @@ private[akka] trait Children { this: ActorCell =>
       if (!old.contains(name)) false
       else {
         val removed = old - name
-        if (!Unsafe.instance.compareAndSwapObject(this, AbstractActorCell.functionRefsOffset, old, removed)) rec()
+        if (!AbstractActorCell.functionRefsHandle.compareAndSet(this, old, removed)) rec()
         else {
           ref.stop()
           true
@@ -106,19 +108,18 @@ private[akka] trait Children { this: ActorCell =>
   }
 
   protected def stopFunctionRefs(): Unit = {
-    val refs = Unsafe.instance
-      .getAndSetObject(this, AbstractActorCell.functionRefsOffset, Map.empty)
-      .asInstanceOf[Map[String, FunctionRef]]
+    val refs =
+      AbstractActorCell.functionRefsHandle.getAndSet(this, Map.empty).asInstanceOf[Map[String, FunctionRef]]
     refs.valuesIterator.foreach(_.stop())
   }
 
   @nowarn @volatile private var _nextNameDoNotCallMeDirectly = 0L
   final protected def randomName(sb: java.lang.StringBuilder): String = {
-    val num = Unsafe.instance.getAndAddLong(this, AbstractActorCell.nextNameOffset, 1)
+    val num = AbstractActorCell.getAndAddNextName(this)
     Helpers.base64(num, sb)
   }
   final protected def randomName(): String = {
-    val num = Unsafe.instance.getAndAddLong(this, AbstractActorCell.nextNameOffset, 1)
+    val num = AbstractActorCell.getAndAddNextName(this)
     Helpers.base64(num)
   }
 
@@ -146,8 +147,11 @@ private[akka] trait Children { this: ActorCell =>
   /*
    * low level CAS helpers
    */
-  @inline private final def swapChildrenRefs(oldChildren: ChildrenContainer, newChildren: ChildrenContainer): Boolean =
-    Unsafe.instance.compareAndSwapObject(this, AbstractActorCell.childrenOffset, oldChildren, newChildren)
+  @inline private final def swapChildrenRefs(
+      oldChildren: ChildrenContainer,
+      newChildren: ChildrenContainer): Boolean = {
+    AbstractActorCell.childrenHandle.compareAndSet(this, oldChildren, newChildren)
+  }
 
   @tailrec final def reserveChild(name: String): Boolean = {
     val c = childrenRefs
@@ -179,8 +183,9 @@ private[akka] trait Children { this: ActorCell =>
     }
   }
 
-  final protected def setTerminated(): Unit =
-    Unsafe.instance.putObjectVolatile(this, AbstractActorCell.childrenOffset, TerminatedChildrenContainer)
+  final protected def setTerminated(): Unit = {
+    AbstractActorCell.childrenHandle.setVolatile(this, TerminatedChildrenContainer)
+  }
 
   /*
    * ActorCell-internal API

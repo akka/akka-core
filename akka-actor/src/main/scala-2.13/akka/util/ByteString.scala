@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.util
@@ -16,6 +16,7 @@ import scala.collection.{ immutable, mutable }
 import scala.collection.immutable.{ IndexedSeq, IndexedSeqOps, StrictOptimizedSeqOps, VectorBuilder }
 import scala.collection.mutable.{ Builder, WrappedArray }
 import scala.reflect.ClassTag
+import scala.jdk.CollectionConverters._
 
 object ByteString {
 
@@ -360,7 +361,7 @@ object ByteString {
     }
 
     def compact: CompactByteString =
-      if (isCompact) ByteString1C(bytes) else ByteString1C(toArray)
+      if (isCompact) ByteString1C(bytes) else ByteString1C(toArray())
 
     def asByteBuffer: ByteBuffer = {
       val buffer = ByteBuffer.wrap(bytes, startIndex, length).asReadOnlyBuffer
@@ -440,7 +441,7 @@ object ByteString {
 
     override def toArrayUnsafe(): Array[Byte] = {
       if (startIndex == 0 && length == bytes.length) bytes
-      else toArray
+      else toArray()
     }
   }
 
@@ -760,7 +761,7 @@ sealed abstract class ByteString
   def apply(idx: Int): Byte
   private[akka] def byteStringCompanion: ByteString.Companion
   // override so that toString will also be `ByteString(...)` for the concrete subclasses
-  // of ByteString which changed for Scala 2.12, see https://github.com/akka/akka/issues/21774
+  // of ByteString which changed for Scala 2.12, see https://github.com/akka/akka-core/issues/21774
   override final def className: String = "ByteString"
 
   override def isEmpty: Boolean = length == 0
@@ -832,7 +833,7 @@ sealed abstract class ByteString
    *
    * @return this ByteString copied into a byte array
    */
-  protected[ByteString] def toArray: Array[Byte] = toArray[Byte]
+  protected[ByteString] def toArray(): Array[Byte] = toArray[Byte]
 
   final override def toArray[B >: Byte](implicit arg0: ClassTag[B]): Array[B] = {
     // super uses byteiterator
@@ -868,7 +869,7 @@ sealed abstract class ByteString
    * only read the bytes and never mutate then. For all other intents and purposes, please use the usual
    * toArray method - which provide the immutability guarantees by copying the backing array.
    */
-  def toArrayUnsafe(): Array[Byte] = toArray
+  def toArrayUnsafe(): Array[Byte] = toArray()
 
   override def foreach[@specialized U](f: Byte => U): Unit = iterator.foreach(f)
 
@@ -891,7 +892,7 @@ sealed abstract class ByteString
    * @param buffer a ByteBuffer to copy bytes to
    * @return the number of bytes actually copied
    */
-  def copyToBuffer(@unused buffer: ByteBuffer): Int
+  def copyToBuffer(buffer: ByteBuffer): Int
 
   /**
    * Create a new ByteString with all contents compacted into a single,
@@ -925,17 +926,13 @@ sealed abstract class ByteString
    * Java API: Returns an Iterable of read-only ByteBuffers that directly wraps this ByteStrings
    * all fragments. Will always have at least one entry.
    */
-  @nowarn
-  def getByteBuffers(): JIterable[ByteBuffer] = {
-    import scala.collection.JavaConverters.asJavaIterableConverter
-    asByteBuffers.asJava
-  }
+  def getByteBuffers(): JIterable[ByteBuffer] = asByteBuffers.asJava
 
   /**
    * Creates a new ByteBuffer with a copy of all bytes contained in this
    * ByteString.
    */
-  def toByteBuffer: ByteBuffer = ByteBuffer.wrap(toArray)
+  def toByteBuffer: ByteBuffer = ByteBuffer.wrap(toArray())
 
   /**
    * Decodes this ByteString as a UTF-8 encoded String.

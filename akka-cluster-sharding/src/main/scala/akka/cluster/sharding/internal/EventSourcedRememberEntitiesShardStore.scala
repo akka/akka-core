@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.cluster.sharding.internal
@@ -52,6 +52,19 @@ private[akka] object EventSourcedRememberEntitiesShardStore {
 
   def props(typeName: String, shardId: ShardRegion.ShardId, settings: ClusterShardingSettings): Props =
     Props(new EventSourcedRememberEntitiesShardStore(typeName, shardId, settings))
+
+  def createEntityEvents(
+      entityIds: Set[EntityId],
+      eventConstructor: Set[EntityId] => StateChange,
+      batchSize: Int): List[StateChange] = {
+    if (entityIds.size <= batchSize)
+      // optimized when entity count is small
+      eventConstructor(entityIds) :: Nil
+    else {
+      // split up in several writes so we don't hit journal limit
+      entityIds.grouped(batchSize).map(eventConstructor).toList
+    }
+  }
 }
 
 /**
@@ -75,8 +88,10 @@ private[akka] final class EventSourcedRememberEntitiesShardStore(
   private val maxUpdatesPerWrite = context.system.settings.config
     .getInt("akka.cluster.sharding.event-sourced-remember-entities-store.max-updates-per-write")
 
-  log.debug("Starting up EventSourcedRememberEntitiesStore")
+  log.debug("Starting up EventSourcedRememberEntitiesStore [{}], using journal [{}]", persistenceId, journalPluginId)
   private var state = State()
+  private val verboseDebug = context.system.settings.config.getBoolean("akka.cluster.sharding.verbose-debug-logging")
+
   override def persistenceId = s"/sharding/${typeName}Shard/$shardId"
   override def journalPluginId: String = settings.journalPluginId
   override def snapshotPluginId: String = settings.snapshotPluginId
@@ -92,30 +107,26 @@ private[akka] final class EventSourcedRememberEntitiesShardStore(
   override def receiveCommand: Receive = {
 
     case RememberEntitiesShardStore.Update(started, stopped) =>
+      if (verboseDebug)
+        log.debug("ES remember entities store asked to store started [{}] and stopped [{}]", started, stopped)
+
       val events =
-        (if (started.nonEmpty) EntitiesStarted(started) :: Nil else Nil) :::
-        (if (stopped.nonEmpty) EntitiesStopped(stopped) :: Nil else Nil)
+        (if (started.nonEmpty) createEntityEvents(started, EntitiesStarted.apply _, maxUpdatesPerWrite) else Nil) :::
+        (if (stopped.nonEmpty) createEntityEvents(stopped, EntitiesStopped.apply _, maxUpdatesPerWrite) else Nil)
       var left = events.size
       var saveSnap = false
-      def persistEventsAndHandleComplete(evts: List[StateChange]): Unit = {
-        persistAll(evts) { _ =>
-          left -= 1
-          saveSnap = saveSnap || isSnapshotNeeded
-          if (left == 0) {
-            sender() ! RememberEntitiesShardStore.UpdateDone(started, stopped)
-            state = state.copy(state.entities.union(started).diff(stopped))
-            if (saveSnap) {
-              saveSnapshot()
-            }
+      persistAll(events) { _ =>
+        left -= 1
+        saveSnap = saveSnap || isSnapshotNeeded
+        if (left == 0) {
+          if (verboseDebug)
+            log.debug("Persisting remembered entities update done, started [{}], stopped [{}]", started, stopped)
+          sender() ! RememberEntitiesShardStore.UpdateDone(started, stopped)
+          state = state.copy(state.entities.union(started).diff(stopped))
+          if (saveSnap) {
+            saveSnapshot()
           }
         }
-      }
-      if (left <= maxUpdatesPerWrite) {
-        // optimized when batches are small
-        persistEventsAndHandleComplete(events)
-      } else {
-        // split up in several writes so we don't hit journal limit
-        events.grouped(maxUpdatesPerWrite).foreach(persistEventsAndHandleComplete)
       }
 
     case RememberEntitiesShardStore.GetEntities =>

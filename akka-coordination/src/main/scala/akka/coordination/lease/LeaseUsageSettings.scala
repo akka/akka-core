@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2019-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2019-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.coordination.lease
 
 import scala.concurrent.duration.FiniteDuration
-import akka.util.JavaDurationConverters._
+import scala.jdk.DurationConverters._
+
 import akka.util.PrettyDuration._
 import com.typesafe.config.Config
 
@@ -22,7 +23,7 @@ object LeaseUsageSettings {
   def apply(config: Config): LeaseUsageSettings =
     new LeaseUsageSettings(
       config.getString("use-lease"),
-      config.getDuration("lease-retry-interval").asScala,
+      config.getDuration("lease-retry-interval").toScala,
       leaseName = config.getString("lease-name"))
 
   /**
@@ -52,7 +53,7 @@ object LeaseUsageSettings {
    *           for example singleton or sharding
    */
   def create(leaseImplementation: String, leaseRetryInterval: java.time.Duration): LeaseUsageSettings =
-    new LeaseUsageSettings(leaseImplementation, leaseRetryInterval.asScala)
+    new LeaseUsageSettings(leaseImplementation, leaseRetryInterval.toScala)
 
   /**
    * Java API:
@@ -63,7 +64,7 @@ object LeaseUsageSettings {
       leaseImplementation: String,
       leaseRetryInterval: java.time.Duration,
       leaseName: String): LeaseUsageSettings =
-    new LeaseUsageSettings(leaseImplementation, leaseRetryInterval.asScala, leaseName)
+    new LeaseUsageSettings(leaseImplementation, leaseRetryInterval.toScala, leaseName)
 }
 
 final class LeaseUsageSettings private[akka] (
@@ -73,7 +74,7 @@ final class LeaseUsageSettings private[akka] (
   def this(leaseImplementation: String, leaseRetryInterval: FiniteDuration) =
     this(leaseImplementation, leaseRetryInterval, leaseName = "")
 
-  def getLeaseRetryInterval(): java.time.Duration = leaseRetryInterval.asJava
+  def getLeaseRetryInterval(): java.time.Duration = leaseRetryInterval.toJava
 
   /**
    * Note that if you have several Cluster Singletons or Cluster Sharding entity types using lease each one must have
@@ -93,7 +94,7 @@ final class LeaseUsageSettings private[akka] (
    * Java API:
    */
   def withLeaseRetryInterval(leaseRetryInterval: java.time.Duration): LeaseUsageSettings = {
-    new LeaseUsageSettings(leaseImplementation, leaseRetryInterval.asScala, leaseName)
+    new LeaseUsageSettings(leaseImplementation, leaseRetryInterval.toScala, leaseName)
   }
 
   override def toString = s"LeaseUsageSettings($leaseImplementation, ${leaseRetryInterval.pretty})"

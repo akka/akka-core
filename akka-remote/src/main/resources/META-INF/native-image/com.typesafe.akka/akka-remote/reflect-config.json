@@ -23,11 +23,6 @@
     "parameterTypes" : [ "java.lang.String", "akka.actor.ActorSystem$Settings", "akka.event.EventStream", "akka.actor.DynamicAccess" ]
   } ]
 }, {
-  "name" : "akka.remote.artery.jfr.JFRRemotingFlightRecorder",
-  "methods" : [ {
-    "name" : "<init>"
-  } ]
-}, {
   "name" : "akka.remote.AddressUidExtension$",
   "fields" : [ {
     "name" : "MODULE$"
@@ -39,11 +34,6 @@
   } ]
 }, {
   "name" : "akka.remote.RARP$",
-  "fields" : [ {
-    "name" : "MODULE$"
-  } ]
-}, {
-  "name" : "akka.remote.artery.RemotingFlightRecorder$",
   "fields" : [ {
     "name" : "MODULE$"
   } ]

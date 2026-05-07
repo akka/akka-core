@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2014-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2014-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package docs.stream.io
 
 import java.util.concurrent.atomic.AtomicReference
-
 import akka.stream.scaladsl.Tcp._
 import akka.stream.scaladsl._
 import akka.testkit.AkkaSpec
@@ -14,8 +13,11 @@ import akka.util.ByteString
 
 import scala.concurrent.Future
 import akka.testkit.SocketUtil
+
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 
+@nowarn("msg=never used") // sample snippets
 class StreamTcpDocSpec extends AkkaSpec {
 
   implicit val ec: ExecutionContext = system.dispatcher

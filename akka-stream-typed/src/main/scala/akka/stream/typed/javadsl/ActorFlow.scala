@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2018-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.stream.typed.javadsl
@@ -7,13 +7,13 @@ package akka.stream.typed.javadsl
 import java.util.function.BiFunction
 
 import scala.concurrent.duration._
+import scala.jdk.DurationConverters._
 
 import akka.NotUsed
 import akka.actor.typed.ActorRef
 import akka.japi.Pair
 import akka.pattern.StatusReply
 import akka.stream.javadsl.Flow
-import akka.util.JavaDurationConverters
 
 /**
  * Collection of Flows aimed at integrating with typed Actors.
@@ -62,8 +62,7 @@ object ActorFlow {
       timeout: java.time.Duration,
       makeMessage: BiFunction[I, ActorRef[A], Q]): Flow[I, A, NotUsed] =
     akka.stream.typed.scaladsl.ActorFlow
-      .ask[I, Q, A](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(
-        JavaDurationConverters.asFiniteDuration(timeout))
+      .ask[I, Q, A](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(timeout.toScala)
       .asJava
 
   /**
@@ -76,8 +75,7 @@ object ActorFlow {
       timeout: java.time.Duration,
       makeMessage: BiFunction[I, ActorRef[StatusReply[A]], Q]): Flow[I, A, NotUsed] =
     akka.stream.typed.scaladsl.ActorFlow
-      .askWithStatus[I, Q, A](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(
-        JavaDurationConverters.asFiniteDuration(timeout))
+      .askWithStatus[I, Q, A](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(timeout.toScala)
       .asJava
 
   /**
@@ -148,8 +146,7 @@ object ActorFlow {
       .map(_.toScala)
       .via(
         akka.stream.typed.scaladsl.ActorFlow
-          .askWithContext[I, Q, A, Ctx](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(
-            JavaDurationConverters.asFiniteDuration(timeout))
+          .askWithContext[I, Q, A, Ctx](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(timeout.toScala)
           .map { case (a, ctx) => Pair(a, ctx) })
       .asJava
 
@@ -167,8 +164,7 @@ object ActorFlow {
       .map(_.toScala)
       .via(
         akka.stream.typed.scaladsl.ActorFlow
-          .askWithStatusAndContext[I, Q, A, Ctx](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(
-            JavaDurationConverters.asFiniteDuration(timeout))
+          .askWithStatusAndContext[I, Q, A, Ctx](parallelism = 2)(ref)((i, ref) => makeMessage(i, ref))(timeout.toScala)
           .map { case (a, ctx) => Pair(a, ctx) })
       .asJava
 
@@ -185,8 +181,7 @@ object ActorFlow {
       .map(_.toScala)
       .via(
         akka.stream.typed.scaladsl.ActorFlow
-          .askWithContext[I, Q, A, Ctx](parallelism)(ref)((i, ref) => makeMessage(i, ref))(
-            JavaDurationConverters.asFiniteDuration(timeout))
+          .askWithContext[I, Q, A, Ctx](parallelism)(ref)((i, ref) => makeMessage(i, ref))(timeout.toScala)
           .map { case (a, ctx) => Pair(a, ctx) })
       .asJava
   }

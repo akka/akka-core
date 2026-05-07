@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed
@@ -7,6 +7,7 @@ package akka.persistence.typed
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import akka.Done
+import akka.actor.testkit.typed.TestException
 import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.typed.ActorRef
@@ -18,6 +19,11 @@ import akka.persistence.typed.internal.{ ReplicatedPublishedEventMetaData, Versi
 import akka.persistence.typed.scaladsl.Effect
 import akka.persistence.typed.scaladsl.EventSourcedBehavior
 import akka.persistence.typed.scaladsl.ReplicatedEventSourcing
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+
+import akka.persistence.typed.scaladsl.EventWithMetadata
 
 object ReplicatedEventPublishingSpec {
 
@@ -29,14 +35,21 @@ object ReplicatedEventPublishingSpec {
     case class Get(replyTo: ActorRef[Set[String]]) extends Command
     case object Stop extends Command
 
-    def apply(entityId: String, replicaId: ReplicaId, allReplicas: Set[ReplicaId]): Behavior[Command] =
+    def apply(
+        entityId: String,
+        replicaId: ReplicaId,
+        allReplicas: Set[ReplicaId],
+        modifyBehavior: EventSourcedBehavior[Command, String, Set[String]] => EventSourcedBehavior[
+          Command,
+          String,
+          Set[String]] = identity): Behavior[Command] =
       Behaviors.setup { ctx =>
         ReplicatedEventSourcing.commonJournalConfig(
           ReplicationId(EntityType, entityId, replicaId),
           allReplicas,
           PersistenceTestKitReadJournal.Identifier)(
           replicationContext =>
-            EventSourcedBehavior[Command, String, Set[String]](
+            modifyBehavior(EventSourcedBehavior[Command, String, Set[String]](
               replicationContext.persistenceId,
               Set.empty,
               (state, command) =>
@@ -54,7 +67,7 @@ object ReplicatedEventPublishingSpec {
                     Effect.stop()
                   case unexpected => throw new RuntimeException(s"Unexpected: $unexpected")
                 },
-              (state, string) => state + string))
+              (state, string) => state + string)))
       }
 
     def externalReplication(entityId: String, replicaId: ReplicaId, allReplicas: Set[ReplicaId]): Behavior[Command] =
@@ -115,7 +128,7 @@ class ReplicatedEventPublishingSpec
         1L,
         "two",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         None)
       actor ! MyReplicatedBehavior.Add("three", probe.ref)
       probe.expectMessage(Done)
@@ -137,7 +150,7 @@ class ReplicatedEventPublishingSpec
         1L,
         "one",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         Some(ackProbe.ref))
       actor.asInstanceOf[ActorRef[Any]] ! publishedEvent
       ackProbe.receiveMessage()
@@ -170,7 +183,7 @@ class ReplicatedEventPublishingSpec
         2L, // missing 1L
         "two",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         None)
       actor ! MyReplicatedBehavior.Add("three", probe.ref)
       probe.expectMessage(Done)
@@ -195,7 +208,7 @@ class ReplicatedEventPublishingSpec
         2L, // missing 1L
         "two",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         Some(probe.ref))
       probe.expectMessage(Done)
       actor ! MyReplicatedBehavior.Add("three", probe.ref)
@@ -218,7 +231,7 @@ class ReplicatedEventPublishingSpec
         1L,
         "two",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCC, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCC, VersionVector.empty, None)),
         None)
       actor ! MyReplicatedBehavior.Add("three", probe.ref)
       probe.expectMessage(Done)
@@ -240,7 +253,7 @@ class ReplicatedEventPublishingSpec
         1L,
         "two",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         None)
       // simulate another published event from that replica
       actor.asInstanceOf[ActorRef[Any]] ! internal.PublishedEventImpl(
@@ -248,7 +261,7 @@ class ReplicatedEventPublishingSpec
         1L,
         "two-again", // ofc this would be the same in the real world, different just so we can detect
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         None)
 
       actor ! MyReplicatedBehavior.Add("three", probe.ref)
@@ -281,7 +294,7 @@ class ReplicatedEventPublishingSpec
         1L,
         "two",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         None)
 
       incarnation2 ! MyReplicatedBehavior.Add("three", probe.ref)
@@ -305,7 +318,7 @@ class ReplicatedEventPublishingSpec
         1L,
         "two",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         None)
 
       incarnationA1 ! MyReplicatedBehavior.Stop
@@ -319,7 +332,7 @@ class ReplicatedEventPublishingSpec
         2L,
         "three",
         System.currentTimeMillis(),
-        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty)),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
         None)
 
       incarnationA2 ! MyReplicatedBehavior.Add("four", probe.ref)
@@ -327,6 +340,164 @@ class ReplicatedEventPublishingSpec
 
       incarnationA2 ! MyReplicatedBehavior.Get(probe.ref)
       probe.expectMessage(Set("one", "two", "three", "four"))
+    }
+
+    "intercept published replicated events between two entities" in {
+      val id = nextEntityId()
+      val probe = createTestProbe[Any]()
+      case class Intercepted(origin: ReplicaId, seqNr: Long, event: String)
+      val interceptProbe = createTestProbe[Intercepted]()
+      val addInterceptor
+          : EventSourcedBehavior[MyReplicatedBehavior.Command, String, Set[String]] => EventSourcedBehavior[
+            MyReplicatedBehavior.Command,
+            String,
+            Set[String]] =
+        _.withReplicatedEventInterceptor { (_, event, origin, seqNr) =>
+          interceptProbe.ref ! Intercepted(origin, seqNr, event)
+          Future.successful(Done)
+        }
+      val actor = spawn(MyReplicatedBehavior(id, DCA, Set(DCA, DCB), modifyBehavior = addInterceptor))
+      actor ! MyReplicatedBehavior.Add("one", probe.ref)
+      probe.expectMessage(Done)
+
+      // simulate a published event from another replica
+      actor.asInstanceOf[ActorRef[Any]] ! internal.PublishedEventImpl(
+        ReplicationId(EntityType, id, DCB).persistenceId,
+        1L,
+        "two",
+        System.currentTimeMillis(),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
+        None)
+      actor ! MyReplicatedBehavior.Add("three", probe.ref)
+      probe.expectMessage(Done)
+
+      actor ! MyReplicatedBehavior.Get(probe.ref)
+      probe.expectMessage(Set("one", "two", "three"))
+      interceptProbe.receiveMessage() shouldEqual Intercepted(DCB, 2L, "two")
+    }
+
+    "intercept and delay published replicated events between two entities" in {
+      val id = nextEntityId()
+      val probe = createTestProbe[Any]()
+      case class Intercepted(origin: ReplicaId, seqNr: Long, event: String)
+      val interceptProbe = createTestProbe[Intercepted]()
+      implicit val ec: ExecutionContext = system.executionContext
+      val addInterceptor
+          : EventSourcedBehavior[MyReplicatedBehavior.Command, String, Set[String]] => EventSourcedBehavior[
+            MyReplicatedBehavior.Command,
+            String,
+            Set[String]] =
+        _.withReplicatedEventInterceptor { (_, event, origin, seqNr) =>
+          interceptProbe.ref ! Intercepted(origin, seqNr, event)
+          akka.pattern.after(50.millis)(Future { Done })
+        }
+      val actor = spawn(MyReplicatedBehavior(id, DCA, Set(DCA, DCB), modifyBehavior = addInterceptor))
+      actor ! MyReplicatedBehavior.Add("one", probe.ref)
+      probe.expectMessage(Done)
+
+      // simulate a published event from another replica
+      actor.asInstanceOf[ActorRef[Any]] ! internal.PublishedEventImpl(
+        ReplicationId(EntityType, id, DCB).persistenceId,
+        1L,
+        "two",
+        System.currentTimeMillis(),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
+        None)
+      actor ! MyReplicatedBehavior.Add("three", probe.ref)
+      probe.expectMessage(Done)
+
+      actor ! MyReplicatedBehavior.Get(probe.ref)
+      probe.expectMessage(Set("one", "two", "three"))
+      interceptProbe.receiveMessage() shouldEqual Intercepted(DCB, 2L, "two")
+    }
+
+    "fail entity if replicated event interceptor fails" in {
+      val id = nextEntityId()
+      val probe = createTestProbe[Any]()
+      val actor = spawn(
+        MyReplicatedBehavior(
+          id,
+          DCA,
+          Set(DCA, DCB),
+          modifyBehavior =
+            _.withReplicatedEventInterceptor((_, _, _, _) => Future.failed(throw TestException("immediate fail")))))
+      actor ! MyReplicatedBehavior.Add("one", probe.ref)
+      probe.expectMessage(Done)
+
+      // simulate a published event from another replica
+      actor.asInstanceOf[ActorRef[Any]] ! internal.PublishedEventImpl(
+        ReplicationId(EntityType, id, DCB).persistenceId,
+        1L,
+        "two",
+        System.currentTimeMillis(),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
+        None)
+      probe.expectTerminated(actor)
+    }
+
+    "transform replicated events between two entities" in {
+      val id = nextEntityId()
+      val probe = createTestProbe[Any]()
+      case class Intercepted(origin: ReplicaId, seqNr: Long, event: String)
+      val addTransformation
+          : EventSourcedBehavior[MyReplicatedBehavior.Command, String, Set[String]] => EventSourcedBehavior[
+            MyReplicatedBehavior.Command,
+            String,
+            Set[String]] =
+        _.withReplicatedEventsTransformation { (_, eventWithMeta) =>
+          EventWithMetadata(eventWithMeta.event.toUpperCase, Nil) :: Nil
+        }
+      val actor = spawn(MyReplicatedBehavior(id, DCA, Set(DCA, DCB), modifyBehavior = addTransformation))
+      actor ! MyReplicatedBehavior.Add("one", probe.ref)
+      probe.expectMessage(Done)
+
+      // simulate a published event from another replica
+      actor.asInstanceOf[ActorRef[Any]] ! internal.PublishedEventImpl(
+        ReplicationId(EntityType, id, DCB).persistenceId,
+        1L,
+        "two",
+        System.currentTimeMillis(),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
+        None)
+      actor ! MyReplicatedBehavior.Add("three", probe.ref)
+      probe.expectMessage(Done)
+
+      actor ! MyReplicatedBehavior.Get(probe.ref)
+      probe.expectMessage(Set("one", "TWO", "three"))
+    }
+
+    "transform replicated events and emit additional events" in {
+      val id = nextEntityId()
+      val probe = createTestProbe[Any]()
+      case class Intercepted(origin: ReplicaId, seqNr: Long, event: String)
+      val addTransformation
+          : EventSourcedBehavior[MyReplicatedBehavior.Command, String, Set[String]] => EventSourcedBehavior[
+            MyReplicatedBehavior.Command,
+            String,
+            Set[String]] =
+        _.withReplicatedEventsTransformation { (_, eventWithMeta) =>
+          EventWithMetadata(eventWithMeta.event.toUpperCase + "-1", Nil) ::
+          EventWithMetadata(eventWithMeta.event.toUpperCase + "-2", Nil) ::
+          EventWithMetadata(eventWithMeta.event.toUpperCase + "-3", Nil) ::
+          Nil
+        }
+      val actor = spawn(MyReplicatedBehavior(id, DCA, Set(DCA, DCB), modifyBehavior = addTransformation))
+      actor ! MyReplicatedBehavior.Add("one", probe.ref)
+      probe.expectMessage(Done)
+
+      // simulate a published event from another replica
+      actor.asInstanceOf[ActorRef[Any]] ! internal.PublishedEventImpl(
+        ReplicationId(EntityType, id, DCB).persistenceId,
+        1L,
+        "two",
+        System.currentTimeMillis(),
+        Some(new ReplicatedPublishedEventMetaData(DCB, VersionVector.empty, None)),
+        None)
+      actor ! MyReplicatedBehavior.Add("three", probe.ref)
+      probe.expectMessage(Done)
+
+      actor ! MyReplicatedBehavior.Get(probe.ref)
+      probe.expectMessage(Set("one", "TWO-1", "TWO-2", "TWO-3", "three"))
     }
 
   }

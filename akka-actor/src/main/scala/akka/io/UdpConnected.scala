@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.io
@@ -14,7 +14,6 @@ import akka.actor._
 import akka.io.Inet.SocketOption
 import akka.io.Udp.UdpSettings
 import akka.util.ByteString
-import akka.util.ccompat._
 
 /**
  * UDP Extension for Akka’s IO layer.
@@ -28,7 +27,6 @@ import akka.util.ccompat._
  *
  * The Java API for generating UDP commands is available at [[UdpConnectedMessage]].
  */
-@ccompatUsedUntil213
 object UdpConnected extends ExtensionId[UdpConnectedExt] with ExtensionIdProvider {
 
   override def lookup = UdpConnected
@@ -257,7 +255,7 @@ object UdpConnectedMessage {
   def resumeReading: Command = ResumeReading
 
   implicit private def fromJava[T](coll: JIterable[T]): immutable.Iterable[T] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     coll.asScala.to(immutable.Iterable)
   }
 }

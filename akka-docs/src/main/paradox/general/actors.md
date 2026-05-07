@@ -175,3 +175,9 @@ The mailbox is then replaced within the actor reference with a system mailbox,
 redirecting all new messages to the EventStream as DeadLetters. This
 is done on a best effort basis, though, so do not rely on it in order to
 construct “guaranteed delivery”.
+
+@@@note
+
+🎓 For a deeper understanding of the Actor Model, consider the free online course [**Actor Fundamentals**](https://akkademy.akka.io/learn/courses/21/actor-fundamentals) in Akkademy.
+
+@@@

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2020-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
 package akka.persistence.typed.crdt
@@ -355,7 +355,7 @@ final class ORSet[A] private[akka] (
    * Java API
    */
   def getElements(): java.util.Set[A] = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     elements.asJava
   }
 
@@ -384,7 +384,7 @@ final class ORSet[A] private[akka] (
    * `elems` must not be empty.
    */
   def addAll(elems: java.util.Set[A]): ORSet.DeltaOp = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     addAll(elems.asScala.toSet)
   }
 
@@ -426,7 +426,7 @@ final class ORSet[A] private[akka] (
    * `elems` must not be empty.
    */
   def removeAll(elems: java.util.Set[A]): ORSet.DeltaOp = {
-    import akka.util.ccompat.JavaConverters._
+    import scala.jdk.CollectionConverters._
     removeAll(elems.asScala.toSet)
   }
 
