@@ -2608,8 +2608,12 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         nodes += m.uniqueAddress
         weaklyUpNodes -= m.uniqueAddress
         joiningNodes -= m.uniqueAddress
-        if (settings.preferOldest)
+        if (settings.preferOldest) {
+          // replace, it's possible that the upNumber is changed
+          membersByAge = membersByAge.filterNot(_.uniqueAddress == m.uniqueAddress)
           membersByAge += m
+          log.debug("MemberUp [{}], membersByAge size [{}]", m.uniqueAddress, membersByAge.size)
+        }
       }
     }
 
@@ -2630,8 +2634,11 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       exitingNodes -= m.uniqueAddress
       removedNodes = removedNodes.updated(m.uniqueAddress, allReachableClockTime)
       unreachable -= m.uniqueAddress
-      if (settings.preferOldest)
-        membersByAge -= m
+      if (settings.preferOldest) {
+        // filter, it's possible that the upNumber is changed
+        membersByAge = membersByAge.filterNot(_.uniqueAddress == m.uniqueAddress)
+        log.debug("MemberRemoved [{}], membersByAge size [{}]", m.uniqueAddress, membersByAge.size)
+      }
       deltaPropagationSelector.cleanupRemovedNode(m.uniqueAddress)
     }
   }
