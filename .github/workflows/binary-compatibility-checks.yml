@@ -28,7 +28,7 @@ jobs:
         uses: ./.github/actions/release-prep-only
 
   check-binary-compatibility:
-    name: Check / Binary Compatibility
+    name: Binary Compatibility / Scala ${{ matrix.scalaVersion }}
     needs: changes
     runs-on: Akka-Default
     if: |
@@ -101,3 +101,20 @@ jobs:
           body: |
             Job ${{ github.job }} in workflow ${{ github.workflow }} of ${{github.repository}} failed!
             https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+
+  binary-compatibility-result:
+    name: Check / Binary Compatibility
+    needs: [ changes, check-binary-compatibility ]
+    runs-on: Akka-Default
+    if: always()
+    steps:
+      - name: Verify matrix outcome
+        run: |
+          result="${{ needs.check-binary-compatibility.result }}"
+          prep="${{ needs.changes.outputs.release_prep_only }}"
+          if [[ "$result" == "success" ]] || { [[ "$result" == "skipped" ]] && [[ "$prep" == "true" ]]; }; then
+            echo "OK (matrix=$result, release_prep_only=$prep)"
+          else
+            echo "Failed: matrix=$result, release_prep_only=$prep"
+            exit 1
+          fi
