@@ -257,6 +257,8 @@ jobs:
           -Dakka.remote.artery.transport=aeron-udp \
           -Dakka.test.timefactor=2 \
           -Dakka.actor.testkit.typed.timefactor=2 \
+          -Dakka.coordinated-shutdown.phases.actor-system-terminate.timeout=30s \
+          -Dakka.coordinated-shutdown.phases.before-actor-system-terminate.timeout=20s \
           -Dakka.test.tags.exclude=gh-exclude,gh-exclude-aeron,timing \
           -Dakka.test.multi-in-test=false \
           -Dakka.cluster.assert=on \
