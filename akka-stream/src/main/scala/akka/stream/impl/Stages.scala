@@ -79,6 +79,7 @@ import akka.stream.Attributes._
     val mergePreferred = name("mergePreferred")
     val mergePrioritized = name("mergePrioritized")
     val flattenMerge = name("flattenMerge")
+    val flattenConcat = name("flattenConcat")
     val recoverWith = name("recoverWith")
     val onErrorComplete = name("onErrorComplete")
     val broadcast = name("broadcast")
