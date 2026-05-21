@@ -1030,6 +1030,8 @@ abstract class ShardCoordinator(
         if (ok) {
           log.debug("{}: Shard [{}] deallocation completed successfully.", typeName, shard)
 
+          val wasExplicitlyStopped = waitingForShardsToStop.contains(shard)
+
           // ack to external trigger of rebalance/stop
           waitingForShardsToStop.get(shard) match {
             case Some(waiting) =>
@@ -1045,7 +1047,13 @@ abstract class ShardCoordinator(
               state = state.updated(evt)
               clearRebalanceInProgress(shard)
               allocateShardHomesForRememberEntities()
-              self.tell(GetShardHome(shard), ignoreRef)
+              // Explicit StopShards should not eagerly re-allocate the shard, otherwise
+              // a fresh empty Shard actor would be spawned in some region (e.g. SDP scale-down
+              // would leave orphan old-revision shards behind). Let it stay homeless until
+              // an entity request naturally arrives.
+              if (!wasExplicitlyStopped) {
+                self.tell(GetShardHome(shard), ignoreRef)
+              }
             }
           } else {
             clearRebalanceInProgress(shard)
