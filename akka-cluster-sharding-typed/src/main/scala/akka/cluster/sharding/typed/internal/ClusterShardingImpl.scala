@@ -313,6 +313,12 @@ import akka.util.{ ByteString, Timeout }
     }
   }
 
+  override def preResolveShard[M, E](entity: scaladsl.Entity[M, E], shard: String): Unit =
+    classicSharding.preResolveShard(entity.typeKey.name, shard)
+
+  override def preResolveShard[M, E](entity: javadsl.Entity[M, E], shard: String): Unit =
+    classicSharding.preResolveShard(entity.typeKey.name, shard)
+
   override lazy val shardState: ActorRef[ClusterShardingQuery] = {
     import akka.actor.typed.scaladsl.adapter._
     val behavior = ShardingState.behavior(classicSharding)

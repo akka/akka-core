@@ -650,6 +650,16 @@ class ClusterSharding(system: ExtendedActorSystem) extends Extension {
   }
 
   /**
+   * Direct the [[ShardRegion]] actor responsible for the named entity type to resolve the location
+   * of the given shard and cache it.  If the `ShardRegion` already knows the location, it will not do anything,
+   * otherwise it will request the home of the shard, which may result in the shard being allocated on
+   * some node in the cluster.  No message will be sent to any entity within the shard.
+   */
+  def preResolveShard(typeName: String, shard: ShardRegion.ShardId): Unit = {
+    shardRegion(typeName) ! ShardRegion.ResolveShard(shard)
+  }
+
+  /**
    * Retrieve the actor reference of the [[ShardRegion]] actor that will act as a proxy to the
    * named entity type running in another data center. A proxy within the same data center can be accessed
    * with [[#shardRegion]] instead of this method. The entity type must be registered with the
