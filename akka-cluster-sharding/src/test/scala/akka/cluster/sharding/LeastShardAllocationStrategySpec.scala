@@ -294,6 +294,113 @@ class LeastShardAllocationStrategySpec extends AkkaSpec {
       allocationStrategy.rebalance(allocations, Set("001", "002", "051", "052")).futureValue should ===(
         Set.empty[String])
     }
+    "prefer to rebalance from more unbalanced regions before less unbalanced ones" in {
+      // Scenario: A=0, B=1, C=3, D=4 (8 shards, 4 regions, optimal=2),
+      // absoluteLimit=1 so only 1 shard moves per round. Phase 1 iterates regions
+      // from most-shards-first when building the candidate list, so D (most
+      // unbalanced: 2 over optimal) contributes before C (less unbalanced: 1 over),
+      // and after take(limit) the chosen shard comes from D, not C.
+      val memberD = newUpMember("127.0.0.4")
+      val regionD = newFakeRegion("regionD", memberD)
+
+      val allocationStrategy =
+        new LeastShardAllocationStrategy(absoluteLimit = 1, relativeLimit = 1.0) {
+          override protected def clusterState: ClusterEvent.CurrentClusterState =
+            CurrentClusterState(SortedSet(memberA, memberB, memberC, memberD))
+          override protected def selfMember: Member = memberA
+        }
+
+      val allocations = Map(
+        regionA -> Vector.empty[String],
+        regionB -> shards.slice(0, 1).toVector, // "001"
+        regionC -> shards.slice(1, 4).toVector, // "002","003","004"
+        regionD -> shards.slice(4, 8).toVector) // "005","006","007","008"
+
+      // Round 1: D is the most unbalanced (4 vs optimal 2). The first shard taken is D's "005".
+      val result1 = allocationStrategy.rebalance(allocations, Set.empty).futureValue
+      result1 should ===(Set("005"))
+      val allocations2 = afterRebalance(allocationStrategy, allocations, result1)
+      // After reallocation: A picks up "005" since it has the least shards (0).
+      countShardsPerRegion(allocations2).sorted should ===(Vector(1, 1, 3, 3))
+      allocations2(regionA) should ===(Vector("005"))
+      allocations2(regionD) should ===(Vector("006", "007", "008"))
+
+      // Round 2: C and D are now equally unbalanced (3 each). With most-shards-first
+      // iteration, ties break by upNumber then address descending, so D contributes first.
+      val result2 = allocationStrategy.rebalance(allocations2, Set.empty).futureValue
+      result2 should ===(Set("006"))
+      val allocations3 = afterRebalance(allocationStrategy, allocations2, result2)
+      // A and B both have 1 shard; allocateShard's tiebreaker prefers the lower address, so A.
+      countShardsPerRegion(allocations3).sorted should ===(Vector(1, 2, 2, 3))
+      allocations3(regionA) should ===(Vector("005", "006"))
+      allocations3(regionB) should ===(Vector("001"))
+      allocations3(regionD) should ===(Vector("007", "008"))
+
+      // Round 3: only C is above optimal; one more shard moves and the cluster ends balanced.
+      val result3 = allocationStrategy.rebalance(allocations3, Set.empty).futureValue
+      result3 should ===(Set("002"))
+      val allocations4 = afterRebalance(allocationStrategy, allocations3, result3)
+      countShardsPerRegion(allocations4).sorted should ===(Vector(2, 2, 2, 2))
+      allocations4(regionB) should ===(Vector("001", "002"))
+    }
+
+    "rebalance from the most unbalanced region when multiple regions are over optimal" in {
+      // 5 regions, gradient unbalance: A=0, B=1, C=2, D=5, E=7. Total 15, optimal 3.
+      // D is 2 over, E is 4 over. With limit=1 the chosen shard must come from E.
+      val memberD = newUpMember("127.0.0.4")
+      val memberE = newUpMember("127.0.0.5")
+      val regionD = newFakeRegion("regionD", memberD)
+      val regionE = newFakeRegion("regionE", memberE)
+
+      val allocationStrategy =
+        new LeastShardAllocationStrategy(absoluteLimit = 1, relativeLimit = 1.0) {
+          override protected def clusterState: ClusterEvent.CurrentClusterState =
+            CurrentClusterState(SortedSet(memberA, memberB, memberC, memberD, memberE))
+          override protected def selfMember: Member = memberA
+        }
+
+      val allocations = Map(
+        regionA -> Vector.empty[String],
+        regionB -> shards.slice(0, 1).toVector, // "001"
+        regionC -> shards.slice(1, 3).toVector, // "002","003"
+        regionD -> shards.slice(3, 8).toVector, // "004"-"008"
+        regionE -> shards.slice(8, 15).toVector) // "009"-"015"
+
+      val result = allocationStrategy.rebalance(allocations, Set.empty).futureValue
+      result should ===(Set("009"))
+      val after = afterRebalance(allocationStrategy, allocations, result)
+      countShardsPerRegion(after).sorted should ===(Vector(1, 1, 2, 5, 6))
+      after(regionA) should ===(Vector("009"))
+      after(regionE) should ===(Vector("010", "011", "012", "013", "014", "015"))
+    }
+
+    "take multiple shards from the most unbalanced region under a tight limit, before any from a less unbalanced one" in {
+      // 4 regions: A=0, B=0, C=3, D=5. Total 8, optimal 2. Excess C=1, D=3, total 4.
+      // With limit=3, all three slots come from D; C is left untouched until next round.
+      val memberD = newUpMember("127.0.0.4")
+      val regionD = newFakeRegion("regionD", memberD)
+
+      val allocationStrategy =
+        new LeastShardAllocationStrategy(absoluteLimit = 3, relativeLimit = 1.0) {
+          override protected def clusterState: ClusterEvent.CurrentClusterState =
+            CurrentClusterState(SortedSet(memberA, memberB, memberC, memberD))
+          override protected def selfMember: Member = memberA
+        }
+
+      val allocations = Map(
+        regionA -> Vector.empty[String],
+        regionB -> Vector.empty[String],
+        regionC -> shards.slice(0, 3).toVector, // "001","002","003"
+        regionD -> shards.slice(3, 8).toVector) // "004"-"008"
+
+      val result = allocationStrategy.rebalance(allocations, Set.empty).futureValue
+      result should ===(Set("004", "005", "006"))
+      val after = afterRebalance(allocationStrategy, allocations, result)
+      countShardsPerRegion(after).sorted should ===(Vector(1, 2, 2, 3))
+      after(regionC) should ===(Vector("001", "002", "003"))
+      after(regionD) should ===(Vector("007", "008"))
+    }
+
     "not rebalance when members are joining dc" in {
       val allocationStrategy =
         new LeastShardAllocationStrategy(absoluteLimit = 1000, relativeLimit = 1.0) {
