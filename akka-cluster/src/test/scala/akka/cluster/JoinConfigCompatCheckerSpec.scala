@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 
 import com.typesafe.config.{ Config, ConfigFactory }
 
-import akka.testkit.{ AkkaSpec, LongRunningTest }
+import akka.testkit.{ AkkaSpec, GHExcludeAeronTest, LongRunningTest }
 
 object JoinConfigCompatCheckerSpec {
 
@@ -47,9 +47,13 @@ object JoinConfigCompatCheckerSpec {
 class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
   import JoinConfigCompatCheckerSpec._
 
+  // All tests are long-running and excluded from aeron transport CI runs
+  override def tags: Map[String, Set[String]] =
+    testNames.map(_ -> Set(LongRunningTest.name, GHExcludeAeronTest.name)).toMap
+
   "A Joining Node" must {
 
-    "be allowed to join a cluster when its configuration is compatible" taggedAs LongRunningTest in {
+    "be allowed to join a cluster when its configuration is compatible" in {
 
       val clusterTestUtil = new ClusterTestUtil(system.name)
       // first node
@@ -65,7 +69,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "NOT be allowed to join a cluster when its configuration is incompatible" taggedAs LongRunningTest in {
+    "NOT be allowed to join a cluster when its configuration is incompatible" in {
       // this config is NOT compatible with the cluster config
       val joinNodeConfig =
         ConfigFactory.parseString("""
@@ -102,7 +106,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "NOT be allowed to join a cluster when one of its required properties are not available on cluster side" taggedAs LongRunningTest in {
+    "NOT be allowed to join a cluster when one of its required properties are not available on cluster side" in {
 
       // this config is NOT compatible with the cluster config
       // because there is one missing required configuration property.
@@ -143,7 +147,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "NOT be allowed to join a cluster when one of the cluster required properties are not available on the joining side" taggedAs LongRunningTest in {
+    "NOT be allowed to join a cluster when one of the cluster required properties are not available on the joining side" in {
 
       // this config is NOT compatible with the cluster config
       // because there is one missing required configuration property.
@@ -180,7 +184,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "be allowed to join a cluster when one of its required properties are not available on cluster side but it's configured to NOT enforce it" taggedAs LongRunningTest in {
+    "be allowed to join a cluster when one of its required properties are not available on cluster side but it's configured to NOT enforce it" in {
 
       // this config is NOT compatible with the cluster config
       // because there is one missing required configuration property.
@@ -218,7 +222,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "be allowed to join a cluster when its configuration is incompatible but it's configured to NOT enforce it" taggedAs LongRunningTest in {
+    "be allowed to join a cluster when its configuration is incompatible but it's configured to NOT enforce it" in {
       // this config is NOT compatible with the cluster config,
       // but node will ignore the the config check and join anyway
       val joinNodeConfig =
@@ -253,7 +257,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
     }
 
     /** This test verifies the built-in JoinConfigCompatCheckerAkkaCluster */
-    "NOT be allowed to join a cluster using a different value for akka.cluster.downing-provider-class" taggedAs LongRunningTest in {
+    "NOT be allowed to join a cluster using a different value for akka.cluster.downing-provider-class" in {
 
       val joinNodeConfig =
         ConfigFactory.parseString("""
@@ -292,7 +296,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
   "A First Node" must {
 
-    "be allowed to re-join a cluster when its configuration is compatible" taggedAs LongRunningTest in {
+    "be allowed to re-join a cluster when its configuration is compatible" in {
 
       val clusterTestUtil = new ClusterTestUtil(system.name)
       // first node
@@ -319,7 +323,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "NOT be allowed to re-join a cluster when its configuration is incompatible" taggedAs LongRunningTest in {
+    "NOT be allowed to re-join a cluster when its configuration is incompatible" in {
       // this config is NOT compatible with the cluster config
       val joinNodeConfig =
         ConfigFactory.parseString("""
@@ -362,7 +366,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "NOT be allowed to re-join a cluster when one of its required properties are not available on cluster side" taggedAs LongRunningTest in {
+    "NOT be allowed to re-join a cluster when one of its required properties are not available on cluster side" in {
 
       // this config is NOT compatible with the cluster config
       // because there is one missing required configuration property.
@@ -410,7 +414,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "NOT be allowed to re-join a cluster when one of the cluster required properties are not available on the joining side" taggedAs LongRunningTest in {
+    "NOT be allowed to re-join a cluster when one of the cluster required properties are not available on the joining side" in {
 
       // this config is NOT compatible with the cluster config
       // because there is one missing required configuration property.
@@ -454,7 +458,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "be allowed to re-join a cluster when one of its required properties are not available on cluster side but it's configured to NOT enforce it" taggedAs LongRunningTest in {
+    "be allowed to re-join a cluster when one of its required properties are not available on cluster side but it's configured to NOT enforce it" in {
 
       // this config is NOT compatible with the cluster config
       // because there is one missing required configuration property.
@@ -502,7 +506,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
 
     }
 
-    "be allowed to re-join a cluster when its configuration is incompatible but it's configured to NOT enforce it" taggedAs LongRunningTest in {
+    "be allowed to re-join a cluster when its configuration is incompatible but it's configured to NOT enforce it" in {
       // this config is NOT compatible with the cluster config,
       // but node will ignore the the config check and join anyway
       val joinNodeConfig =
@@ -549,7 +553,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
   }
 
   "A Cluster" must {
-    "NOT exchange sensitive config paths with joining node" taggedAs LongRunningTest in {
+    "NOT exchange sensitive config paths with joining node" in {
 
       // this config has sensitive properties that are not compatible with the cluster
       // the cluster will ignore them, because they are on the sensitive-config-path
@@ -599,7 +603,7 @@ class JoinConfigCompatCheckerSpec extends AkkaSpec with ClusterTestKit {
       }
     }
 
-    "be allowed to disable a check" taggedAs LongRunningTest in {
+    "be allowed to disable a check" in {
 
       // this config has sensitive properties that are not compatible with the cluster
       // the cluster will ignore them, because they are on the sensitive-config-path
