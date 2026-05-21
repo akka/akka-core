@@ -177,6 +177,11 @@ public class ActorCompile {
                 Behaviors.supervise(Behaviors.<MyMsg>ignore())
                     .onFailure(IllegalStateException.class, strategy6))
             .onFailure(RuntimeException.class, strategy1);
+    // or using flattern API:
+      Behavior<MyMsg> flatternBehv =
+          Behaviors.supervise(Behaviors.<MyMsg>ignore())
+              .whenFailure(IllegalStateException.class, strategy6)
+              .whenFailure(RuntimeException.class, strategy1);
   }
 
   // actor context
