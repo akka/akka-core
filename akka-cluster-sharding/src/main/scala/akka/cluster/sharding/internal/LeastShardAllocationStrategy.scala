@@ -56,9 +56,12 @@ import akka.cluster.sharding.internal.ClusterShardAllocationMixin.ShardSuitabili
     def rebalancePhase1(
         numberOfShards: Int,
         optimalPerRegion: Int,
-        sortedEntries: Iterable[RegionEntry]): Set[ShardId] = {
+        sortedEntries: IndexedSeq[RegionEntry]): Set[ShardId] = {
       val selected = Vector.newBuilder[ShardId]
-      sortedEntries.foreach {
+      // Iterate from the most-shards end (most over optimal) first so that when
+      // the rebalance limit is smaller than the total excess, the shards moved
+      // come from the regions furthest from optimal rather than those closest to it.
+      sortedEntries.reverseIterator.foreach {
         case RegionEntry(_, _, shardIds) =>
           if (shardIds.size > optimalPerRegion) {
             selected ++= shardIds.take(shardIds.size - optimalPerRegion)
@@ -71,7 +74,7 @@ import akka.cluster.sharding.internal.ClusterShardAllocationMixin.ShardSuitabili
     def rebalancePhase2(
         numberOfShards: Int,
         optimalPerRegion: Int,
-        sortedEntries: Iterable[RegionEntry]): Future[Set[ShardId]] = {
+        sortedEntries: IndexedSeq[RegionEntry]): Future[Set[ShardId]] = {
       // In the first phase the optimalPerRegion is rounded up, and depending on number of shards per region and number
       // of regions that might not be the exact optimal.
       // In second phase we look for diff of >= 2 below optimalPerRegion and rebalance that number of shards.
