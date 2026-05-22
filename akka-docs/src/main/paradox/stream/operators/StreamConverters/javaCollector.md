@@ -11,4 +11,25 @@ Create a sink which materializes into a @scala[`Future`] @java[`CompletionStage`
 
 ## Description
 
-TODO: We would welcome help on contributing descriptions and examples, see: https://github.com/akka/akka-core/issues/25646
+Creates a @apidoc[Sink] that materializes into a @scala[`Future`]@java[`CompletionStage`] containing the
+result of applying a Java 8 @javadoc[java.util.stream.Collector](java.util.stream.Collector) to the incoming
+stream elements. The ``Collector`` will trigger demand downstream and will accumulate elements into a mutable
+result container, with an optional finisher transformation after all elements have been processed. Reduction
+processing is performed sequentially.
+
+Note that a sink can be materialized multiple times, so the ``collectorFactory`` must create a
+fresh ``Collector`` for each materialization.
+
+See also @ref:[javaCollectorParallelUnordered](javaCollectorParallelUnordered.md) for a parallel version,
+and @ref:[`Sink.collect`](../Sink/collect.md) for a convenience wrapper.
+
+## Example
+
+In this example, we use `StreamConverters.javaCollector` with ``Collectors.toList`` to collect
+a stream of strings into a ``List``.
+
+Scala
+:   @@snip [JavaCollectorDocExample.scala](/akka-docs/src/test/scala/docs/stream/operators/JavaCollectorDocExample.scala) { #javaCollector }
+
+Java
+:   @@snip [JavaCollectorDocExamples.java](/akka-docs/src/test/java/jdocs/stream/operators/JavaCollectorDocExamples.java) { #javaCollector }
