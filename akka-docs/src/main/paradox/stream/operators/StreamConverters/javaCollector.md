@@ -17,7 +17,7 @@ stream elements. The ``Collector`` will trigger demand downstream and will accum
 result container, with an optional finisher transformation after all elements have been processed. Reduction
 processing is performed sequentially.
 
-Note that a sink can be materialized multiple times, so the ``collectorFactory`` must be able to create a
+Note that a sink can be materialized multiple times, so the ``collectorFactory`` must create a
 fresh ``Collector`` for each materialization.
 
 See also @ref:[javaCollectorParallelUnordered](javaCollectorParallelUnordered.md) for a parallel version,
