@@ -7,6 +7,7 @@ package akka.stream.io
 import java.security.{ KeyStore, SecureRandom }
 import javax.net.ssl._
 
+import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -15,6 +16,9 @@ import akka.NotUsed
 import akka.stream._
 import akka.stream.TLSProtocol._
 import akka.stream.scaladsl._
+import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
+import akka.stream.testkit.TestSubscriber
+import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.WithLogCapturing
 import akka.testkit.AkkaSpec
 import akka.util.{ ByteString, JavaVersion }
@@ -42,6 +46,39 @@ object TlsStageEdgeCasesSpec {
       akka.loglevel = DEBUG
       akka.loggers = ["akka.testkit.SilenceAllTestEventListener"]
     """
+
+  /**
+   * Identity flow that, when its downstream cancels, does NOT propagate the
+   * cancellation upstream; instead it keeps pulling and discarding. Used to
+   * keep the client's `cipherOut` open after the peer goes away, so the client
+   * is left in a genuine half-closed state (transport read side EOF, write side
+   * still open) instead of being torn down by a cancellation cascade.
+   */
+  final class SwallowDownstreamCancel extends GraphStage[FlowShape[ByteString, ByteString]] {
+    val in: Inlet[ByteString] = Inlet("SwallowDownstreamCancel.in")
+    val out: Outlet[ByteString] = Outlet("SwallowDownstreamCancel.out")
+    override val shape: FlowShape[ByteString, ByteString] = FlowShape(in, out)
+
+    override def createLogic(attr: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+      setHandler(in, new InHandler {
+        override def onPush(): Unit = push(out, grab(in))
+        override def onUpstreamFinish(): Unit = complete(out)
+        override def onUpstreamFailure(ex: Throwable): Unit = fail(out, ex)
+      })
+      setHandler(out, new OutHandler {
+        override def onPull(): Unit = pull(in)
+        override def onDownstreamFinish(cause: Throwable): Unit = {
+          // Swallow: keep the upstream alive by draining it into the void.
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = { grab(in); pull(in) }
+            override def onUpstreamFinish(): Unit = completeStage()
+            override def onUpstreamFailure(ex: Throwable): Unit = failStage(ex)
+          })
+          if (!hasBeenPulled(in)) pull(in)
+        }
+      })
+    }
+  }
 }
 
 /**
@@ -90,6 +127,15 @@ class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrid
       .filter(_.size >= expectedSize)
       .runWith(Sink.headOption)
     Await.result(f, 30.seconds).getOrElse(ByteString.empty)
+  }
+
+  @tailrec
+  private def drainUntilTerminated(sub: TestSubscriber.Probe[SslTlsInbound]): Unit = {
+    sub.request(1)
+    sub.expectNextOrComplete() match {
+      case Left(_)  => () // OnComplete — stage tore down as expected
+      case Right(_) => drainUntilTerminated(sub) // trailing SessionTruncated/SessionBytes
+    }
   }
 
   "TLS stage edge cases" should {
@@ -176,6 +222,48 @@ class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrid
         val res = runEcho(inputs, "hello".length).utf8String
         res should ===("hello")
       }
+    }
+
+    "tear down when the transport is truncated while plainIn stays open" in {
+      // Regression for #32931: cipherIn reaches EOF without a TLS close_notify
+      // (truncation / half-closed TCP) while plainIn stays open and the engine
+      // is idle. The stage must still tear plainOut down rather than hang.
+      val ks = KillSwitches.shared("trunc-ks")
+
+      // Outbound (client -> server) keeps the client's cipherOut alive even
+      // when the server tears down; inbound (server -> client) carries the
+      // kill switch that we trip to simulate an unclean transport EOF.
+      val terminator =
+        BidiFlow.fromFlows(Flow[ByteString].via(new SwallowDownstreamCancel), ks.flow[ByteString])
+
+      val echo = Flow[SslTlsInbound].collect { case SessionBytes(_, b) => SendBytes(b) }
+
+      val tlsFlow =
+        clientTls(IgnoreComplete).atop(terminator).atop(serverTls(IgnoreComplete).reversed).join(echo)
+
+      // plainIn emits one element and then stays open forever (Source.never).
+      val sub =
+        Source
+          .single[SslTlsOutbound](SendBytes(ByteString("hello")))
+          .concat(Source.never[SslTlsOutbound])
+          .via(tlsFlow)
+          .runWith(TestSink[SslTlsInbound]())
+
+      // Drive handshake + round-trip: wait until the echoed "hello" comes back.
+      sub.request(10)
+      var echoed = ByteString.empty
+      while (echoed.utf8String != "hello") {
+        sub.expectNext() match {
+          case SessionBytes(_, b) => echoed ++= b
+          case other              => fail(s"unexpected inbound element before truncation: $other")
+        }
+      }
+
+      // Truncate the transport read side without a close_notify, keeping
+      // plainIn open. The stage must still tear plainOut down.
+      ks.shutdown()
+
+      drainUntilTerminated(sub)
     }
   }
 }

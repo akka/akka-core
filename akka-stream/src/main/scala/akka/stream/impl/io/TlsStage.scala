@@ -281,12 +281,14 @@ private[stream] final class TlsStageLogic(
   private def canUnwrap: Boolean = pendingUserOut == null
   private def outboundReady: Boolean =
     (userHasData || engineNeedsWrap) && isAvailable(cipherOut)
+  // transportInAtEnd (cipherIn EOF without close_notify) must also make inbound
+  // ready so the pump enters doInbound and reacts to the truncation.
   private def inboundReady: Boolean =
-    (transportHasData && canUnwrap) || userOutCancelled
+    ((transportHasData || transportInAtEnd) && canUnwrap) || userOutCancelled
   private def outboundHalfClosedReady: Boolean =
     engineNeedsWrap && isAvailable(cipherOut)
   private def inboundHalfClosedReady: Boolean =
-    transportHasData && engineInboundOpen && canUnwrap
+    (transportHasData || transportInAtEnd) && engineInboundOpen && canUnwrap
 
   // ----- Pump loop -----
 
