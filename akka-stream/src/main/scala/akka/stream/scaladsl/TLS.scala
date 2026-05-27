@@ -11,7 +11,6 @@ import akka.stream.impl.io.TlsModule
 import akka.stream.impl.io.TlsStage
 import akka.util.ByteString
 
-import com.typesafe.config.ConfigFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSession
@@ -55,9 +54,6 @@ import scala.util.Try
  */
 object TLS {
 
-  private lazy val useGraphStageImpl: Boolean =
-    ConfigFactory.load().getBoolean("akka.stream.materializer.io.tls.use-graph-stage-implementation")
-
   /**
    * Create a StreamTls [[akka.stream.scaladsl.BidiFlow]].
    *
@@ -73,10 +69,11 @@ object TLS {
       createSSLEngine: () => SSLEngine, // we don't offer the internal `ActorSystem => SSLEngine` API here, see #21753
       verifySession: SSLSession => Try[Unit], // we don't offer the internal API that provides `ActorSystem` here, see #21753
       closing: TLSClosing): scaladsl.BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
-    if (useGraphStageImpl) graphStageApply(createSSLEngine, verifySession, closing)
-    else scaladsl.BidiFlow.fromGraph(TlsModule(Attributes.none, createSSLEngine, verifySession, closing))
+    // Always a TlsModule blueprint; the materializer chooses the actor- or
+    // graph-stage-based implementation per its config when assembling the island.
+    scaladsl.BidiFlow.fromGraph(TlsModule(Attributes.none, createSSLEngine, verifySession, closing))
 
-  /** INTERNAL API: graph-stage variant, always used when the config toggle is on, exposed for testing. */
+  /** INTERNAL API: graph-stage variant, used directly by tests to force the graph-stage implementation. */
   @akka.annotation.InternalApi
   private[akka] def graphStageApply(
       createSSLEngine: () => SSLEngine,

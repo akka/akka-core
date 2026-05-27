@@ -39,6 +39,7 @@ import akka.stream.impl.fusing.ActorGraphInterpreter.BatchingActorInputBoundary
 import akka.stream.impl.fusing.GraphInterpreter.Connection
 import akka.stream.impl.io.TLSActor
 import akka.stream.impl.io.TlsModule
+import akka.stream.impl.io.TlsStage
 import akka.stream.stage.GraphStageLogic
 import akka.stream.stage.InHandler
 import akka.stream.stage.OutHandler
@@ -93,7 +94,10 @@ import akka.util.OptionVal
           effectiveAttributes: Attributes,
           materializer: PhasedFusingActorMaterializer,
           islandName: String): PhaseIsland[Any] =
-        new TlsModulePhase(materializer, islandName).asInstanceOf[PhaseIsland[Any]]
+        if (materializer.tlsUseGraphStageImplementation)
+          new TlsGraphStageIsland(effectiveAttributes, materializer, islandName).asInstanceOf[PhaseIsland[Any]]
+        else
+          new TlsModulePhase(materializer, islandName).asInstanceOf[PhaseIsland[Any]]
     },
     GraphStageTag -> DefaultPhase)
 
@@ -406,6 +410,9 @@ private final case class SavedIslandData(
   private val fuzzingWarningDisabled =
     system.settings.config.hasPath("akka.stream.secret-test-fuzzing-warning-disable")
 
+  private val tlsUseGraphStageImplementation: Boolean =
+    system.settings.config.getBoolean("akka.stream.materializer.io.tls.use-graph-stage-implementation")
+
   override def shutdown(): Unit =
     if (haveShutDown.compareAndSet(false, true)) supervisor ! PoisonPill
 
@@ -685,7 +692,7 @@ private final case class SavedIslandData(
 /**
  * INTERNAL API
  */
-@InternalApi private[akka] final class GraphStageIsland(
+@InternalApi private[akka] class GraphStageIsland(
     effectiveAttributes: Attributes,
     materializer: PhasedFusingActorMaterializer,
     islandName: String,
@@ -998,4 +1005,30 @@ private final case class SavedIslandData(
     publisher.subscribe(FanIn.SubInput[Any](tlsActor, 1 - slot))
 
   def onIslandReady(): Unit = ()
+}
+
+/**
+ * INTERNAL API
+ *
+ * Materializes the [[TlsModule]] atomic as a [[TlsStage]], reusing the regular
+ * [[GraphStageIsland]] machinery.
+ */
+@InternalApi private[akka] final class TlsGraphStageIsland(
+    effectiveAttributes: Attributes,
+    materializer: PhasedFusingActorMaterializer,
+    islandName: String)
+    extends GraphStageIsland(effectiveAttributes, materializer, islandName, subflowFuser = OptionVal.None) {
+
+  override def materializeAtomic(mod: AtomicModule[Shape, Any], attributes: Attributes): (GraphStageLogic, Any) =
+    mod match {
+      case tls: TlsModule =>
+        val stage = new TlsStage(tls.createSSLEngine, tls.verifySession, tls.closing)
+        // The stage's fresh ports never went through traversal id assignment;
+        // copy the ids from the TlsModule ports (identical BidiShape layout) so
+        // the logic's handler array lines up with the slots assignPort uses.
+        tls.shape.inlets.zip(stage.shape.inlets).foreach { case (from, to)   => to.id = from.id }
+        tls.shape.outlets.zip(stage.shape.outlets).foreach { case (from, to) => to.id = from.id }
+        super.materializeAtomic(GraphStageModule(stage.shape, attributes, stage), attributes)
+      case _ => super.materializeAtomic(mod, attributes)
+    }
 }
