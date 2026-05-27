@@ -354,7 +354,7 @@ private[stream] final class TlsStageLogic(
             }
 
           case InboundClosed =>
-            if (outboundReady || inboundHalfClosedReady || userInAtEnd) {
+            if (outboundReady || inboundHalfClosedReady || userInAtEnd || transportInAtEnd) {
               val continue = doInbound(isOutboundClosed = false, inboundHalfClosed = true)
               if (continue && (phase eq InboundClosed))
                 doOutbound(isInboundClosed = true)
