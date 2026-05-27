@@ -311,5 +311,34 @@ class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrid
 
       Await.result(terminated, 10.seconds) should ===(Done)
     }
+
+    "deliver decrypted bytes buffered without demand before completing on close_notify" in {
+      // The peer sends application bytes immediately followed by a close_notify
+      // (one batched cipher chunk) while plainOut has no demand. The bytes are
+      // buffered as pendingUserOut and the close moves the stage to completion;
+      // they must still be delivered before onComplete, not dropped.
+      val server =
+        Flow.fromSinkAndSource(Sink.ignore, Source.single[SslTlsOutbound](SendBytes(ByteString("final"))))
+
+      val tlsFlow = clientTls(EagerClose).atop(serverTls(EagerClose).reversed).join(server)
+
+      val sub =
+        Source
+          .never[SslTlsOutbound] // keep the client's plainIn open
+          .via(tlsFlow)
+          .runWith(TestSink[SslTlsInbound]())
+
+      sub.ensureSubscription()
+      // Let handshake + "final" + close_notify be processed while plainOut has no demand.
+      sub.expectNoMessage(500.millis)
+
+      sub.request(1)
+      sub.expectNext() match {
+        case SessionBytes(_, b) => b.utf8String should ===("final")
+        case other              => fail(s"expected buffered SessionBytes(final), got $other")
+      }
+      sub.request(1)
+      sub.expectComplete()
+    }
   }
 }

@@ -376,12 +376,18 @@ private[stream] final class TlsStageLogic(
       emitPendingTransportOut()
 
       if (phase eq CompletedPhase) {
+        // Drain buffered plaintext / SessionTruncated to plainOut before completing.
+        if (pendingUserOut != null && isAvailable(plainOut)) {
+          push(plainOut, pendingUserOut)
+          pendingUserOut = null
+        }
         if (pendingTruncated && isAvailable(plainOut)) {
           push(plainOut, SessionTruncated)
           pendingTruncated = false
         }
-        // SessionTruncated can only be delivered while plainOut is open, otherwise complete regardless
-        if (!pendingTruncated || userOutCancelled) completeStage()
+        // Defer completion until buffered elements are delivered; if plainOut is
+        // cancelled nothing is buffered, so complete regardless.
+        if ((pendingUserOut == null && !pendingTruncated) || userOutCancelled) completeStage()
       } else {
         if (!hasBeenPulled(plainIn) && !isClosed(plainIn) &&
             userInChoppingBlock.size < MaxUserInBufferedBytes) pull(plainIn)
