@@ -606,6 +606,8 @@ private[stream] final class TlsStageLogic(
               transportInBuffer.position() == oldInPosition =>
             throw new IllegalStateException("SSLEngine trying to loop NEED_UNWRAP without producing output")
           case _ =>
+            // Propagate ignoreOutput (TLSActor reset it to false here): during AwaitingClose
+            // trailing records' plaintext must also be discarded, not leaked to the user.
             if (transportInBuffer.hasRemaining) doUnwrap(ignoreOutput)
             else flushToUser()
         }
