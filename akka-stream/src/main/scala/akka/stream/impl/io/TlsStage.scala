@@ -19,7 +19,7 @@ import akka.annotation.InternalApi
 import akka.stream._
 import akka.stream.TLSProtocol._
 import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler, TimerGraphStageLogic }
-import akka.util.ByteString
+import akka.util.{ ByteString, ByteStringBuilder }
 
 /**
  * INTERNAL API.
@@ -112,8 +112,8 @@ private[stream] final class TlsStageLogic(
   // Pull eagerly up to this many bytes of plaintext to enable batching multiple
   // wrap() calls per pump cycle, but avoid excessive buffering for large payloads.
   private val MaxUserInBufferedBytes = 64 * 1024
-  // Flush accumulated ciphertext once it exceeds this size rather than
-  // concatenating more ByteStrings — avoids overhead for large TLS records.
+  // Flush accumulated ciphertext once it exceeds this size to bound buffered
+  // memory and the size of a single downstream push.
   private val MaxPendingTransportOutBytes = 32 * 1024
 
   // Netty's default sizes: 16665 + 1024 (compressed data) + 1024 (OpenJDK compat).
@@ -140,7 +140,12 @@ private[stream] final class TlsStageLogic(
   private var corkUser: Boolean = true
   private var unwrapPutBackCounter: Int = 0
 
+  // Accumulated ciphertext awaiting a single push to cipherOut. A lone wrap()
+  // output is held directly as a ByteString (no extra allocation); only when a
+  // second chunk is appended in the same pump do we switch to a builder, which
+  // then avoids the per-record ByteStrings/Vector churn.
   private var pendingTransportOut: ByteString = ByteString.empty
+  private var pendingTransportOutBuilder: ByteStringBuilder = null
 
   private var phase: Phase = Bidirectional
   private var pumping: Boolean = false
@@ -305,7 +310,7 @@ private[stream] final class TlsStageLogic(
         val transChopBefore = transportInChoppingBlock.size
         val userChopBefore = userInChoppingBlock.size
         val transBufPosBefore = transportInBuffer.position()
-        val pendingTransOutBefore = pendingTransportOut.size
+        val pendingTransOutBefore = pendingTransportOutLength
 
         // Drain pending plaintext / SessionTruncated to plainOut first.
         if (pendingUserOut != null && isAvailable(plainOut)) {
@@ -370,7 +375,7 @@ private[stream] final class TlsStageLogic(
           (transportInChoppingBlock.size != transChopBefore) ||
           (userInChoppingBlock.size != userChopBefore) ||
           (transportInBuffer.position() != transBufPosBefore) ||
-          (pendingTransportOut.size != pendingTransOutBefore)
+          (pendingTransportOutLength != pendingTransOutBefore)
       }
 
       emitPendingTransportOut()
@@ -523,21 +528,37 @@ private[stream] final class TlsStageLogic(
 
   private def flushToTransport(): Unit = {
     transportOutBuffer.flip()
-    if (transportOutBuffer.hasRemaining)
-      pendingTransportOut = pendingTransportOut ++ ByteString(transportOutBuffer)
+    if (transportOutBuffer.hasRemaining) {
+      val chunk = ByteString(transportOutBuffer)
+      if (pendingTransportOutBuilder != null) pendingTransportOutBuilder ++= chunk
+      else if (pendingTransportOut.isEmpty) pendingTransportOut = chunk
+      else {
+        // Second chunk this pump: switch to a builder to batch without churn.
+        pendingTransportOutBuilder = ByteString.newBuilder
+        pendingTransportOutBuilder ++= pendingTransportOut
+        pendingTransportOutBuilder ++= chunk
+        pendingTransportOut = ByteString.empty
+      }
+    }
     transportOutBuffer.clear()
-    // For large payloads, flush immediately rather than accumulating —
-    // ByteString concatenation overhead outweighs the batching benefit.
-    if (pendingTransportOut.size >= MaxPendingTransportOutBytes)
+    // Bound the buffered ciphertext / push size for large payloads.
+    if (pendingTransportOutLength >= MaxPendingTransportOutBytes)
       emitPendingTransportOut()
   }
 
-  private def emitPendingTransportOut(): Unit = {
-    if (pendingTransportOut.nonEmpty && isAvailable(cipherOut)) {
-      push(cipherOut, pendingTransportOut)
-      pendingTransportOut = ByteString.empty
+  private def pendingTransportOutLength: Int =
+    if (pendingTransportOutBuilder != null) pendingTransportOutBuilder.length else pendingTransportOut.size
+
+  private def emitPendingTransportOut(): Unit =
+    if (isAvailable(cipherOut)) {
+      if (pendingTransportOutBuilder != null) {
+        push(cipherOut, pendingTransportOutBuilder.result())
+        pendingTransportOutBuilder = null
+      } else if (pendingTransportOut.nonEmpty) {
+        push(cipherOut, pendingTransportOut)
+        pendingTransportOut = ByteString.empty
+      }
     }
-  }
 
   private def flushToUser(): Unit = {
     if (unwrapPutBackCounter > 0) unwrapPutBackCounter = 0
