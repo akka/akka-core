@@ -380,7 +380,8 @@ private[stream] final class TlsStageLogic(
           push(plainOut, SessionTruncated)
           pendingTruncated = false
         }
-        if (!pendingTruncated) completeStage()
+        // SessionTruncated can only be delivered while plainOut is open, otherwise complete regardless
+        if (!pendingTruncated || userOutCancelled) completeStage()
       } else {
         if (!hasBeenPulled(plainIn) && !isClosed(plainIn) &&
             userInChoppingBlock.size < MaxUserInBufferedBytes) pull(plainIn)

@@ -12,6 +12,7 @@ import scala.collection.immutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+import akka.Done
 import akka.NotUsed
 import akka.stream._
 import akka.stream.TLSProtocol._
@@ -264,6 +265,51 @@ class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrid
       ks.shutdown()
 
       drainUntilTerminated(sub)
+    }
+
+    "complete on transport truncation after plainOut was cancelled (ignoreCancel)" in {
+      // plainOut is cancelled first (with ignoreCancel the stage half-closes
+      // into InboundClosed and stays alive), then the transport is truncated
+      // without a close_notify. SessionTruncated can never be delivered to the
+      // cancelled plainOut, so the stage must still complete rather than hang
+      // waiting to flush it.
+      val ks = KillSwitches.shared("trunc-cancel-ks")
+
+      val terminator =
+        BidiFlow.fromFlows(Flow[ByteString].via(new SwallowDownstreamCancel), ks.flow[ByteString])
+
+      val echo = Flow[SslTlsInbound].collect { case SessionBytes(_, b) => SendBytes(b) }
+
+      val tlsFlow =
+        clientTls(IgnoreBoth).atop(terminator).atop(serverTls(IgnoreBoth).reversed).join(echo)
+
+      // watchTermination on plainIn observes the stage tearing down (it cancels
+      // plainIn when it completes); the probe is the plainOut we will cancel.
+      val (terminated, sub) =
+        Source
+          .single[SslTlsOutbound](SendBytes(ByteString("hello")))
+          .concat(Source.never[SslTlsOutbound])
+          .watchTermination()(Keep.right)
+          .via(tlsFlow)
+          .toMat(TestSink[SslTlsInbound]())(Keep.both)
+          .run()
+
+      // Drive handshake + round-trip: wait until the echoed "hello" comes back.
+      sub.request(10)
+      var echoed = ByteString.empty
+      while (echoed.utf8String != "hello") {
+        sub.expectNext() match {
+          case SessionBytes(_, b) => echoed ++= b
+          case other              => fail(s"unexpected inbound element before truncation: $other")
+        }
+      }
+
+      // Cancel plainOut -> InboundClosed (ignoreCancel keeps the stage alive),
+      // then truncate the transport read side.
+      sub.cancel()
+      ks.shutdown()
+
+      Await.result(terminated, 10.seconds) should ===(Done)
     }
   }
 }
