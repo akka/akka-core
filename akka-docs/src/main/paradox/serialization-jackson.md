@@ -405,6 +405,28 @@ The following Jackson modules are enabled by default:
 
 You can amend the configuration `akka.serialization.jackson.jackson-modules` to enable other modules.
 
+Add modules at the base `akka.serialization.jackson.jackson-modules` level, where `+=` appends to the
+default modules listed above:
+
+```
+akka.serialization.jackson.jackson-modules += "com.example.SomeJacksonModule"
+```
+
+Using `+=` in a @ref:[per binding](#configuration-per-binding) section, such as
+`akka.serialization.jackson.jackson-cbor.jackson-modules`, does **not** add to the defaults. The
+per binding configuration replaces the list of modules entirely, so the default modules (including the
+Akka and Scala modules that are required for correct serialization) would be lost. This is because the
+per binding configuration falls back to the base configuration, and a configured list value replaces
+the corresponding list in the fallback rather than being concatenated with it.
+
+If you need different modules for a specific binding, reference the base list explicitly and then add
+to it:
+
+```
+akka.serialization.jackson.jackson-cbor.jackson-modules = ${akka.serialization.jackson.jackson-modules}
+akka.serialization.jackson.jackson-cbor.jackson-modules += "com.example.SomeJacksonModule"
+```
+
 The [ParameterNamesModule](https://github.com/FasterXML/jackson-modules-java8/tree/master/parameter-names) requires that the `-parameters`
 Java compiler option is enabled.
 
