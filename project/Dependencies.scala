@@ -21,7 +21,7 @@ object Dependencies {
   // https://github.com/real-logic/aeron/blob/1.x.y/build.gradle
   // Note: 1.23+ is JDK 17 only so we cannot bump until we stop supporting JDK 11
   val agronaVersion = "1.22.0"
-  val nettyVersion = "4.2.0.Final"
+  val nettyVersion = "4.2.15.Final"
   val protobufJavaVersion = "3.25.5" // also sync with protocVersion in Protobuf.scala
   val logbackVersion = "1.5.18"
   val jacksonCoreVersion = "2.18.6" // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
