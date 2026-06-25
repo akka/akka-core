@@ -15,6 +15,8 @@ import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.Behavior
+import akka.actor.typed.PostStop
+import akka.actor.typed.PreRestart
 import akka.actor.typed.Signal
 import akka.annotation.InternalApi
 import akka.annotation.InternalStableApi
@@ -127,6 +129,17 @@ private[akka] final class ReplayingEvents[C, E, S](
     case PoisonPill =>
       state = state.copy(receivedPoisonPill = true)
       this
+    // PostStop and PreRestart return the recovery permit promptly (it is otherwise only returned via
+    // onRecoveryFailure/onRecoveryCompleted, or reclaimed by the RecoveryPermitter via death watch, which a
+    // restart doesn't trigger). They are still delivered to the user signal handler. Same as in ReplayingSnapshot.
+    case PostStop =>
+      tryReturnRecoveryPermit("PostStop")
+      setup.onSignal(state.state, PostStop, catchAndLog = true)
+      Behaviors.stopped
+    case PreRestart =>
+      tryReturnRecoveryPermit("PreRestart")
+      setup.onSignal(state.state, PreRestart, catchAndLog = true)
+      Behaviors.stopped
     case signal =>
       if (setup.onSignal(state.state, signal, catchAndLog = true)) this
       else Behaviors.unhandled

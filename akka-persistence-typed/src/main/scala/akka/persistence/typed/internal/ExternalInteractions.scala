@@ -7,12 +7,7 @@ package akka.persistence.typed.internal
 import scala.collection.immutable
 
 import akka.actor.ActorRef
-import akka.actor.typed.Behavior
-import akka.actor.typed.PostStop
-import akka.actor.typed.PreRestart
-import akka.actor.typed.Signal
 import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.scaladsl.Behaviors
 import akka.annotation.InternalApi
 import akka.annotation.InternalStableApi
 import akka.persistence._
@@ -135,17 +130,6 @@ private[akka] trait JournalInteractions[C, E, S] {
 
   protected def requestRecoveryPermit(): Unit = {
     setup.persistence.recoveryPermitter.tell(RecoveryPermitter.RequestRecoveryPermit, setup.selfClassic)
-  }
-
-  /** Intended to be used in .onSignal(returnPermitOnStop) by behaviors */
-  protected def returnPermitOnStop
-      : PartialFunction[(ActorContext[InternalProtocol], Signal), Behavior[InternalProtocol]] = {
-    case (_, PostStop) =>
-      tryReturnRecoveryPermit("PostStop")
-      Behaviors.stopped
-    case (_, PreRestart) =>
-      tryReturnRecoveryPermit("PreRestart")
-      Behaviors.stopped
   }
 
   /** Mutates setup, by setting the `holdingRecoveryPermit` to false */
