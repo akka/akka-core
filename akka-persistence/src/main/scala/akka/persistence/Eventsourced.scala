@@ -743,7 +743,7 @@ private[persistence] trait Eventsourced
           if (isSnapshotOptional) {
             log.info(
               "Snapshot load error for persistenceId [{}]. Replaying all events since snapshot-is-optional=true. " +
-                "Caused by: {}",
+              "Caused by: {}",
               persistenceId,
               cause.toString)
             loadSnapshotResult(snapshot = None, recovery.toSequenceNr)
