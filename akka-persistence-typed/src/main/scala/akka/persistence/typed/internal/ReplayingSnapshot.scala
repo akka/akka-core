@@ -215,8 +215,10 @@ private[akka] class ReplayingSnapshot[C, E, S](override val setup: BehaviorSetup
     def handleSnapshotFailure(cause: Throwable, toSnr: Long): Behavior[InternalProtocol] =
       if (setup.isSnapshotOptional) {
         setup.internalLogger.info(
-          "Snapshot load error for persistenceId [{}]. Replaying all events since snapshot-is-optional=true",
-          setup.persistenceId)
+          "Snapshot load error for persistenceId [{}]. Replaying all events since snapshot-is-optional=true. " +
+            "Caused by: {}",
+          setup.persistenceId,
+          cause.toString)
 
         loadSnapshotResult(snapshot = None, toSnr)
       } else {

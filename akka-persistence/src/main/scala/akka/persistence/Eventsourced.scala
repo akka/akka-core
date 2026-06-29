@@ -742,8 +742,10 @@ private[persistence] trait Eventsourced
         case LoadSnapshotFailed(cause) =>
           if (isSnapshotOptional) {
             log.info(
-              "Snapshot load error for persistenceId [{}]. Replaying all events since snapshot-is-optional=true",
-              persistenceId)
+              "Snapshot load error for persistenceId [{}]. Replaying all events since snapshot-is-optional=true. " +
+                "Caused by: {}",
+              persistenceId,
+              cause.toString)
             loadSnapshotResult(snapshot = None, recovery.toSequenceNr)
           } else {
             timeoutCancellable.cancel()
