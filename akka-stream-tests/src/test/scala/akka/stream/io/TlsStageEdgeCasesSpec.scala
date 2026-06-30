@@ -340,5 +340,16 @@ class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrid
       sub.request(1)
       sub.expectComplete()
     }
+
+    "fail the stream when verifySession rejects the session after the handshake" in {
+      val verifyEx = new SecurityException("session rejected by policy")
+      val rejectingClientTls =
+        TLS.graphStageApply(() => mkEngine(Client), _ => scala.util.Failure(verifyEx), EagerClose)
+      val echo = Flow[SslTlsInbound].collect { case SessionBytes(_, b) => SendBytes(b) }
+      val tlsFlow = rejectingClientTls.atop(serverTls(EagerClose).reversed).join(echo)
+      val f = Source.single[SslTlsOutbound](SendBytes(ByteString("hello"))).via(tlsFlow).runWith(Sink.ignore)
+      val thrown = intercept[SecurityException](Await.result(f, 10.seconds))
+      thrown.getMessage should include("session rejected by policy")
+    }
   }
 }
