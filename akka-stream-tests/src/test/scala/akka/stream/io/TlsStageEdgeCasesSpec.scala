@@ -1,0 +1,390 @@
+/*
+ * Copyright (C) 2025-2025 Lightbend Inc. <https://www.lightbend.com>
+ */
+
+package akka.stream.io
+
+import java.security.{ KeyStore, SecureRandom }
+import javax.net.ssl._
+
+import scala.annotation.tailrec
+import scala.collection.immutable
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+import akka.Done
+import akka.NotUsed
+import akka.stream._
+import akka.stream.TLSProtocol._
+import akka.stream.scaladsl._
+import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
+import akka.stream.testkit.TestSubscriber
+import akka.stream.testkit.scaladsl.TestSink
+import akka.testkit.WithLogCapturing
+import akka.testkit.AkkaSpec
+import akka.util.{ ByteString, JavaVersion }
+
+object TlsStageEdgeCasesSpec {
+  val TLS12Ciphers: Set[String] = Set("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")
+
+  def initContext(): SSLContext = {
+    val password = "changeme"
+    val keyStore = KeyStore.getInstance(KeyStore.getDefaultType)
+    keyStore.load(getClass.getResourceAsStream("/keystore"), password.toCharArray)
+    val trustStore = KeyStore.getInstance(KeyStore.getDefaultType)
+    trustStore.load(getClass.getResourceAsStream("/truststore"), password.toCharArray)
+    val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
+    kmf.init(keyStore, password.toCharArray)
+    val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm)
+    tmf.init(trustStore)
+    val ctx = SSLContext.getInstance("TLSv1.2")
+    ctx.init(kmf.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
+    ctx
+  }
+
+  val configOverrides: String =
+    """
+      akka.loglevel = DEBUG
+      akka.loggers = ["akka.testkit.SilenceAllTestEventListener"]
+    """
+
+  /**
+   * Identity flow that, when its downstream cancels, does NOT propagate the
+   * cancellation upstream; instead it keeps pulling and discarding. Used to
+   * keep the client's `cipherOut` open after the peer goes away, so the client
+   * is left in a genuine half-closed state (transport read side EOF, write side
+   * still open) instead of being torn down by a cancellation cascade.
+   */
+  final class SwallowDownstreamCancel extends GraphStage[FlowShape[ByteString, ByteString]] {
+    val in: Inlet[ByteString] = Inlet("SwallowDownstreamCancel.in")
+    val out: Outlet[ByteString] = Outlet("SwallowDownstreamCancel.out")
+    override val shape: FlowShape[ByteString, ByteString] = FlowShape(in, out)
+
+    override def createLogic(attr: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+      setHandler(in, new InHandler {
+        override def onPush(): Unit = push(out, grab(in))
+        override def onUpstreamFinish(): Unit = complete(out)
+        override def onUpstreamFailure(ex: Throwable): Unit = fail(out, ex)
+      })
+      setHandler(out, new OutHandler {
+        override def onPull(): Unit = pull(in)
+        override def onDownstreamFinish(cause: Throwable): Unit = {
+          // Swallow: keep the upstream alive by draining it into the void.
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = { grab(in); pull(in) }
+            override def onUpstreamFinish(): Unit = completeStage()
+            override def onUpstreamFailure(ex: Throwable): Unit = failStage(ex)
+          })
+          if (!hasBeenPulled(in)) pull(in)
+        }
+      })
+    }
+  }
+}
+
+/**
+ * Edge case tests for the TLS bidi stage. These exercise specific behaviors
+ * that proved tricky to port from the legacy `TLSActor` implementation to a
+ * pure `GraphStage` (see `TlsStage`). They are intended to pass against both
+ * the legacy and new implementations to give confidence in the migration.
+ */
+class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrides) with WithLogCapturing {
+  import TlsStageEdgeCasesSpec._
+
+  private val ctx = initContext()
+
+  private def mkEngine(role: TLSRole): SSLEngine = {
+    val engine = ctx.createSSLEngine()
+    engine.setUseClientMode(role == Client)
+    engine.setEnabledCipherSuites(TLS12Ciphers.toArray)
+    engine.setEnabledProtocols(Array("TLSv1.2"))
+    engine
+  }
+
+  // Use graphStageApply directly to always exercise the graph-stage implementation
+  // regardless of the akka.stream.materializer.io.tls.use-graph-stage-implementation config toggle
+  private def clientTls(closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
+    TLS.graphStageApply(() => mkEngine(Client), _ => scala.util.Success(()), closing)
+
+  private def serverTls(closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
+    TLS.graphStageApply(() => mkEngine(Server), _ => scala.util.Success(()), closing)
+
+  /** Wrap-and-echo helper: client sends `inputs`, server echoes back the
+   *  decrypted SslTlsInbound as plaintext SendBytes, and the bytes returned
+   *  to the client are concatenated and returned. */
+  private def runEcho(
+      inputs: immutable.Seq[SslTlsOutbound],
+      expectedSize: Int,
+      leftClosing: TLSClosing = IgnoreComplete,
+      rightClosing: TLSClosing = IgnoreComplete): ByteString = {
+    val echo = Flow[SslTlsInbound].collect {
+      case SessionBytes(_, bytes) => SendBytes(bytes)
+    }
+    val tls = clientTls(leftClosing).atop(serverTls(rightClosing).reversed).join(echo)
+    val f = Source(inputs)
+      .via(tls)
+      .collect { case SessionBytes(_, b) => b }
+      .scan(ByteString.empty)(_ ++ _)
+      .filter(_.size >= expectedSize)
+      .runWith(Sink.headOption)
+    Await.result(f, 30.seconds).getOrElse(ByteString.empty)
+  }
+
+  @tailrec
+  private def drainUntilTerminated(sub: TestSubscriber.Probe[SslTlsInbound]): Unit = {
+    sub.request(1)
+    sub.expectNextOrComplete() match {
+      case Left(_)  => () // OnComplete — stage tore down as expected
+      case Right(_) => drainUntilTerminated(sub) // trailing SessionTruncated/SessionBytes
+    }
+  }
+
+  "TLS stage edge cases" should {
+
+    "round-trip many small SendBytes elements" in {
+      val str = "0123456789abcdefghij"
+      val inputs = str.map(c => SendBytes(ByteString(c.toByte)))
+      runEcho(inputs, str.length).utf8String should ===(str)
+    }
+
+    "round-trip a single payload larger than the TLS max packet size" in {
+      // > 16384 bytes (TLS max record), exercises engine.wrap producing
+      // multiple TLS records and the chopping block handling them.
+      val payload = ("x" * 50000)
+      val inputs = SendBytes(ByteString(payload)) :: Nil
+      runEcho(inputs, payload.length).utf8String should ===(payload)
+    }
+
+    "round-trip empty SendBytes interleaved with non-empty ones" in {
+      val inputs = List(
+        SendBytes(ByteString.empty),
+        SendBytes(ByteString("hello ")),
+        SendBytes(ByteString.empty),
+        SendBytes(ByteString("world")),
+        SendBytes(ByteString.empty))
+      runEcho(inputs, "hello world".length).utf8String should ===("hello world")
+    }
+
+    "round-trip when plaintext is provided before downstream pulls" in {
+      // The Source pushes immediately. With a buffered downstream, plaintext
+      // arrives at plainIn well before any onPull on cipherOut from the
+      // server side — verifies the stage correctly defers wrapping until
+      // demand exists.
+      val inputs = List.fill(10)(SendBytes(ByteString("ping")))
+      runEcho(inputs, 4 * 10).utf8String should ===("ping" * 10)
+    }
+
+    "complete cleanly with EagerClose on both sides and an empty payload" in {
+      // Mirror of CompletedImmediately in TlsSpec: with empty input and
+      // EagerClose semantics, the handshake must still complete and the
+      // streams tear down without timing out.
+      val tls = clientTls(EagerClose)
+        .atop(serverTls(EagerClose).reversed)
+        .join(Flow[SslTlsInbound].collect { case SessionBytes(_, b) => SendBytes(b) })
+      val f = Source.empty[SslTlsOutbound].via(tls).collect { case SessionBytes(_, b) => b }.runWith(Sink.seq)
+      Await.result(f, 10.seconds) should ===(immutable.Seq.empty)
+    }
+
+    "round-trip after a renegotiation triggered mid-stream" in {
+      // NegotiateNewSession in the middle of a stream of SendBytes. The
+      // pre-renegotiation bytes must arrive with the original cipher,
+      // post-renegotiation bytes with the new cipher, and all of them
+      // unwrapped successfully on the receiving side.
+      if (JavaVersion.majorVersion < 17) { // TLSv1.2 renegotiation OK on 11
+        val inputs = List(
+          SendBytes(ByteString("before-")),
+          NegotiateNewSession.withCipherSuites("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"),
+          SendBytes(ByteString("after")))
+        runEcho(inputs, "before-after".length).utf8String should ===("before-after")
+      }
+    }
+
+    "fail the stream when the user-side input fails before any demand" in {
+      val ex = new RuntimeException("boom-user")
+      val inputs = Source.failed[SslTlsOutbound](ex)
+      val tls = clientTls(EagerClose)
+        .atop(serverTls(EagerClose).reversed)
+        .join(Flow[SslTlsInbound].collect {
+          case SessionBytes(_, b) => SendBytes(b)
+        })
+      val f = inputs.via(tls).runWith(Sink.ignore)
+      val thrown = intercept[RuntimeException](Await.result(f, 5.seconds))
+      thrown.getMessage should include("boom-user")
+    }
+
+    "round-trip a sequence preceded by an immediately-applied NegotiateNewSession" in {
+      // First element is a NegotiateNewSession; the engine must reset to the
+      // requested cipher BEFORE sending its initial ClientHello so the
+      // session ends up with that cipher.
+      if (JavaVersion.majorVersion < 17) {
+        val inputs = List(
+          NegotiateNewSession.withCipherSuites("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"),
+          SendBytes(ByteString("hello")))
+        val res = runEcho(inputs, "hello".length).utf8String
+        res should ===("hello")
+      }
+    }
+
+    "tear down when the transport is truncated while plainIn stays open" in {
+      // Regression for #32931: cipherIn reaches EOF without a TLS close_notify
+      // (truncation / half-closed TCP) while plainIn stays open and the engine
+      // is idle. The stage must still tear plainOut down rather than hang.
+      val ks = KillSwitches.shared("trunc-ks")
+
+      // Outbound (client -> server) keeps the client's cipherOut alive even
+      // when the server tears down; inbound (server -> client) carries the
+      // kill switch that we trip to simulate an unclean transport EOF.
+      val terminator =
+        BidiFlow.fromFlows(Flow[ByteString].via(new SwallowDownstreamCancel), ks.flow[ByteString])
+
+      val echo = Flow[SslTlsInbound].collect { case SessionBytes(_, b) => SendBytes(b) }
+
+      val tlsFlow =
+        clientTls(IgnoreComplete).atop(terminator).atop(serverTls(IgnoreComplete).reversed).join(echo)
+
+      // plainIn emits one element and then stays open forever (Source.never).
+      val sub =
+        Source
+          .single[SslTlsOutbound](SendBytes(ByteString("hello")))
+          .concat(Source.never[SslTlsOutbound])
+          .via(tlsFlow)
+          .runWith(TestSink[SslTlsInbound]())
+
+      // Drive handshake + round-trip: wait until the echoed "hello" comes back.
+      sub.request(10)
+      var echoed = ByteString.empty
+      while (echoed.utf8String != "hello") {
+        sub.expectNext() match {
+          case SessionBytes(_, b) => echoed ++= b
+          case other              => fail(s"unexpected inbound element before truncation: $other")
+        }
+      }
+
+      // Truncate the transport read side without a close_notify, keeping
+      // plainIn open. The stage must still tear plainOut down.
+      ks.shutdown()
+
+      drainUntilTerminated(sub)
+    }
+
+    "complete on transport truncation after plainOut was cancelled (ignoreCancel)" in {
+      // plainOut is cancelled first (with ignoreCancel the stage half-closes
+      // into InboundClosed and stays alive), then the transport is truncated
+      // without a close_notify. SessionTruncated can never be delivered to the
+      // cancelled plainOut, so the stage must still complete rather than hang
+      // waiting to flush it.
+      val ks = KillSwitches.shared("trunc-cancel-ks")
+
+      val terminator =
+        BidiFlow.fromFlows(Flow[ByteString].via(new SwallowDownstreamCancel), ks.flow[ByteString])
+
+      val echo = Flow[SslTlsInbound].collect { case SessionBytes(_, b) => SendBytes(b) }
+
+      val tlsFlow =
+        clientTls(IgnoreBoth).atop(terminator).atop(serverTls(IgnoreBoth).reversed).join(echo)
+
+      // watchTermination on plainIn observes the stage tearing down (it cancels
+      // plainIn when it completes); the probe is the plainOut we will cancel.
+      val (terminated, sub) =
+        Source
+          .single[SslTlsOutbound](SendBytes(ByteString("hello")))
+          .concat(Source.never[SslTlsOutbound])
+          .watchTermination()(Keep.right)
+          .via(tlsFlow)
+          .toMat(TestSink[SslTlsInbound]())(Keep.both)
+          .run()
+
+      // Drive handshake + round-trip: wait until the echoed "hello" comes back.
+      sub.request(10)
+      var echoed = ByteString.empty
+      while (echoed.utf8String != "hello") {
+        sub.expectNext() match {
+          case SessionBytes(_, b) => echoed ++= b
+          case other              => fail(s"unexpected inbound element before truncation: $other")
+        }
+      }
+
+      // Cancel plainOut -> InboundClosed (ignoreCancel keeps the stage alive),
+      // then truncate the transport read side.
+      sub.cancel()
+      ks.shutdown()
+
+      Await.result(terminated, 10.seconds) should ===(Done)
+    }
+
+    "deliver decrypted bytes buffered without demand before completing on close_notify" in {
+      // The peer sends application bytes immediately followed by a close_notify
+      // (one batched cipher chunk) while plainOut has no demand. The bytes are
+      // buffered as pendingUserOut and the close moves the stage to completion;
+      // they must still be delivered before onComplete, not dropped.
+      val server =
+        Flow.fromSinkAndSource(Sink.ignore, Source.single[SslTlsOutbound](SendBytes(ByteString("final"))))
+
+      val tlsFlow = clientTls(EagerClose).atop(serverTls(EagerClose).reversed).join(server)
+
+      val sub =
+        Source
+          .never[SslTlsOutbound] // keep the client's plainIn open
+          .via(tlsFlow)
+          .runWith(TestSink[SslTlsInbound]())
+
+      sub.ensureSubscription()
+      // Let handshake + "final" + close_notify be processed while plainOut has no demand.
+      sub.expectNoMessage(500.millis)
+
+      sub.request(1)
+      sub.expectNext() match {
+        case SessionBytes(_, b) => b.utf8String should ===("final")
+        case other              => fail(s"expected buffered SessionBytes(final), got $other")
+      }
+      sub.request(1)
+      sub.expectComplete()
+    }
+
+    "deliver decrypted bytes buffered when cipherOut is cancelled before demand arrives" in {
+      // Server sends "final"; client decrypts it into pendingUserOut while
+      // plainOut has no demand.  The cipherOut downstream is then cancelled
+      // (simulating the write side of the transport going away).  The stage
+      // must not drop the already-decrypted data: it must deliver it to
+      // plainOut when demand eventually arrives.
+      val ks = KillSwitches.shared("cipher-out-cancel-ks")
+      // KillSwitch sits on the client→server cipher path only; the return
+      // path (server→client) is an identity flow so the cascade is clean.
+      val cipherLayer = BidiFlow.fromFlows(ks.flow[ByteString], Flow[ByteString])
+      val server =
+        Flow.fromSinkAndSource(Sink.ignore, Source.single[SslTlsOutbound](SendBytes(ByteString("final"))))
+      val tlsFlow =
+        clientTls(IgnoreComplete).atop(cipherLayer).atop(serverTls(IgnoreComplete).reversed).join(server)
+
+      val sub = Source.never[SslTlsOutbound].via(tlsFlow).runWith(TestSink[SslTlsInbound]())
+      sub.ensureSubscription()
+      // Allow handshake + "final" to be decrypted and buffered as pendingUserOut.
+      sub.expectNoMessage(500.millis)
+
+      // Cancel cipherOut while the decrypted data is still pending.
+      ks.shutdown()
+      // If the stage incorrectly calls completeStage() inside onDownstreamFinish,
+      // sub will receive OnComplete here before any demand was issued.
+      sub.expectNoMessage(200.millis)
+
+      sub.request(1)
+      sub.expectNext() match {
+        case SessionBytes(_, b) => b.utf8String should ===("final")
+        case other              => fail(s"expected buffered SessionBytes(final), got $other")
+      }
+      sub.request(1)
+      sub.expectComplete()
+    }
+
+    "fail the stream when verifySession rejects the session after the handshake" in {
+      val verifyEx = new SecurityException("session rejected by policy")
+      val rejectingClientTls =
+        TLS.graphStageApply(() => mkEngine(Client), _ => scala.util.Failure(verifyEx), EagerClose)
+      val echo = Flow[SslTlsInbound].collect { case SessionBytes(_, b) => SendBytes(b) }
+      val tlsFlow = rejectingClientTls.atop(serverTls(EagerClose).reversed).join(echo)
+      val f = Source.single[SslTlsOutbound](SendBytes(ByteString("hello"))).via(tlsFlow).runWith(Sink.ignore)
+      val thrown = intercept[SecurityException](Await.result(f, 10.seconds))
+      thrown.getMessage should include("session rejected by policy")
+    }
+  }
+}
