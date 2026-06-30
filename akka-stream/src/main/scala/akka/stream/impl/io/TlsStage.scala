@@ -687,6 +687,10 @@ private[stream] final class TlsStageLogic(
     } else {
       // Asymmetric failure: only fail the user side and stop accepting more
       // user input. cipherOut may still be needed to flush a TLS alert.
+      // cipherIn is intentionally left open: FlushingOutbound ignores inbound
+      // data, and cipherIn is closed by completeStage() when flushing finishes.
+      // The legacy TLSActor cancelled both inputs here, but keeping cipherIn
+      // open avoids a cancel/complete race on the transport layer.
       if (!isClosed(plainOut)) fail(plainOut, e)
       if (!isClosed(plainIn)) cancel(plainIn)
     }
