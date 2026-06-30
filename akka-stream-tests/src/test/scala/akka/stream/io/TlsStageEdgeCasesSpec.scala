@@ -341,6 +341,41 @@ class TlsStageEdgeCasesSpec extends AkkaSpec(TlsStageEdgeCasesSpec.configOverrid
       sub.expectComplete()
     }
 
+    "deliver decrypted bytes buffered when cipherOut is cancelled before demand arrives" in {
+      // Server sends "final"; client decrypts it into pendingUserOut while
+      // plainOut has no demand.  The cipherOut downstream is then cancelled
+      // (simulating the write side of the transport going away).  The stage
+      // must not drop the already-decrypted data: it must deliver it to
+      // plainOut when demand eventually arrives.
+      val ks = KillSwitches.shared("cipher-out-cancel-ks")
+      // KillSwitch sits on the client→server cipher path only; the return
+      // path (server→client) is an identity flow so the cascade is clean.
+      val cipherLayer = BidiFlow.fromFlows(ks.flow[ByteString], Flow[ByteString])
+      val server =
+        Flow.fromSinkAndSource(Sink.ignore, Source.single[SslTlsOutbound](SendBytes(ByteString("final"))))
+      val tlsFlow =
+        clientTls(IgnoreComplete).atop(cipherLayer).atop(serverTls(IgnoreComplete).reversed).join(server)
+
+      val sub = Source.never[SslTlsOutbound].via(tlsFlow).runWith(TestSink[SslTlsInbound]())
+      sub.ensureSubscription()
+      // Allow handshake + "final" to be decrypted and buffered as pendingUserOut.
+      sub.expectNoMessage(500.millis)
+
+      // Cancel cipherOut while the decrypted data is still pending.
+      ks.shutdown()
+      // If the stage incorrectly calls completeStage() inside onDownstreamFinish,
+      // sub will receive OnComplete here before any demand was issued.
+      sub.expectNoMessage(200.millis)
+
+      sub.request(1)
+      sub.expectNext() match {
+        case SessionBytes(_, b) => b.utf8String should ===("final")
+        case other              => fail(s"expected buffered SessionBytes(final), got $other")
+      }
+      sub.request(1)
+      sub.expectComplete()
+    }
+
     "fail the stream when verifySession rejects the session after the handshake" in {
       val verifyEx = new SecurityException("session rejected by policy")
       val rejectingClientTls =

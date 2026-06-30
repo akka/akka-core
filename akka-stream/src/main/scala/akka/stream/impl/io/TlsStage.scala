@@ -249,9 +249,12 @@ private[stream] final class TlsStageLogic(
     override def onPull(): Unit = maybeDeferredPump()
 
     override def onDownstreamFinish(cause: Throwable): Unit = {
-      // Transport is gone; nothing more we can do.
+      // Transport-out is gone; no more ciphertext can be sent. Route through
+      // pump() instead of calling completeStage() directly so that any
+      // plaintext already decrypted into pendingUserOut is still delivered
+      // to plainOut before the stage closes.
       phase = CompletedPhase
-      completeStage()
+      pump()
     }
   })
 
