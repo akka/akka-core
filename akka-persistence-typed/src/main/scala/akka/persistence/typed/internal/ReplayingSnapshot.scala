@@ -4,7 +4,9 @@
 
 package akka.persistence.typed.internal
 
-import akka.actor.typed.Behavior
+import scala.util.control.NonFatal
+
+import akka.actor.typed.{ Behavior, PostStop, PreRestart }
 import akka.actor.typed.internal.PoisonPill
 import akka.actor.typed.scaladsl.{ ActorContext, Behaviors }
 import akka.annotation.{ InternalApi, InternalStableApi }
@@ -79,13 +81,24 @@ private[akka] class ReplayingSnapshot[C, E, S](override val setup: BehaviorSetup
           case _: AsyncEffectCompleted[_, _, _]      => Behaviors.unhandled
           case _: AsyncReplicationInterceptCompleted => Behaviors.unhandled
         }
-        .receiveSignal(returnPermitOnStop.orElse {
+        .receiveSignal {
           case (_, PoisonPill) =>
             stay(receivedPoisonPill = true)
+          // PostStop and PreRestart return the recovery permit promptly (the RecoveryPermitter would otherwise
+          // only reclaim it via death watch, which a restart doesn't trigger). They are still delivered to the
+          // user signal handler, consistently with the other recovery phases (e.g. ReplayingEvents).
+          case (_, PostStop) =>
+            tryReturnRecoveryPermit("PostStop")
+            setup.onSignal(setup.emptyState, PostStop, catchAndLog = true)
+            Behaviors.stopped
+          case (_, PreRestart) =>
+            tryReturnRecoveryPermit("PreRestart")
+            setup.onSignal(setup.emptyState, PreRestart, catchAndLog = true)
+            Behaviors.stopped
           case (_, signal) =>
             if (setup.onSignal(setup.emptyState, signal, catchAndLog = true)) Behaviors.same
             else Behaviors.unhandled
-        })
+        }
     }
     stay(receivedPoisonPillInPreviousPhase)
   }
@@ -196,20 +209,33 @@ private[akka] class ReplayingSnapshot[C, E, S](override val setup: BehaviorSetup
           eventsReplayed = 0))
     }
 
+    // When the snapshot can't be used (the store failed to load it, or the snapshot adapter / metadata
+    // extraction threw while transforming it) either replay all events when the snapshot is optional, or
+    // fail recovery (emitting RecoveryFailed). Same handling regardless of whether the load or the adapter failed.
+    def handleSnapshotFailure(cause: Throwable, toSnr: Long): Behavior[InternalProtocol] =
+      if (setup.isSnapshotOptional) {
+        setup.internalLogger.info(
+          "Snapshot load error for persistenceId [{}]. Replaying all events since snapshot-is-optional=true. " +
+          "Caused by: {}",
+          setup.persistenceId,
+          cause.toString)
+
+        loadSnapshotResult(snapshot = None, toSnr)
+      } else {
+        onRecoveryFailure(cause)
+      }
+
     response match {
       case LoadSnapshotResult(snapshot, toSnr) =>
-        loadSnapshotResult(snapshot, toSnr)
+        try {
+          loadSnapshotResult(snapshot, toSnr)
+        } catch {
+          case NonFatal(cause) =>
+            handleSnapshotFailure(cause, toSnr)
+        }
 
       case LoadSnapshotFailed(cause) =>
-        if (setup.isSnapshotOptional) {
-          setup.internalLogger.info(
-            "Snapshot load error for persistenceId [{}]. Replaying all events since snapshot-is-optional=true",
-            setup.persistenceId)
-
-          loadSnapshotResult(snapshot = None, setup.recovery.toClassic.toSequenceNr)
-        } else {
-          onRecoveryFailure(cause)
-        }
+        handleSnapshotFailure(cause, setup.recovery.toClassic.toSequenceNr)
 
       case _ =>
         Behaviors.unhandled
