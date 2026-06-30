@@ -95,7 +95,9 @@ object TlsSpec {
     """
 }
 
-abstract class TlsSpecBase extends StreamSpec(TlsSpec.configOverrides) with WithLogCapturing {
+abstract class TlsSpecBase(extraConfig: String = "")
+    extends StreamSpec(TlsSpec.configOverrides + "\n" + extraConfig)
+    with WithLogCapturing {
   import GraphDSL.Implicits._
   import TlsSpec._
   import system.dispatcher
@@ -621,4 +623,17 @@ class TlsGraphStageSpec extends TlsSpecBase {
       createSSLEngine: () => SSLEngine,
       closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
     TLS.graphStageApply(createSSLEngine, _ => scala.util.Success(()), closing)
+}
+
+/**
+ * Runs all TLS tests through TLS.apply with the graph-stage island enabled, exercising the
+ * TlsGraphStageIsland materialisation path (port-id copying, island wiring) that production
+ * traffic will use once the flag default is flipped to true.
+ */
+class TlsGraphStageIslandSpec
+    extends TlsSpecBase("akka.stream.materializer.io.tls.use-graph-stage-implementation = true") {
+  protected def createTls(
+      createSSLEngine: () => SSLEngine,
+      closing: TLSClosing): BidiFlow[SslTlsOutbound, ByteString, ByteString, SslTlsInbound, NotUsed] =
+    TLS(createSSLEngine, closing)
 }
