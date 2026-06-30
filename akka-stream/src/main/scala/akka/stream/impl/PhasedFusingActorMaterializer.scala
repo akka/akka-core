@@ -1024,10 +1024,12 @@ private final case class SavedIslandData(
       case tls: TlsModule =>
         val stage = new TlsStage(tls.createSSLEngine, tls.verifySession, tls.closing)
         // The stage's fresh ports never went through traversal id assignment;
-        // copy the ids from the TlsModule ports (identical BidiShape layout) so
-        // the logic's handler array lines up with the slots assignPort uses.
-        tls.shape.inlets.zip(stage.shape.inlets).foreach { case (from, to)   => to.id = from.id }
-        tls.shape.outlets.zip(stage.shape.outlets).foreach { case (from, to) => to.id = from.id }
+        // copy the ids from the TlsModule ports by name so the logic's handler
+        // array lines up with the slots assignPort uses.
+        stage.plainIn.id = tls.plainIn.id
+        stage.cipherOut.id = tls.cipherOut.id
+        stage.cipherIn.id = tls.cipherIn.id
+        stage.plainOut.id = tls.plainOut.id
         super.materializeAtomic(GraphStageModule(stage.shape, attributes, stage), attributes)
       case _ => super.materializeAtomic(mod, attributes)
     }
