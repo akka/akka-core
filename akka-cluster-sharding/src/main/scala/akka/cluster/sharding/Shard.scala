@@ -31,7 +31,6 @@ import akka.cluster.sharding.ShardRegion.ShardsUpdated
 import akka.cluster.sharding.internal.EntityPassivationStrategy
 import akka.cluster.sharding.internal.RememberEntitiesProvider
 import akka.cluster.sharding.internal.RememberEntitiesShardStore
-import akka.cluster.sharding.internal.RememberEntitiesShardStore.GetEntities
 import akka.cluster.sharding.internal.RememberEntityStarterManager
 import akka.cluster.sharding.internal.ShardingFlightRecorder
 import akka.coordination.lease.scaladsl.Lease
@@ -557,10 +556,7 @@ private[akka] class Shard(
       case Some(store) =>
         log.debug("{}: Waiting for load of entity ids using [{}] to complete", typeName, store)
         store ! RememberEntitiesShardStore.GetEntities
-        timers.startSingleTimer(
-          RememberEntityTimeoutKey,
-          RememberEntityTimeout(GetEntities),
-          settings.tuningParameters.waitingForStateTimeout)
+        // The store is a local child actor that is expected to always reply, unless it stops because it failed.
         context.become(awaitingRememberedEntities())
       case None =>
         shardInitialized()
@@ -569,9 +565,8 @@ private[akka] class Shard(
 
   def awaitingRememberedEntities(): Receive = {
     case RememberEntitiesShardStore.RememberedEntities(entityIds) =>
-      timers.cancel(RememberEntityTimeoutKey)
       onEntitiesRemembered(entityIds)
-    case RememberEntityTimeout(GetEntities) =>
+    case _: RememberEntityStoreCrashed =>
       loadingEntityIdsFailed()
     case me: MemberEvent =>
       receiveMemberEvent(me)
@@ -587,9 +582,8 @@ private[akka] class Shard(
 
   def loadingEntityIdsFailed(): Unit = {
     log.error(
-      "{}: Failed to load initial entity ids from remember entities store within [{}], stopping shard for backoff and restart",
-      typeName,
-      settings.tuningParameters.waitingForStateTimeout.pretty)
+      "{}: The remember entities store stopped while loading initial entity ids, stopping shard for backoff and restart",
+      typeName)
     // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
     context.stop(self)
   }
