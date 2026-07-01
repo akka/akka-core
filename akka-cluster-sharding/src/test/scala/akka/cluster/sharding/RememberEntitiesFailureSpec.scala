@@ -118,7 +118,11 @@ object RememberEntitiesFailureSpec {
           case Some(StopStore)  => context.stop(self)
           case Some(Delay(howLong)) =>
             log.debug("Delaying initial entities listing with {}", howLong)
-            timers.startSingleTimer("get-entities-delay", Delayed(sender(), Set.empty), howLong)
+            // a slow but correct store: reply with the proper message once the delay elapses
+            timers.startSingleTimer(
+              "get-entities-delay",
+              Delayed(sender(), RememberEntitiesShardStore.RememberedEntities(Set.empty)),
+              howLong)
         }
       case RememberEntitiesShardStore.Update(started, stopped) =>
         failUpdate match {
@@ -128,7 +132,11 @@ object RememberEntitiesFailureSpec {
           case Some(StopStore)  => context.stop(self)
           case Some(Delay(howLong)) =>
             log.debug("Delaying response for AddEntity with {}", howLong)
-            timers.startSingleTimer("add-entity-delay", Delayed(sender(), Set.empty), howLong)
+            // a slow but correct store: reply with the proper message once the delay elapses
+            timers.startSingleTimer(
+              "add-entity-delay",
+              Delayed(sender(), RememberEntitiesShardStore.UpdateDone(started, stopped)),
+              howLong)
         }
       case FailUpdateEntity(whichWay) =>
         failUpdate = Some(whichWay)
@@ -396,6 +404,81 @@ class RememberEntitiesFailureSpec
         }, 5.seconds)
 
         system.stop(sharding)
+      }
+    }
+
+    "not restart the shard when the initial remember entities load is slower than waiting-for-state-timeout" in {
+      // Simulates a slow concurrent recovery (e.g. many shard stores replaying at once during a rolling
+      // restart). The store is a local child actor that will eventually reply, so the shard must wait for
+      // it rather than time out and restart. The delay is longer than the default waiting-for-state-timeout
+      // (2s), which previously tripped the load timeout and put the shard into a restart/backoff loop.
+      val storeProbe = TestProbe()
+      system.eventStream.subscribe(storeProbe.ref, classOf[ShardStoreCreated])
+
+      failShardGetEntities = Map("1" -> Delay(3.seconds))
+      try {
+        val sharding = ClusterSharding(system).start(
+          "slowInitialLoad",
+          Props[EntityActor](),
+          ClusterShardingSettings(system).withRememberEntities(true),
+          extractEntityId,
+          extractShardId)
+
+        val probe = TestProbe()
+        sharding.tell(EntityEnvelope(1, "hello-1"), probe.ref)
+
+        // the shard store for shard "1" is created once
+        storeProbe.expectMsgType[ShardStoreCreated]
+
+        // the message is delivered once the slow load completes (~3s), without the shard restarting
+        probe.expectMsg(6.seconds, "hello-1")
+
+        // no second store was created, i.e. the shard did not restart and re-create its store during the load
+        storeProbe.expectNoMessage()
+
+        system.stop(sharding)
+      } finally {
+        failShardGetEntities = Map.empty
+      }
+    }
+
+    "restart the shard if the remember entities store stops while loading initial entity ids" in {
+      val storeProbe = TestProbe()
+      system.eventStream.subscribe(storeProbe.ref, classOf[ShardStoreCreated])
+
+      // keep the store silent so the shard stays in the initial load state (awaiting remembered entities)
+      failShardGetEntities = Map("1" -> NoResponse)
+      try {
+        val sharding = ClusterSharding(system).start(
+          "storeStopDuringLoad",
+          Props[EntityActor](),
+          ClusterShardingSettings(system).withRememberEntities(true),
+          extractEntityId,
+          extractShardId)
+
+        val probe = TestProbe()
+        sharding.tell(EntityEnvelope(1, "hello-1"), probe.ref)
+
+        // the shard has created its store and is now waiting for the (silent) load to complete
+        val store1 = storeProbe.expectMsgType[ShardStoreCreated].store
+
+        // let subsequent loads succeed, then simulate a failed store (e.g. failed recovery) by stopping it
+        // while the shard is still loading. The shard watches the store and must restart rather than hang.
+        failShardGetEntities = Map.empty
+        system.stop(store1)
+
+        // a new store is created for the restarted shard
+        storeProbe.expectMsgType[ShardStoreCreated]
+
+        // and the shard recovers and can serve the entity
+        awaitAssert({
+          sharding.tell(EntityEnvelope(1, "hello-1"), probe.ref)
+          probe.expectMsg("hello-1")
+        }, 5.seconds)
+
+        system.stop(sharding)
+      } finally {
+        failShardGetEntities = Map.empty
       }
     }
 
