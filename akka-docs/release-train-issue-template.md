@@ -9,6 +9,7 @@ For every release, use the `scripts/create-release-issue.sh` to make a copy of t
 
 Variables to be expanded in this template:
 - $VERSION$=???
+- $MINOR_VERSION$=??? (the version without the patch number, e.g. 2.10 for 2.10.20)
 
 Key links:
   - akka/akka-core milestone: https://github.com/akka/akka-core/milestone/?
@@ -39,7 +40,7 @@ Key links:
 
 ### When everything is on https://repo.akka.io/TOKEN/secure
   - [ ] Log into `gustav.akka.io` as `akkarepo` 
-    - [ ] If this updates the `current` version, run `./update-akka-current-version.sh $VERSION$`
+    - [ ] If this updates the `current` version, run `./update-akka-current-version.sh $VERSION$ $MINOR_VERSION$`
     - [ ] otherwise check changes and commit the new version to the local git repository
          ```
          cd ~/www
