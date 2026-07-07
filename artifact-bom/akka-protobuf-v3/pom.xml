@@ -1,0 +1,11 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.typesafe.akka</groupId>
+    <artifactId>akka-protobuf-v3</artifactId>
+    <version>100.0.0</version>
+    <packaging>pom</packaging>
+    <dependencyManagement>
+        <dependencies> </dependencies>
+    </dependencyManagement>
+    <dependencies></dependencies>
+</project>
