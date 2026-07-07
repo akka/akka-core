@@ -36,17 +36,8 @@ jobs:
       github.event.repository.fork == false &&
       needs.changes.outputs.release_prep_only != 'true'
     steps:
-      - name: Checkout Global Scripts
-        uses: actions/checkout@v6
-        with:
-          repository: akka/github-actions-scripts
-          path: scripts
-          fetch-depth: 0
-
-      - name: Setup global resolver
-        run: |
-          chmod +x ./scripts/setup_global_resolver.sh
-          ./scripts/setup_global_resolver.sh
+      - name: Run akka/github-actions-scripts
+        uses: akka/github-actions-scripts/setup_global_resolver@main
 
       - name: Checkout
         # https://github.com/actions/checkout/releases
