@@ -102,3 +102,6 @@ jobs:
           -Dakka.log.timestamps=true \
           -Dakka.warn-on-no-license-key=false \
           validateCompile validatePullRequest
+
+      - name: Artifact BOM validation
+        uses: akka/github-actions-scripts/artifact_bom_validation@main

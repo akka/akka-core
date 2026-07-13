@@ -7,6 +7,7 @@ package akka
 import akka.JdkOptions.autoImport._
 import com.lightbend.paradox.projectinfo.ParadoxProjectInfoPluginKeys._
 import com.typesafe.sbt.MultiJvmPlugin.autoImport.MultiJvm
+import io.akka.sbt.ArtifactBomPlugin.autoImport.makeBomIncludeDependencies
 import sbt.Def
 import sbt.Keys._
 import sbt._
@@ -138,6 +139,7 @@ object AkkaBuild {
     // append -SNAPSHOT to version when isSnapshot
     ThisBuild / dynverSonatypeSnapshots := true,
     ThisBuild / ivyLoggingLevel := UpdateLogging.Quiet,
+    ThisBuild / makeBomIncludeDependencies := true,
     licenses := {
       val tagOrBranch =
         if (isSnapshot.value) "main"

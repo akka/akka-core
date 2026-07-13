@@ -19,3 +19,5 @@ addSbtPlugin("net.bzzt" % "sbt-reproducible-builds" % "0.32")
 
 addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.11.1")
 addSbtPlugin("com.lightbend.sbt" % "sbt-publish-rsync" % "0.3")
+// create pom.xml for scanning tools
+addSbtPlugin("io.akka.sbt" % "sbt-artifact-bom" % "0.2.0")

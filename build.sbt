@@ -126,6 +126,7 @@ lazy val actor = akkaModule("akka-actor")
   })
   .settings(VersionGenerator.settings)
   .enablePlugins(BoilerplatePlugin)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val actorTests = akkaModule("akka-actor-tests")
   .dependsOn(testkit % "compile->compile;test->test", actor)
@@ -159,6 +160,7 @@ lazy val cluster = akkaModule("akka-cluster")
   .settings(Test / parallelExecution := false)
   .configs(MultiJvm)
   .enablePlugins(MultiNodeScalaTest)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val clusterMetrics = akkaModule("akka-cluster-metrics")
   .dependsOn(
@@ -172,6 +174,7 @@ lazy val clusterMetrics = akkaModule("akka-cluster-metrics")
   .settings(Test / parallelExecution := false)
   .configs(MultiJvm)
   .enablePlugins(MultiNodeScalaTest)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val clusterSharding = akkaModule("akka-cluster-sharding")
 // TODO akka-persistence dependency should be provided in pom.xml artifact.
@@ -189,6 +192,7 @@ lazy val clusterSharding = akkaModule("akka-cluster-sharding")
   .settings(Protobuf.settings)
   .configs(MultiJvm)
   .enablePlugins(MultiNode, ScaladocNoVerificationOfDiagrams)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val clusterTools = akkaModule("akka-cluster-tools")
   .dependsOn(
@@ -200,6 +204,7 @@ lazy val clusterTools = akkaModule("akka-cluster-tools")
   .settings(Protobuf.settings)
   .configs(MultiJvm)
   .enablePlugins(MultiNode, ScaladocNoVerificationOfDiagrams)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val distributedData = akkaModule("akka-distributed-data")
   .dependsOn(cluster % "compile->compile;test->test;multi-jvm->multi-jvm", jackson % "test->test")
@@ -208,6 +213,7 @@ lazy val distributedData = akkaModule("akka-distributed-data")
   .settings(Protobuf.settings)
   .configs(MultiJvm)
   .enablePlugins(MultiNodeScalaTest)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val docs = akkaModule("akka-docs")
   .dependsOn(
@@ -259,6 +265,7 @@ lazy val jackson = akkaModule("akka-serialization-jackson")
   .settings(AutomaticModuleName.settings("akka.serialization.jackson"))
   .settings(javacOptions += "-parameters")
   .enablePlugins(ScaladocNoVerificationOfDiagrams)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val multiNodeTestkit = akkaModule("akka-multi-node-testkit")
   .dependsOn(remote, testkit)
@@ -266,6 +273,7 @@ lazy val multiNodeTestkit = akkaModule("akka-multi-node-testkit")
   .settings(Protobuf.settings)
   .settings(AutomaticModuleName.settings("akka.remote.testkit"))
   .settings(AkkaBuild.mayChangeSettings)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val persistence = akkaModule("akka-persistence")
   .dependsOn(actor, stream, testkit % "test->test")
@@ -273,6 +281,7 @@ lazy val persistence = akkaModule("akka-persistence")
   .settings(AutomaticModuleName.settings("akka.persistence"))
   .settings(Protobuf.settings)
   .settings(Test / fork := true)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val persistenceQuery = akkaModule("akka-persistence-query")
   .dependsOn(
@@ -288,6 +297,7 @@ lazy val persistenceQuery = akkaModule("akka-persistence-query")
   .settings(Protobuf.importPath := Some(baseDirectory.value / ".." / "akka-remote" / "src" / "main" / "protobuf"))
   .settings(Test / fork := true)
   .enablePlugins(ScaladocNoVerificationOfDiagrams)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val persistenceShared = akkaModule("akka-persistence-shared")
   .dependsOn(persistence % "test->test", testkit % "test->test", remote % "test")
@@ -296,6 +306,7 @@ lazy val persistenceShared = akkaModule("akka-persistence-shared")
   .settings(Test / fork := true)
   .enablePlugins(NoPublish)
   .disablePlugins(MimaPlugin)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val persistenceTck = akkaModule("akka-persistence-tck")
   .dependsOn(persistence % "compile->compile;test->test", testkit % "compile->compile;test->test")
@@ -303,6 +314,7 @@ lazy val persistenceTck = akkaModule("akka-persistence-tck")
   .settings(AutomaticModuleName.settings("akka.persistence.tck"))
   .settings(Test / fork := true)
   .disablePlugins(MimaPlugin)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val persistenceTestkit = akkaModule("akka-persistence-testkit")
   .dependsOn(
@@ -313,6 +325,7 @@ lazy val persistenceTestkit = akkaModule("akka-persistence-testkit")
   .settings(Dependencies.persistenceTestKit)
   .settings(AutomaticModuleName.settings("akka.persistence.testkit"))
   .disablePlugins(MimaPlugin)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val persistenceTypedTests = akkaModule("akka-persistence-typed-tests")
   .dependsOn(
@@ -332,6 +345,7 @@ lazy val persistenceTypedTests = akkaModule("akka-persistence-typed-tests")
 lazy val protobufV3 = akkaModule("akka-protobuf-v3")
   .settings(AutomaticModuleName.settings("akka.protobuf.v3"))
   .enablePlugins(ScaladocNoVerificationOfDiagrams)
+  .enablePlugins(ArtifactBomPlugin)
   .disablePlugins(MimaPlugin)
   .settings(
     libraryDependencies += Dependencies.Provided.protobufRuntime,
@@ -359,6 +373,7 @@ lazy val pki =
     .dependsOn(testkit % "test->test")
     .settings(Dependencies.pki)
     .settings(AutomaticModuleName.settings("akka.pki"))
+    .enablePlugins(ArtifactBomPlugin)
 
 lazy val remote =
   akkaModule("akka-remote")
@@ -374,6 +389,7 @@ lazy val remote =
     .settings(AutomaticModuleName.settings("akka.remote"))
     .settings(Protobuf.settings)
     .settings(Test / parallelExecution := false)
+    .enablePlugins(ArtifactBomPlugin)
 
 lazy val remoteTests = akkaModule("akka-remote-tests")
   .dependsOn(
@@ -393,6 +409,7 @@ lazy val slf4j = akkaModule("akka-slf4j")
   .dependsOn(actor, testkit % "test->test")
   .settings(Dependencies.slf4j)
   .settings(AutomaticModuleName.settings("akka.slf4j"))
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val stream = akkaModule("akka-stream")
   .dependsOn(actor, protobufV3)
@@ -400,11 +417,13 @@ lazy val stream = akkaModule("akka-stream")
   .settings(AutomaticModuleName.settings("akka.stream"))
   .settings(Protobuf.settings)
   .enablePlugins(BoilerplatePlugin)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val streamTestkit = akkaModule("akka-stream-testkit")
   .dependsOn(stream, testkit % "compile->compile;test->test")
   .settings(Dependencies.streamTestkit)
   .settings(AutomaticModuleName.settings("akka.stream.testkit"))
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val streamTests = akkaModule("akka-stream-tests")
   .dependsOn(streamTestkit % "test->test", remote % "test->test", stream % "test->test")
@@ -429,6 +448,7 @@ lazy val testkit = akkaModule("akka-testkit")
   .settings(Dependencies.testkit)
   .settings(AutomaticModuleName.settings("akka.actor.testkit"))
   .settings(initialCommands += "import akka.testkit._")
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val actorTyped = akkaModule("akka-actor-typed")
   .dependsOn(actor, slf4j)
@@ -443,6 +463,7 @@ lazy val actorTyped = akkaModule("akka-actor-typed")
       import akka.util.Timeout
       implicit val timeout = Timeout(5.seconds)
     """)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val persistenceTyped = akkaModule("akka-persistence-typed")
   .dependsOn(
@@ -461,6 +482,7 @@ lazy val persistenceTyped = akkaModule("akka-persistence-typed")
   .settings(Protobuf.settings)
   // To be able to import ContainerFormats.proto
   .settings(Protobuf.importPath := Some(baseDirectory.value / ".." / "akka-remote" / "src" / "main" / "protobuf"))
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val clusterTyped = akkaModule("akka-cluster-typed")
   .dependsOn(
@@ -481,6 +503,7 @@ lazy val clusterTyped = akkaModule("akka-cluster-typed")
   .settings(Protobuf.importPath := Some(baseDirectory.value / ".." / "akka-remote" / "src" / "main" / "protobuf"))
   .configs(MultiJvm)
   .enablePlugins(MultiNodeScalaTest)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val clusterShardingTyped = akkaModule("akka-cluster-sharding-typed")
   .dependsOn(
@@ -502,6 +525,7 @@ lazy val clusterShardingTyped = akkaModule("akka-cluster-sharding-typed")
   .settings(Protobuf.importPath := Some(baseDirectory.value / ".." / "akka-remote" / "src" / "main" / "protobuf"))
   .configs(MultiJvm)
   .enablePlugins(MultiNodeScalaTest)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val streamTyped = akkaModule("akka-stream-typed")
   .dependsOn(
@@ -512,11 +536,13 @@ lazy val streamTyped = akkaModule("akka-stream-typed")
     actorTypedTests % "test->test")
   .settings(AutomaticModuleName.settings("akka.stream.typed"))
   .enablePlugins(ScaladocNoVerificationOfDiagrams)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val actorTestkitTyped = akkaModule("akka-actor-testkit-typed")
   .dependsOn(actorTyped, slf4j, testkit % "compile->compile;test->test")
   .settings(AutomaticModuleName.settings("akka.actor.testkit.typed"))
   .settings(Dependencies.actorTestkitTyped)
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val actorTypedTests = akkaModule("akka-actor-typed-tests")
   .dependsOn(actorTyped, actorTestkitTyped % "compile->compile;test->test", actor)
@@ -529,11 +555,13 @@ lazy val discovery = akkaModule("akka-discovery")
   .dependsOn(actor, testkit % "test->test", actorTests % "test->test")
   .settings(Dependencies.discovery)
   .settings(AutomaticModuleName.settings("akka.discovery"))
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val coordination = akkaModule("akka-coordination")
   .dependsOn(actor, testkit % "test->test", actorTests % "test->test")
   .settings(Dependencies.coordination)
   .settings(AutomaticModuleName.settings("akka.coordination"))
+  .enablePlugins(ArtifactBomPlugin)
 
 lazy val billOfMaterials = Project("akka-bill-of-materials", file("akka-bill-of-materials"))
   .enablePlugins(BillOfMaterialsPlugin)
