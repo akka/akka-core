@@ -27,7 +27,7 @@ lazy val kafka = project
   .settings(
     libraryDependencies ++= Seq(
         "ch.qos.logback" % "logback-classic" % LogbackVersion,
-        "org.slf4j" % "log4j-over-slf4j" % "2.0.17",
+        "org.slf4j" % "log4j-over-slf4j" % "2.0.18",
         "io.github.embeddedkafka" %% "embedded-kafka" % EmbeddedKafkaVersion),
     cancelable := false)
 
