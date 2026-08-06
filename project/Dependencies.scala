@@ -122,7 +122,7 @@ object Dependencies {
 
     // metrics, measurements, perf testing
     val metrics = "io.dropwizard.metrics" % "metrics-core" % "4.2.39" % Test // ApacheV2
-    val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % "4.2.32" % Test // ApacheV2
+    val metricsJvm = "io.dropwizard.metrics" % "metrics-jvm" % "4.2.39" % Test // ApacheV2
     val latencyUtils = "org.latencyutils" % "LatencyUtils" % "2.0.3" % Test // Free BSD
     val hdrHistogram = "org.hdrhistogram" % "HdrHistogram" % "2.2.2" % Test // CC0
     val metricsAll = Seq(metrics, metricsJvm, latencyUtils, hdrHistogram)
