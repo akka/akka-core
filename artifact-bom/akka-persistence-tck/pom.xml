@@ -119,7 +119,7 @@
             <dependency>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest_2.13</artifactId>
-                <version>3.2.17</version>
+                <version>3.2.20</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -237,7 +237,7 @@
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
     </dependencies>
 </project>
