@@ -142,7 +142,7 @@ object Dependencies {
   }
 
   object Provided {
-    val sigarLoader = "io.kamon" % "sigar-loader" % "1.6.6-rev002" % "optional;provided" // ApacheV2
+    val sigarLoader = "io.kamon" % "sigar-loader" % "1.6.6" % "optional;provided" // ApacheV2
 
     val activation = "com.sun.activation" % "javax.activation" % "1.2.0" % "provided;test"
 
