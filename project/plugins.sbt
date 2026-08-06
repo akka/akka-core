@@ -6,7 +6,7 @@ libraryDependencies += Defaults.sbtPluginExtra(
 addSbtPlugin("com.github.sbt" % "sbt-java-formatter" % "0.12.0")
 addSbtPlugin("com.lightbend.sbt" % "sbt-bill-of-materials" % "1.0.2")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
-addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.4")
+addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.6")
 addSbtPlugin("com.github.sbt" % "sbt-unidoc" % "0.6.1")
 addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "3.0.3")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.7")
