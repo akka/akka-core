@@ -35,6 +35,7 @@ import akka.cluster.sharding.ShardCoordinator
 import akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
 import akka.cluster.sharding.ShardRegion
 import akka.cluster.sharding.ShardRegion.{ StartEntity => ClassicStartEntity }
+import akka.cluster.sharding.internal.RememberEntitiesShardStore
 import akka.cluster.sharding.typed.scaladsl.EntityContext
 import akka.cluster.typed.Cluster
 import akka.event.Logging
@@ -49,14 +50,20 @@ import akka.util.{ ByteString, Timeout }
  * INTERNAL API
  * Extracts entityId and unwraps ShardingEnvelope and StartEntity messages.
  * Other messages are delegated to the given `ShardingMessageExtractor`.
+ *
+ * Internal remember-entities store messages (e.g. a stale reply arriving after the shard already
+ * restarted due to a timed out write) must never reach the user-supplied extractor: they are not of
+ * type `E`, so delegating them would throw a `ClassCastException` instead of simply not matching.
  */
 @InternalApi private[akka] class ExtractorAdapter[E, M](delegate: ShardingMessageExtractor[E, M])
     extends ShardingMessageExtractor[Any, M] {
   override def entityId(message: Any): String = {
     message match {
-      case ShardingEnvelope(entityId, _) => entityId //also covers ClassicStartEntity in ShardingEnvelope
-      case ClassicStartEntity(entityId)  => entityId
-      case msg                           => delegate.entityId(msg.asInstanceOf[E])
+      case ShardingEnvelope(entityId, _)                    => entityId //also covers ClassicStartEntity in ShardingEnvelope
+      case ClassicStartEntity(entityId)                     => entityId
+      case _: RememberEntitiesShardStore.UpdateDone         => null
+      case _: RememberEntitiesShardStore.RememberedEntities => null
+      case msg                                              => delegate.entityId(msg.asInstanceOf[E])
     }
   }
 
@@ -70,6 +77,8 @@ import akka.util.{ ByteString, Timeout }
       case msg: ClassicStartEntity =>
         // not really of type M, but erased and StartEntity is only handled internally, not delivered to the entity
         msg.asInstanceOf[M]
+      case _: RememberEntitiesShardStore.UpdateDone         => null.asInstanceOf[M]
+      case _: RememberEntitiesShardStore.RememberedEntities => null.asInstanceOf[M]
       case msg =>
         delegate.unwrapMessage(msg.asInstanceOf[E])
     }
