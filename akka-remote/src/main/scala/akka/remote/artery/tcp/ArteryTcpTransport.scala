@@ -405,7 +405,7 @@ private[remote] class ArteryTcpTransport(
           .addAttributes(Attributes.logLevels(onFailure = LogLevels.Off))
           .via(inboundKillSwitch.flow)
           .viaMat(inboundFlow(settings, _inboundCompressions))(Keep.both)
-          .toMat(inboundSink(envelopeBufferPool))({ case ((a, b), c) => (a, b, c) })
+          .toMat(inboundSink(envelopeBufferPool, flushAckReplies = 1))({ case ((a, b), c) => (a, b, c) })
           .run()(materializer)
 
       } else {
@@ -433,7 +433,7 @@ private[remote] class ArteryTcpTransport(
             })
             .run()(materializer)
 
-        val lane = inboundSink(envelopeBufferPool)
+        val lane = inboundSink(envelopeBufferPool, flushAckReplies = 1)
         val completedValues: Vector[Future[Done]] =
           (0 until inboundLanes).iterator
             .map { _ =>
@@ -469,7 +469,7 @@ private[remote] class ArteryTcpTransport(
         .addAttributes(Attributes.logLevels(onFailure = LogLevels.Off))
         .via(inboundKillSwitch.flow)
         .via(inboundLargeFlow(settings))
-        .toMat(inboundSink(largeEnvelopeBufferPool))(Keep.both)
+        .toMat(inboundSink(largeEnvelopeBufferPool, flushAckReplies = inboundLanes))(Keep.both)
         .run()(materializer)
 
     updateStreamMatValues(completed)

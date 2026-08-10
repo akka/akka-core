@@ -368,7 +368,7 @@ private[remote] class ArteryAeronUdpTransport(_system: ExtendedActorSystem, _pro
       if (inboundLanes == 1) {
         aeronSource(OrdinaryStreamId, envelopeBufferPool, inboundChannel)
           .viaMat(inboundFlow(settings, _inboundCompressions))(Keep.both)
-          .toMat(inboundSink(envelopeBufferPool))({ case ((a, b), c) => (a, b, c) })
+          .toMat(inboundSink(envelopeBufferPool, flushAckReplies = 1))({ case ((a, b), c) => (a, b, c) })
           .run()(materializer)
 
       } else {
@@ -392,7 +392,7 @@ private[remote] class ArteryAeronUdpTransport(_system: ExtendedActorSystem, _pro
             })
             .run()(materializer)
 
-        val lane = inboundSink(envelopeBufferPool)
+        val lane = inboundSink(envelopeBufferPool, flushAckReplies = 1)
         val completedValues: Vector[Future[Done]] =
           (0 until inboundLanes).iterator
             .map { _ =>
@@ -426,7 +426,7 @@ private[remote] class ArteryAeronUdpTransport(_system: ExtendedActorSystem, _pro
 
     val (resourceLife, completed) = aeronSource(LargeStreamId, largeEnvelopeBufferPool, inboundChannel)
       .via(inboundLargeFlow(settings))
-      .toMat(inboundSink(largeEnvelopeBufferPool))(Keep.both)
+      .toMat(inboundSink(largeEnvelopeBufferPool, flushAckReplies = inboundLanes))(Keep.both)
       .run()(materializer)
 
     updateStreamMatValues(LargeStreamId, resourceLife, completed)
