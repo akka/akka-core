@@ -6,9 +6,6 @@ apply plugin: 'application'
 repositories {
     mavenCentral()
     mavenLocal()
-    maven {
-        url "https://repo.akka.io/maven"
-    }
 }
 
 dependencies {

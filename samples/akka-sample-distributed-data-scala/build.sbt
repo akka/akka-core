@@ -15,7 +15,6 @@ val `akka-sample-distributed-data-scala` = project
     Compile / scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Xlog-reflective-calls", "-Xlint"),
     Compile / javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:deprecation"),
     run / javaOptions ++= Seq("-Xms128m", "-Xmx1024m"),
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-cluster-typed" % AkkaVersion,
         "com.typesafe.akka" %% "akka-serialization-jackson" % AkkaVersion,

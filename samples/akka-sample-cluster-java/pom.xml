@@ -15,14 +15,6 @@
     <akka-diagnostics.version>2.1.0</akka-diagnostics.version>
   </properties>
 
-  <repositories>
-    <repository>
-      <id>akka-repository</id>
-      <name>Akka library repository</name>
-      <url>https://repo.akka.io/maven</url>
-    </repository>
-  </repositories>
-
   <dependencies>
     <dependency>
       <groupId>com.typesafe.akka</groupId>

@@ -12,7 +12,7 @@ permissions:
 jobs:
   scrape_index:
     name: Update search index
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     steps:
 
       - name: Checkout
