@@ -469,6 +469,9 @@ private[remote] class ArteryTcpTransport(
         .addAttributes(Attributes.logLevels(onFailure = LogLevels.Off))
         .via(inboundKillSwitch.flow)
         .via(inboundLargeFlow(settings))
+        // The large message stream has a single lane, but flushReplier always reports the ordinary
+        // stream's inboundLanes as expectedAcks, so the single Flush must be duplicated that many
+        // times here too, to send back a matching number of acks (see #32963).
         .via(Flow.fromGraph(new DuplicateFlush(inboundLanes, system, largeEnvelopeBufferPool)))
         .toMat(inboundSink(largeEnvelopeBufferPool))(Keep.both)
         .run()(materializer)
