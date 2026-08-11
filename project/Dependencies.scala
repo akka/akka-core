@@ -82,7 +82,7 @@ object Dependencies {
     val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonCoreVersion // ApacheV2
     val jacksonParameterNames = "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonCoreVersion // ApacheV2
     val jacksonCbor = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonCoreVersion // ApacheV2
-    val lz4Java = "at.yawk.lz4" % "lz4-java" % "1.10.2" // ApacheV2
+    val lz4Java = "at.yawk.lz4" % "lz4-java" % "1.11.1" // ApacheV2
 
     val logback = "ch.qos.logback" % "logback-classic" % logbackVersion // EPL 1.0
   }
