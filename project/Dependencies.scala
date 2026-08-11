@@ -13,7 +13,7 @@ object Dependencies {
   import DependencyHelpers._
 
   val junitVersion = "4.13.2"
-  val slf4jVersion = "2.0.17"
+  val slf4jVersion = "2.0.18"
   // check agrona version when updating this
   // Note: 1.46 is JDK 17 only so we cannot bump until we stop supporting JDK 11
   val aeronVersion = "1.45.2"
@@ -23,7 +23,7 @@ object Dependencies {
   val agronaVersion = "1.22.0"
   val nettyVersion = "4.2.15.Final"
   val protobufJavaVersion = "3.25.5" // also sync with protocVersion in Protobuf.scala
-  val logbackVersion = "1.5.18"
+  val logbackVersion = "1.5.38"
   val jacksonCoreVersion = "2.18.8" // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
   val jacksonDatabindVersion = jacksonCoreVersion // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
 

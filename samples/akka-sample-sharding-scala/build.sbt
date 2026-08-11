@@ -1,7 +1,7 @@
 val AkkaVersion = "2.10.20"
 val AkkaHttpVersion = "10.7.1"
 val AkkaDiagnostics = "2.2.1"
-val LogbackVersion = "1.5.18"
+val LogbackVersion = "1.5.38"
 
 lazy val commonScalacOptions =
   Seq("-deprecation", "-feature", "-unchecked", "-Xlint", "-Ywarn-unused:imports", "-encoding", "UTF-8")
