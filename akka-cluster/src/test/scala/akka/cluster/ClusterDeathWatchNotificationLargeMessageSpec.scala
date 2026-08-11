@@ -17,6 +17,11 @@ object ClusterDeathWatchNotificationLargeMessageSpec {
 
   // large-message-destinations enables the large message stream, which is not duplicated
   // across inbound lanes the way the ordinary stream is (see #32963)
+  //
+  // death-watch-notification-flush-timeout is set far above the `within` bound below (which is
+  // itself dilated by akka.test.timefactor, unlike this config value) so that a regression back to
+  // completing the flush via the timeout, rather than via actual acks, fails the test instead of
+  // passing for the wrong reason.
   val config = ConfigFactory.parseString("""
     akka {
         loglevel = INFO
@@ -26,6 +31,7 @@ object ClusterDeathWatchNotificationLargeMessageSpec {
     }
     akka.remote.artery.canonical.port = 0
     akka.remote.artery.large-message-destinations = [ "/user/large*" ]
+    akka.remote.artery.advanced.death-watch-notification-flush-timeout = 30 seconds
     """).withFallback(ArterySpecSupport.defaultConfig)
 }
 
@@ -57,8 +63,7 @@ class ClusterDeathWatchNotificationLargeMessageSpec
     system2.stop(watchee)
 
     // the death watch notification flush should complete because of the actual acks it receives,
-    // well within the 3 second default akka.remote.artery.advanced.death-watch-notification-flush-timeout,
-    // not because that timeout expired
+    // well within the (dilated) bound below, not because of the 30 second flush timeout configured above
     within(2.seconds) {
       expectTerminated(remoteWatchee)
     }

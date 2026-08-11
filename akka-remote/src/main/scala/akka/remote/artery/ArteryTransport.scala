@@ -884,23 +884,17 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
   // Checks for Flush messages and sends an FlushAck for those (not processing them further)
   // Purpose of this stage is flushing, the sender can wait for the ACKs up to try flushing
   // pending messages.
-  // The Flush messages are duplicated into all lanes by the DuplicateFlush stage and
-  // the `expectedAcks` corresponds to the number of lanes. The sender receives the `expectedAcks` and
-  // thereby knows how many to wait for.
-  // The large message stream has only a single lane and therefore isn't duplicated by DuplicateFlush,
-  // so `ackReplies` lets it echo back `expectedAcks` copies of the ack for the one Flush it does see,
-  // to still match what the sender is told to expect.
-  def flushReplier(expectedAcks: Int, ackReplies: Int): Flow[InboundEnvelope, InboundEnvelope, NotUsed] = {
+  // The Flush messages are duplicated into all lanes by the DuplicateFlush stage, for both the
+  // ordinary and the large message stream (which only has a single lane but is still duplicated
+  // to produce the same number of acks), and the `expectedAcks` corresponds to the number of lanes.
+  // The sender receives the `expectedAcks` and thereby knows how many to wait for.
+  def flushReplier(expectedAcks: Int): Flow[InboundEnvelope, InboundEnvelope, NotUsed] = {
     Flow[InboundEnvelope].filter { envelope =>
       envelope.message match {
         case Flush =>
           envelope.sender match {
             case OptionVal.Some(snd) =>
-              var i = 0
-              while (i < ackReplies) {
-                snd.tell(FlushAck(expectedAcks), ActorRef.noSender)
-                i += 1
-              }
+              snd.tell(FlushAck(expectedAcks), ActorRef.noSender)
             case _ =>
               log.error("Expected sender for Flush message from [{}]", envelope.association)
           }
@@ -910,11 +904,11 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
     }
   }
 
-  def inboundSink(bufferPool: EnvelopeBufferPool, flushAckReplies: Int): Sink[InboundEnvelope, Future[Done]] =
+  def inboundSink(bufferPool: EnvelopeBufferPool): Sink[InboundEnvelope, Future[Done]] =
     Flow[InboundEnvelope]
       .via(createDeserializer(bufferPool))
       .via(if (settings.Advanced.TestMode) new InboundTestStage(this, testState) else Flow[InboundEnvelope])
-      .via(flushReplier(expectedAcks = settings.Advanced.InboundLanes, ackReplies = flushAckReplies))
+      .via(flushReplier(expectedAcks = settings.Advanced.InboundLanes))
       .via(terminationHintReplier(inControlStream = false))
       .via(new InboundHandshake(this, inControlStream = false))
       .via(new InboundQuarantineCheck(this))
@@ -934,7 +928,7 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
     Flow[InboundEnvelope]
       .via(createDeserializer(envelopeBufferPool))
       .via(if (settings.Advanced.TestMode) new InboundTestStage(this, testState) else Flow[InboundEnvelope])
-      .via(flushReplier(expectedAcks = 1, ackReplies = 1))
+      .via(flushReplier(expectedAcks = 1))
       .via(terminationHintReplier(inControlStream = true))
       .via(new InboundHandshake(this, inControlStream = true))
       .via(new InboundQuarantineCheck(this))
