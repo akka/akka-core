@@ -884,9 +884,10 @@ private[remote] abstract class ArteryTransport(_system: ExtendedActorSystem, _pr
   // Checks for Flush messages and sends an FlushAck for those (not processing them further)
   // Purpose of this stage is flushing, the sender can wait for the ACKs up to try flushing
   // pending messages.
-  // The Flush messages are duplicated into all lanes by the DuplicateFlush stage and
-  // the `expectedAcks` corresponds to the number of lanes. The sender receives the `expectedAcks` and
-  // thereby knows how many to wait for.
+  // The Flush messages are duplicated into all lanes by the DuplicateFlush stage, for both the
+  // ordinary and the large message stream (which only has a single lane but is still duplicated
+  // to produce the same number of acks), and the `expectedAcks` corresponds to the number of lanes.
+  // The sender receives the `expectedAcks` and thereby knows how many to wait for.
   def flushReplier(expectedAcks: Int): Flow[InboundEnvelope, InboundEnvelope, NotUsed] = {
     Flow[InboundEnvelope].filter { envelope =>
       envelope.message match {
