@@ -1,6 +1,8 @@
-# Introduction to Akka libraries
+# Introduction to Akka Libraries
 
-Welcome to Akka, a set of libraries for designing scalable, resilient systems that span processor cores and networks. Akka allows you to focus on meeting business needs instead of writing low-level code to provide reliable behavior, fault tolerance, and high performance.
+Welcome to Akka Libraries, a set of libraries for designing scalable, resilient systems that span processor cores and networks. Akka allows you to focus on meeting business needs instead of writing low-level code to provide reliable behavior, fault tolerance, and high performance.
+
+Akka Libraries are the actor, cluster, persistence, and stream foundation underneath the [Akka Agentic AI Platform](https://akka.io/). To build and operate services on the platform, start with the [Akka SDK](https://doc.akka.io/java/index.html) and [Akka Automated Operations](https://doc.akka.io/operations/akka-platform.html).
 
 Many common practices and accepted programming models do not address important challenges
 inherent in designing systems for modern computer architectures. To be
