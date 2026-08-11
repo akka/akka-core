@@ -21,7 +21,7 @@ concurrency:
 jobs:
   run-multi-node-aeron-tests:
     name: Multi Node Test with Artery Aeron UDP transport
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.repository == 'akka/akka-core'
     steps:
       - name: Checkout Global Scripts

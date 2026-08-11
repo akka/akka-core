@@ -14,7 +14,7 @@ permissions:
 jobs:
   check-code-style:
     name: Check / Code Style
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     steps:
       - name: Checkout Global Scripts
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
 
   pull-request-validation:
     name: Check / Tests
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     steps:
       - name: Checkout Global Scripts
         uses: actions/checkout@v4

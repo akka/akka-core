@@ -15,7 +15,7 @@ jobs:
 
   akka-cluster-metrics-sigar:
     name: Akka Cluster Metrics Test with Sigar
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.repository == 'akka/akka-core'
     steps:
       - name: Checkout Global Scripts
@@ -97,7 +97,7 @@ jobs:
 
   jdk-nightly-build:
     name: JDK ${{ matrix.jdkVersion }} / Scala ${{ matrix.scalaVersion }}
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.repository == 'akka/akka-core'
     strategy:
       fail-fast: false
@@ -214,7 +214,7 @@ jobs:
 
   akka-artery-aeron-tests:
     name: Akka Artery Aeron Tests
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.repository == 'akka/akka-core'
     strategy:
       fail-fast: false

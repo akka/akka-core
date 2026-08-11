@@ -15,7 +15,7 @@ permissions:
 jobs:
   check-binary-compatibility:
     name: Check / Binary Compatibility
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.repository == 'akka/akka-core'
     strategy:
       fail-fast: false

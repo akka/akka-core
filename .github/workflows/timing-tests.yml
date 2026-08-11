@@ -15,7 +15,7 @@ jobs:
 
   akka-timing-sensitive-tests:
     name: Akka Tests taggedAs TimingTest
-    runs-on: ubuntu-22.04
+    runs-on: Akka-Default
     if: github.repository == 'akka/akka-core'
     steps:
       - name: Checkout Global Scripts
