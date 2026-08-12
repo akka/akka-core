@@ -1,6 +1,6 @@
 import com.typesafe.sbt.MultiJvmPlugin.multiJvmSettings
 
-val AkkaVersion = "2.10.20"
+val AkkaVersion = "2.10.21"
 val AkkaDiagnosticsVersion = "2.1.1"
 val LogbackClassicVersion = "1.5.38"
 val ScalaTestVersion = "3.2.17"
