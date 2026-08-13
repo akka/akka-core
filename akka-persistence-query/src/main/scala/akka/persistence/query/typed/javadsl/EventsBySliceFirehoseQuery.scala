@@ -10,7 +10,6 @@ import java.util.Optional
 import java.util.concurrent.CompletionStage
 
 import scala.concurrent.ExecutionContext
-import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters._
 
 import akka.NotUsed
@@ -20,6 +19,7 @@ import akka.persistence.query.javadsl.ReadJournal
 import akka.persistence.query.typed.EventEnvelope
 import akka.persistence.query.typed.scaladsl
 import akka.stream.javadsl.Source
+import akka.util.DispatcherFutureConverters.ScalaFutureOpsWithShiftTo
 
 object EventsBySliceFirehoseQuery {
   val Identifier: String = scaladsl.EventsBySliceFirehoseQuery.Identifier
@@ -78,15 +78,20 @@ final class EventsBySliceFirehoseQuery(delegate: scaladsl.EventsBySliceFirehoseQ
   }
 
   override def timestampOf(persistenceId: String, sequenceNr: Long): CompletionStage[Optional[Instant]] =
-    delegate.timestampOf(persistenceId, sequenceNr).map(_.toJava)(ExecutionContext.parasitic).asJava
+    delegate
+      .timestampOf(persistenceId, sequenceNr)
+      .map(_.toJava)(ExecutionContext.parasitic)
+      .asJava(delegate.system.dispatcher)
 
   override def loadEnvelope[Event](persistenceId: String, sequenceNr: Long): CompletionStage[EventEnvelope[Event]] =
-    delegate.loadEnvelope[Event](persistenceId, sequenceNr).asJava
+    delegate.loadEnvelope[Event](persistenceId, sequenceNr).asJava(delegate.system.dispatcher)
 
   override def latestEventTimestamp(
       entityType: String,
       minSlice: Int,
       maxSlice: Int): CompletionStage[Optional[Instant]] =
-    delegate.latestEventTimestamp(entityType, minSlice, maxSlice).map(_.toJava)(ExecutionContext.parasitic).asJava
-
+    delegate
+      .latestEventTimestamp(entityType, minSlice, maxSlice)
+      .map(_.toJava)(ExecutionContext.parasitic)
+      .asJava(delegate.system.dispatcher)
 }
