@@ -11,13 +11,7 @@ import scala.annotation.nowarn
 import scala.reflect.ClassTag
 
 import akka.actor.typed._
-import akka.actor.typed.internal.{
-  BehaviorImpl,
-  StashBufferImpl,
-  Supervisor,
-  TimerSchedulerImpl,
-  WithMdcBehaviorInterceptor
-}
+import akka.actor.typed.internal.{ BehaviorImpl, StashBufferImpl, TimerSchedulerImpl, WithMdcBehaviorInterceptor }
 import akka.japi.function.{ Effect, Function2 => JapiFunction2 }
 import akka.japi.pf.PFBuilder
 import scala.jdk.CollectionConverters._
@@ -261,7 +255,7 @@ object Behaviors {
      * Only exceptions of the given type (and their subclasses) will be handled by this supervision behavior.
      */
     def onFailure[Thr <: Throwable](clazz: Class[Thr], strategy: SupervisorStrategy): Behavior[T] =
-      Supervisor(Behavior.validateAsInitial(wrapped), strategy)(ClassTag(clazz))
+      new SuperviseBehavior[T](wrapped).whenFailure(clazz, strategy).unwrap
 
     /**
      * Specify the [[SupervisorStrategy]] to be invoked when the wrapped behavior throws.
@@ -270,6 +264,14 @@ object Behaviors {
      */
     def onFailure(strategy: SupervisorStrategy): Behavior[T] =
       onFailure(classOf[Exception], strategy)
+
+    /**
+     * Specify the [[SupervisorStrategy]] to be invoked when the wrapped behavior throws by use flatten ways.
+     *
+     * Only exceptions of the given type (and their subclasses) will be handled by this supervision behavior.
+     */
+    def whenFailure[Thr <: Throwable](clazz: Class[Thr], strategy: SupervisorStrategy): SuperviseBehavior[T] =
+      new SuperviseBehavior[T](wrapped).whenFailure(clazz, strategy)
   }
 
   /**
