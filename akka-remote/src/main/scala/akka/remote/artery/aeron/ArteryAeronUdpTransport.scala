@@ -306,7 +306,8 @@ private[remote] class ArteryAeronUdpTransport(_system: ExtendedActorSystem, _pro
         aeron,
         taskRunner,
         bufferPool,
-        giveUpAfter))
+        giveUpAfter,
+        settings.Advanced.ShutdownFlushTimeout))
   }
 
   private def aeronSource(
