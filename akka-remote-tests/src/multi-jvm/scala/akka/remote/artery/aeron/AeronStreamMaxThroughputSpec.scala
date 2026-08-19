@@ -107,6 +107,8 @@ abstract class AeronStreamMaxThroughputSpec
 
   val streamId = 1
   val giveUpMessageAfter = 30.seconds
+  // flush for as long as an outstanding offer may be retried
+  val flushTimeout = giveUpMessageAfter
 
   lazy val reporterExecutor = Executors.newFixedThreadPool(1)
   def reporter(name: String): TestRateReporter = {
@@ -197,7 +199,7 @@ abstract class AeronStreamMaxThroughputSpec
           envelope.byteBuffer.flip()
           envelope
         }
-        .runWith(new AeronSink(channel(second), streamId, aeron, taskRunner, pool, giveUpMessageAfter))
+        .runWith(new AeronSink(channel(second), streamId, aeron, taskRunner, pool, giveUpMessageAfter, flushTimeout))
 
       printStats("sender")
       enterBarrier(testName + "-done")
