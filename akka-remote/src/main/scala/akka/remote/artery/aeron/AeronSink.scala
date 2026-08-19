@@ -27,6 +27,8 @@ import akka.stream.stage.AsyncCallback
 import akka.stream.stage.GraphStageLogic
 import akka.stream.stage.GraphStageWithMaterializedValue
 import akka.stream.stage.InHandler
+import akka.stream.stage.StageLogging
+import akka.stream.stage.TimerGraphStageLogic
 import akka.util.PrettyDuration.PrettyPrintableDuration
 
 /**
@@ -37,6 +39,8 @@ private[remote] object AeronSink {
   final class GaveUpMessageException(msg: String) extends RuntimeException(msg) with NoStackTrace
 
   final class PublicationClosedException(msg: String) extends RuntimeException(msg) with NoStackTrace
+
+  private case object FlushTimeout
 
   private val TimerCheckPeriod = 1 << 13 // 8192
   private val TimerCheckMask = TimerCheckPeriod - 1
@@ -94,7 +98,8 @@ private[remote] class AeronSink(
     aeron: Aeron,
     taskRunner: TaskRunner,
     pool: EnvelopeBufferPool,
-    giveUpAfter: Duration)
+    giveUpAfter: Duration,
+    flushTimeout: FiniteDuration)
     extends GraphStageWithMaterializedValue[SinkShape[EnvelopeBuffer], Future[Done]] {
   import AeronSink._
   import TaskRunner._
@@ -104,7 +109,9 @@ private[remote] class AeronSink(
 
   override def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, Future[Done]) = {
     val completed = Promise[Done]()
-    val logic = new GraphStageLogic(shape) with InHandler {
+    val logic = new TimerGraphStageLogic(shape) with InHandler with StageLogging {
+
+      override protected def logSource: Class[_] = classOf[AeronSink]
 
       private var envelopeInFlight: EnvelopeBuffer = null
       private val pub = aeron.addPublication(channel, streamId)
@@ -227,9 +234,19 @@ private[remote] class AeronSink(
       }
 
       override def onUpstreamFinish(): Unit = {
-        // flush outstanding offer before completing stage
-        if (!offerTaskInProgress)
+        // flush outstanding offer before completing stage, but not for the full `giveUpAfter` duration
+        // since that can be hours and would block shutdown of the transport (see #32776)
+        if (offerTaskInProgress)
+          scheduleOnce(FlushTimeout, flushTimeout)
+        else
           super.onUpstreamFinish()
+      }
+
+      override protected def onTimer(timerKey: Any): Unit = timerKey match {
+        case FlushTimeout =>
+          log.debug("Flush of outstanding message to [{}] timed out after [{}].", channel, flushTimeout.pretty)
+          completeStage()
+        case other => throw new IllegalArgumentException(s"Unknown timer key: $other")
       }
 
       override def onUpstreamFailure(cause: Throwable): Unit = {

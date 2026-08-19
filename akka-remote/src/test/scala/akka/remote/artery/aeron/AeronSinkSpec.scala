@@ -74,12 +74,32 @@ class AeronSinkSpec extends AkkaSpec("""
           envelope.byteBuffer.flip()
           envelope
         }
-        .runWith(new AeronSink(channel, 1, aeron, taskRunner, pool, 500.millis))
+        .runWith(new AeronSink(channel, 1, aeron, taskRunner, pool, 500.millis, 1.second))
 
       // without the give up timeout the stream would not complete/fail
       intercept[GaveUpMessageException] {
         Await.result(done, 5.seconds)
       }
+    }
+
+    "complete when upstream completes while an offer is in progress" in {
+      val port = SocketUtil.temporaryLocalPort(udp = true)
+      // nobody is subscribing to this channel, so the offer will never be accepted
+      val channel = s"aeron:udp?endpoint=localhost:$port"
+
+      val payload = new Array[Byte](100000)
+      val done = Source(1 to 1)
+        .map { _ =>
+          val envelope = pool.acquire()
+          envelope.byteBuffer.put(payload)
+          envelope.byteBuffer.flip()
+          envelope
+        }
+        // give up after a duration as long as the one used for the control stream
+        // (give-up-system-message-after), the flush timeout must complete the stage anyway
+        .runWith(new AeronSink(channel, 1, aeron, taskRunner, pool, 6.hours, 1.second))
+
+      Await.result(done, 5.seconds)
     }
 
   }
