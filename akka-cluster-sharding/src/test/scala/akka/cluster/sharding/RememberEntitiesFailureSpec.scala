@@ -85,6 +85,9 @@ object RememberEntitiesFailureSpec {
   @volatile var failCoordinatorGetShards: Option[Fail] = None
 
   case class ShardStoreCreated(store: ActorRef, shardId: ShardId)
+  // published when an injected GetEntities failure is applied, so that a test can wait for that to
+  // have happened instead of guessing how long it takes
+  case class GetEntitiesFailed(shardId: ShardId, way: Fail, store: ActorRef)
   case class CoordinatorStoreCreated(store: ActorRef)
 
   @nowarn("msg=never used")
@@ -111,7 +114,9 @@ object RememberEntitiesFailureSpec {
 
     override def receive: Receive = {
       case RememberEntitiesShardStore.GetEntities =>
-        failShardGetEntities.get(shardId) match {
+        val injectedFail = failShardGetEntities.get(shardId)
+        injectedFail.foreach(way => context.system.eventStream.publish(GetEntitiesFailed(shardId, way, self)))
+        injectedFail match {
           case None             => sender() ! RememberEntitiesShardStore.RememberedEntities(Set.empty)
           case Some(NoResponse) => log.debug("Sending no response for GetEntities")
           case Some(CrashStore) => throw TestException("store crash on GetEntities")
@@ -215,8 +220,21 @@ class RememberEntitiesFailureSpec
 
   "Remember entities handling in sharding" must {
 
-    List(NoResponse, CrashStore, StopStore, Delay(500.millis), Delay(1.second)).foreach { (wayToFail: Fail) =>
+    val allWaysToFail = List(NoResponse, CrashStore, StopStore, Delay(500.millis), Delay(1.second))
+
+    // The shard puts no timeout on the initial GetEntities, it relies on death watch of the store instead,
+    // see the contract in RememberEntitiesShardStore. A store that fails the initial load must therefore
+    // stop itself, or reply late, for the shard to make progress. NoResponse and CrashStore keep the store
+    // alive without replying, which leaves the shard waiting by design, so they describe no recoverable
+    // failure here. The silent store is covered by "restart the shard if the remember entities store stops
+    // while loading initial entity ids".
+    List(StopStore, Delay(500.millis), Delay(1.second)).foreach { (wayToFail: Fail) =>
       s"recover when initial remember entities load fails $wayToFail" in {
+        val storeProbe = TestProbe()
+        val failedProbe = TestProbe()
+        system.eventStream.subscribe(storeProbe.ref, classOf[ShardStoreCreated])
+        system.eventStream.subscribe(failedProbe.ref, classOf[GetEntitiesFailed])
+
         log.debug("Getting entities for shard 1 will fail")
         failShardGetEntities = Map("1" -> wayToFail)
 
@@ -230,7 +248,16 @@ class RememberEntitiesFailureSpec
             extractShardId)
 
           sharding.tell(EntityEnvelope(1, "hello-1"), probe.ref)
-          probe.expectNoMessage() // message is lost because shard crashes
+
+          // wait for this shard's own store to apply the failure before clearing it below, otherwise
+          // the store can handle GetEntities after the reset and the test would never exercise a
+          // failing load
+          val store = storeProbe.expectMsgType[ShardStoreCreated].store
+          failedProbe.expectMsg(GetEntitiesFailed("1", wayToFail, store))
+
+          // no reply while the initial load is failing. Not dilated, it must stay below the shortest
+          // Delay above, which is not dilated either
+          probe.expectNoMessage(100.millis)
 
           log.debug("Resetting initial fail")
           failShardGetEntities = Map.empty
@@ -243,10 +270,14 @@ class RememberEntitiesFailureSpec
 
           system.stop(sharding)
         } finally {
+          system.eventStream.unsubscribe(storeProbe.ref)
+          system.eventStream.unsubscribe(failedProbe.ref)
           failShardGetEntities = Map.empty
         }
       }
+    }
 
+    allWaysToFail.foreach { (wayToFail: Fail) =>
       s"recover when shard storing a start event fails $wayToFail" in {
         val storeProbe = TestProbe()
         system.eventStream.subscribe(storeProbe.ref, classOf[ShardStoreCreated])
