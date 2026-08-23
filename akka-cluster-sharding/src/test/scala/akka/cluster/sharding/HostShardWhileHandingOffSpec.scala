@@ -148,11 +148,29 @@ class HostShardWhileHandingOffSpec extends AkkaSpec(HostShardWhileHandingOffSpec
       probe.awaitAssert(shardsInRegion() should ===(Map("0" -> 0)), 5.seconds)
     }
 
-    "ack a repeated HostShard without restarting the shard" in {
-      region.tell(HostShard("1"), probe.ref)
-      probe.expectMsg(ShardStarted("1"))
+    "not lose entity messages that arrive in the same window" in {
+      region.tell(0, probe.ref) // -> entity in shard "0"
+      val entity0 = probe.expectMsgType[ActorRef]
 
-      region.tell(1, probe.ref) // -> entity in shard "1"
+      region.tell(BeginHandOff("0"), probe.ref)
+      probe.expectMsg(BeginHandOffAck("0"))
+      region.tell(HandOff("0"), probe.ref)
+      region.tell(HostShard("0"), probe.ref)
+
+      // sent while the region has no usable shard actor for "0", so it has to be buffered
+      val entityProbe = TestProbe()
+      region.tell(0, entityProbe.ref)
+
+      entity0 ! PoisonPill
+      probe.expectMsgAllOf(10.seconds, ShardStopped("0"), ShardStarted("0"))
+
+      // the buffered message reaches an entity in the restarted shard
+      entityProbe.expectMsgType[ActorRef](10.seconds)
+      probe.awaitAssert(shardsInRegion() should contain("0" -> 1), 5.seconds)
+    }
+
+    "ack a repeated HostShard without restarting the shard" in {
+      region.tell(1, probe.ref) // -> entity in shard "1", allocated by the coordinator
       probe.expectMsgType[ActorRef]
       probe.awaitAssert(shardsInRegion() should contain("1" -> 1), 5.seconds)
 

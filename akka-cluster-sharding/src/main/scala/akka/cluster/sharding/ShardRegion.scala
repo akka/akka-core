@@ -905,20 +905,19 @@ private[akka] class ShardRegion(
         regionByShard = regionByShard.updated(shard, self)
         regions = regions.updated(self, regions.getOrElse(self, Set.empty) + shard)
 
-        shards.get(shard) match {
-          case Some(ref) if handingOff.contains(ref) =>
-            // The previous shard actor is still stopping. Starting the shard now would do nothing,
-            // so remember the request and start the shard when that actor has stopped. Not acking
-            // means the coordinator retries after `shard-start-timeout` if it never stops.
-            log.debug(
-              "{}: Shard [{}] is still handing off, starting it when the previous shard actor has stopped",
-              typeName,
-              shard)
-            pendingHostShards = pendingHostShards.updated(shard, sender())
-          case _ =>
-            // start the shard, if already started this does nothing
-            getShard(shard)
-            sender() ! ShardStarted(shard)
+        if (isHandingOff(shard)) {
+          // The previous shard actor is still stopping. Starting the shard now would do nothing,
+          // so remember the request and start the shard when that actor has stopped. Not acking
+          // means the coordinator retries after `shard-start-timeout` if it never stops.
+          log.debug(
+            "{}: Shard [{}] is still handing off, starting it when the previous shard actor has stopped",
+            typeName,
+            shard)
+          pendingHostShards = pendingHostShards.updated(shard, sender())
+        } else {
+          // start the shard, if already started this does nothing
+          getShard(shard)
+          sender() ! ShardStarted(shard)
         }
       }
 
@@ -942,8 +941,8 @@ private[akka] class ShardRegion(
 
     case BeginHandOff(shard) =>
       log.debug("{}: BeginHandOff shard [{}]", typeName, shard)
+      pendingHostShards -= shard
       if (!preparingForShutdown) {
-        pendingHostShards -= shard
         if (regionByShard.contains(shard)) {
           val regionRef = regionByShard(shard)
           val updatedShards = regions(regionRef) - shard
@@ -1127,7 +1126,7 @@ private[akka] class ShardRegion(
         log.debug("{}: Not starting shard [{}] as region is shutting down", typeName, shardId)
         sendGracefulShutdownToCoordinatorIfInProgress()
       } else {
-        log.debug("{}: Starting shard [{}] that was requested while it was handed off", typeName, shardId)
+        log.debug("{}: Starting shard [{}] that was requested while it was being handed off", typeName, shardId)
         getShard(shardId)
         requester ! ShardStarted(shardId)
       }
@@ -1440,8 +1439,15 @@ private[akka] class ShardRegion(
         }
     }
 
+  // A shard that is handing off no longer handles messages, and it is not removed from `shards`
+  // until it has stopped.
+  private def isHandingOff(id: ShardId): Boolean =
+    shards.get(id).exists(handingOff.contains)
+
   def getShard(id: ShardId): Option[ActorRef] = {
-    if (startingShards.contains(id))
+    // None means there is no shard actor to use yet, so callers buffer. For a shard that is
+    // handing off the messages are delivered when it has stopped and is started again.
+    if (startingShards.contains(id) || isHandingOff(id))
       None
     else {
       shards
