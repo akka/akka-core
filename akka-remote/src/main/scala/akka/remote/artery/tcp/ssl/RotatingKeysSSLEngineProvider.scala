@@ -11,6 +11,7 @@ import java.security.PrivateKey
 import java.security.SecureRandom
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
+import java.util.{ Collection => JCollection }
 import javax.net.ssl.KeyManager
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLEngine
@@ -18,6 +19,7 @@ import javax.net.ssl.SSLSession
 import javax.net.ssl.TrustManager
 
 import scala.concurrent.duration._
+import scala.language.existentials
 
 import com.typesafe.config.Config
 
@@ -87,10 +89,10 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
 
   // Construct the cached instance
   private def constructContext(): ConfiguredContext = {
-    val (privateKey, cert, cacert) = readFiles()
+    val (privateKey, cert, cacerts) = readFiles()
     try {
-      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, cacert)
-      val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacert)
+      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, cacerts)
+      val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacerts)
 
       val sessionVerifier = new PeerSubjectVerifier(cert)
 
@@ -107,12 +109,12 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
     }
   }
 
-  private def readFiles(): (PrivateKey, X509Certificate, Certificate) = {
+  private def readFiles(): (PrivateKey, X509Certificate, JCollection[_ <: Certificate]) = {
     try {
-      val cacert: Certificate = PemManagersProvider.loadCertificate(SSLCACertFile)
+      val cacerts: JCollection[_ <: Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
       val cert: X509Certificate = PemManagersProvider.loadCertificate(SSLCertFile).asInstanceOf[X509Certificate]
       val privateKey: PrivateKey = PemManagersProvider.loadPrivateKey(SSLKeyFile)
-      (privateKey, cert, cacert)
+      (privateKey, cert, cacerts)
     } catch {
       case e: FileNotFoundException =>
         throw new SslTransportException(
