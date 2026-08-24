@@ -41,6 +41,11 @@ import akka.stream.TLSRole
  * This provider does not perform hostname verification, but instead allows checking
  * that the remote certificate has a subject name that matches the subject name of
  * the configured certificate.
+ *
+ * The `ca-cert-file` may contain a single PEM-encoded CA certificate or a bundle of
+ * concatenated PEM-encoded CA certificates; every certificate in the file becomes a
+ * trust anchor. Bundles are useful during CA rotation, when the old and the new CA
+ * must both be trusted for an overlap window.
  */
 final class RotatingKeysSSLEngineProvider(val config: Config, protected val log: MarkerLoggingAdapter)
     extends SSLEngineProvider {
