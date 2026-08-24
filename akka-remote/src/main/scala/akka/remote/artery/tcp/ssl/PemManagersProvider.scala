@@ -55,7 +55,7 @@ private[ssl] object PemManagersProvider {
     keyStore.load(null)
 
     keyStore.setCertificateEntry("cert", cert)
-    val cacertArray = cacerts.asScala.toArray
+    val cacertArray: Array[Certificate] = cacerts.asScala.toArray[Certificate]
     cacertArray.zipWithIndex.foreach {
       case (ca, i) => keyStore.setCertificateEntry(s"cacert-$i", ca)
     }
