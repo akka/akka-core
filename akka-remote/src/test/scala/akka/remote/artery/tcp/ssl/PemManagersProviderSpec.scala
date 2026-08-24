@@ -4,9 +4,13 @@
 
 package akka.remote.artery.tcp.ssl
 
+import java.nio.file.Files
 import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
+import javax.net.ssl.X509TrustManager
+
+import scala.jdk.CollectionConverters._
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -41,6 +45,34 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
       }
     }
 
+    "load every CA from a multi-cert PEM bundle" in {
+      // Concatenate two independent CA PEMs into a single bundle file — this is the
+      // shape a customer produces during CA rotation, where the trust file must
+      // temporarily contain both the old and the new CA.
+      val bundlePath = writeBundle("ssl/exampleca.crt", "ssl/pem/selfsigned-certificate.pem")
+      try {
+        val cacerts = PemManagersProvider.loadCertificates(bundlePath)
+        cacerts.size must be(2)
+
+        val trustManagers = PemManagersProvider.buildTrustManagers(cacerts)
+        val anchors = trustManagers.collect {
+          case tm: X509TrustManager => tm.getAcceptedIssuers.toList
+        }.flatten
+        anchors.size must be(2)
+        anchors.toSet must be(cacerts.asScala.toSet)
+      } finally Files.deleteIfExists(java.nio.file.Paths.get(bundlePath))
+    }
+
+  }
+
+  private def writeBundle(resources: String*): String = {
+    val bytes = resources.iterator
+      .map(nameToPath)
+      .flatMap(p => Files.readAllBytes(java.nio.file.Paths.get(p)) :+ '\n'.toByte)
+      .toArray
+    val tmp = Files.createTempFile("ca-bundle-", ".pem")
+    Files.write(tmp, bytes)
+    tmp.toString
   }
 
   private def withFiles(keyFile: String, certFile: String, caCertFile: String)(
