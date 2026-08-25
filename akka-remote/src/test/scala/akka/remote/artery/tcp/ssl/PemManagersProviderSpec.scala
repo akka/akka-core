@@ -46,10 +46,10 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
     }
 
     "load every CA from a multi-cert PEM bundle" in {
-      // Concatenate two independent CA PEMs into a single bundle file — this is the
-      // shape a customer produces during CA rotation, where the trust file must
-      // temporarily contain both the old and the new CA.
-      val bundlePath = writeBundle("ssl/exampleca.crt", "ssl/pem/selfsigned-certificate.pem")
+      // Concatenate two independent, valid, non-expired root CAs into a single bundle
+      // file, mirroring a CA rotation bundle that must trust both an old and a new CA
+      // for an overlap window.
+      val bundlePath = writeBundle("ssl/exampleca.crt", "ssl/rotation-ca2/exampleca2.crt")
       try {
         val cacerts = PemManagersProvider.loadCertificates(bundlePath)
         cacerts.size must be(2)

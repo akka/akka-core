@@ -59,7 +59,19 @@ private[ssl] object PemManagersProvider {
     cacertArray.zipWithIndex.foreach {
       case (ca, i) => keyStore.setCertificateEntry(s"cacert-$i", ca)
     }
-    val chain: Array[Certificate] = cert +: cacertArray
+    // Only the CA that actually issued `cert` belongs in its chain -- the other CAs in the
+    // bundle (e.g. an old CA still present during a rotation overlap window) are trust
+    // anchors, not issuers, and must not be presented as part of this chain: a peer
+    // validating with a TrustManager that doesn't build alternate paths (e.g. "SunX509")
+    // will reject the chain if one of those unrelated CAs is invalid, even though it's not
+    // the actual issuer.
+    val issuer = cacertArray.collectFirst {
+      case ca: X509Certificate if ca.getSubjectX500Principal == cert.getIssuerX500Principal => ca
+    }
+    val chain: Array[Certificate] = issuer match {
+      case Some(ca) => Array(cert, ca)
+      case None     => cert +: cacertArray
+    }
     keyStore.setKeyEntry("private-key", privateKey, "changeit".toCharArray, chain)
 
     val kmf =
