@@ -40,10 +40,8 @@ import akka.stream.TLSRole
  * that the remote certificate has a subject name that matches the subject name of
  * the configured certificate.
  *
- * The `ca-cert-file` may contain a single PEM-encoded CA certificate or a bundle of
- * concatenated PEM-encoded CA certificates; every certificate in the file becomes a
- * trust anchor. Bundles are useful during CA rotation, when the old and the new CA
- * must both be trusted for an overlap window.
+ * The `ca-cert-file` may hold a single certificate, or several concatenated together so
+ * that an old and a new CA can both be trusted during a rotation.
  */
 final class RotatingKeysSSLEngineProvider(val config: Config, protected val log: MarkerLoggingAdapter)
     extends SSLEngineProvider {

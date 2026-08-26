@@ -40,10 +40,10 @@ class RotatingKeysSSLEngineProviderConstructionSpec extends AnyWordSpec with Mat
           emptyCaCertFile.toString)
         val provider = new RotatingKeysSSLEngineProvider(config, NoMarkerLogging)
 
-        // Before the fix: this succeeds, silently caching an SSLContext with zero trust
-        // anchors for the full ssl-context-cache-ttl. Every handshake using it then fails
-        // later with an opaque InvalidAlgorithmParameterException that points nowhere near
-        // the actual cause (the empty ca-cert-file).
+        // An empty or truncated ca-cert-file otherwise loads as zero certificates without
+        // error, the SSLContext gets cached with no trust anchors for the full
+        // ssl-context-cache-ttl, and every handshake then fails later with an opaque
+        // InvalidAlgorithmParameterException that points nowhere near the actual cause.
         intercept[SslTransportException] {
           provider.getSSLContext()
         }

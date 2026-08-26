@@ -43,15 +43,12 @@ private[ssl] object PemManagersProvider {
     keyStore.load(null)
 
     keyStore.setCertificateEntry("cert", cert)
-    cacerts.zipWithIndex.foreach {
-      case (ca, i) => keyStore.setCertificateEntry(s"cacert-$i", ca)
-    }
-    // Only the CA that actually issued `cert` belongs in its chain -- the other CAs in the
+    // Only the CA that actually issued `cert` belongs in its chain. The other CAs in the
     // bundle (e.g. an old CA still present during a rotation overlap window) are trust
     // anchors, not issuers, and must not be presented as part of this chain: a peer
-    // validating with a TrustManager that doesn't build alternate paths (e.g. "SunX509")
-    // will reject the chain if one of those unrelated CAs is invalid, even though it's not
-    // the actual issuer.
+    // validating with a TrustManager that doesn't build alternate paths (e.g. SunX509)
+    // will reject the chain if one of those unrelated CAs is invalid, even though it is
+    // not the actual issuer.
     val issuer = cacerts.collectFirst {
       case ca: X509Certificate if ca.getSubjectX500Principal == cert.getIssuerX500Principal => ca
     }
@@ -109,10 +106,9 @@ private[ssl] object PemManagersProvider {
   /**
    * INTERNAL API
    *
-   * Loads every PEM-encoded certificate from `filename`. Unlike [[loadCertificate]] (which
-   * calls the JDK's singular `generateCertificate` and silently ignores all but the first
-   * entry), this reads a full CA bundle — required for scenarios such as CA rotation where
-   * a trust file legitimately contains multiple certificates.
+   * Loads every PEM-encoded certificate from `filename`, in file order. Use this for a
+   * CA trust file, which may legitimately contain more than one certificate, for example
+   * during a CA rotation.
    */
   @InternalApi
   private[ssl] def loadCertificates(filename: String): Seq[Certificate] = blocking {
