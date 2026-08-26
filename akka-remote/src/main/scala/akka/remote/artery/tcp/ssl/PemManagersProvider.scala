@@ -13,7 +13,6 @@ import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.util.Collections
 import java.util.{ Collection => JCollection }
 import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
@@ -32,16 +31,6 @@ import akka.pki.pem.PEMDecoder
  */
 @InternalApi
 private[ssl] object PemManagersProvider {
-
-  /**
-   * INTERNAL API
-   */
-  @InternalApi
-  private[ssl] def buildKeyManagers(
-      privateKey: PrivateKey,
-      cert: X509Certificate,
-      cacert: Certificate): Array[KeyManager] =
-    buildKeyManagers(privateKey, cert, Collections.singletonList(cacert))
 
   /**
    * INTERNAL API
@@ -80,13 +69,6 @@ private[ssl] object PemManagersProvider {
     val keyManagers = kmf.getKeyManagers
     keyManagers
   }
-
-  /**
-   * INTERNAL API
-   */
-  @InternalApi
-  private[ssl] def buildTrustManagers(cacert: Certificate): Array[TrustManager] =
-    buildTrustManagers(Collections.singletonList(cacert))
 
   /**
    * INTERNAL API
