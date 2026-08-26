@@ -13,7 +13,6 @@ import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.util.{ Collection => JCollection }
 import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManager
@@ -39,13 +38,12 @@ private[ssl] object PemManagersProvider {
   private[ssl] def buildKeyManagers(
       privateKey: PrivateKey,
       cert: X509Certificate,
-      cacerts: JCollection[_ <: Certificate]): Array[KeyManager] = {
+      cacerts: Seq[Certificate]): Array[KeyManager] = {
     val keyStore = KeyStore.getInstance("JKS")
     keyStore.load(null)
 
     keyStore.setCertificateEntry("cert", cert)
-    val cacertArray: Array[Certificate] = cacerts.asScala.toArray[Certificate]
-    cacertArray.zipWithIndex.foreach {
+    cacerts.zipWithIndex.foreach {
       case (ca, i) => keyStore.setCertificateEntry(s"cacert-$i", ca)
     }
     // Only the CA that actually issued `cert` belongs in its chain -- the other CAs in the
@@ -54,12 +52,12 @@ private[ssl] object PemManagersProvider {
     // validating with a TrustManager that doesn't build alternate paths (e.g. "SunX509")
     // will reject the chain if one of those unrelated CAs is invalid, even though it's not
     // the actual issuer.
-    val issuer = cacertArray.collectFirst {
+    val issuer = cacerts.collectFirst {
       case ca: X509Certificate if ca.getSubjectX500Principal == cert.getIssuerX500Principal => ca
     }
     val chain: Array[Certificate] = issuer match {
       case Some(ca) => Array(cert, ca)
-      case None     => cert +: cacertArray
+      case None     => (cert +: cacerts).toArray
     }
     keyStore.setKeyEntry("private-key", privateKey, "changeit".toCharArray, chain)
 
@@ -74,10 +72,10 @@ private[ssl] object PemManagersProvider {
    * INTERNAL API
    */
   @InternalApi
-  private[ssl] def buildTrustManagers(cacerts: JCollection[_ <: Certificate]): Array[TrustManager] = {
+  private[ssl] def buildTrustManagers(cacerts: Seq[Certificate]): Array[TrustManager] = {
     val trustStore = KeyStore.getInstance("JKS")
     trustStore.load(null)
-    cacerts.asScala.zipWithIndex.foreach {
+    cacerts.zipWithIndex.foreach {
       case (ca, i) => trustStore.setCertificateEntry(s"cacert-$i", ca)
     }
 
@@ -117,9 +115,9 @@ private[ssl] object PemManagersProvider {
    * a trust file legitimately contains multiple certificates.
    */
   @InternalApi
-  private[ssl] def loadCertificates(filename: String): JCollection[_ <: Certificate] = blocking {
+  private[ssl] def loadCertificates(filename: String): Seq[Certificate] = blocking {
     val bytes = Files.readAllBytes(new File(filename).toPath)
-    certFactory.generateCertificates(new ByteArrayInputStream(bytes))
+    certFactory.generateCertificates(new ByteArrayInputStream(bytes)).asScala.toVector
   }
 
 }

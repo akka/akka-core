@@ -10,8 +10,6 @@ import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
-import scala.jdk.CollectionConverters._
-
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -30,16 +28,16 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
       // during the SSLHandshake.
       withFiles("ssl/pem/pkcs1.pem", "ssl/pem/selfsigned-certificate.pem", "ssl/pem/selfsigned-certificate.pem") {
         (pk, cert, cacert) =>
-          PemManagersProvider.buildKeyManagers(pk, cert, java.util.Collections.singletonList(cacert)).length must be(1)
-          PemManagersProvider.buildTrustManagers(java.util.Collections.singletonList(cacert)).length must be(1)
+          PemManagersProvider.buildKeyManagers(pk, cert, Seq(cacert)).length must be(1)
+          PemManagersProvider.buildTrustManagers(Seq(cacert)).length must be(1)
           cert.getSubjectDN.getName must be("CN=0d207b68-9a20-4ee8-92cb-bf9699581cf8")
       }
     }
 
     "load stores reading files setup in config (keytool samples)" in {
       withFiles("ssl/node.example.com.pem", "ssl/node.example.com.crt", "ssl/exampleca.crt") { (pk, cert, cacert) =>
-        PemManagersProvider.buildKeyManagers(pk, cert, java.util.Collections.singletonList(cacert)).length must be(1)
-        PemManagersProvider.buildTrustManagers(java.util.Collections.singletonList(cacert)).length must be(1)
+        PemManagersProvider.buildKeyManagers(pk, cert, Seq(cacert)).length must be(1)
+        PemManagersProvider.buildTrustManagers(Seq(cacert)).length must be(1)
         cert.getSubjectDN.getName must be(
           "CN=node.example.com, OU=Example Org, O=Example Company, L=San Francisco, ST=California, C=US")
       }
@@ -59,7 +57,7 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
           case tm: X509TrustManager => tm.getAcceptedIssuers.toList
         }.flatten
         anchors.size must be(2)
-        anchors.toSet must be(cacerts.asScala.toSet)
+        anchors.toSet must be(cacerts.toSet)
       } finally Files.deleteIfExists(java.nio.file.Paths.get(bundlePath))
     }
 

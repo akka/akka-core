@@ -11,7 +11,6 @@ import java.security.PrivateKey
 import java.security.SecureRandom
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
-import java.util.{ Collection => JCollection }
 import javax.net.ssl.KeyManager
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLEngine
@@ -19,7 +18,6 @@ import javax.net.ssl.SSLSession
 import javax.net.ssl.TrustManager
 
 import scala.concurrent.duration._
-import scala.language.existentials
 
 import com.typesafe.config.Config
 
@@ -114,9 +112,9 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
     }
   }
 
-  private def readFiles(): (PrivateKey, X509Certificate, JCollection[_ <: Certificate]) = {
+  private def readFiles(): (PrivateKey, X509Certificate, Seq[Certificate]) = {
     try {
-      val cacerts: JCollection[_ <: Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
+      val cacerts: Seq[Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
       if (cacerts.isEmpty)
         throw new SslTransportException(s"No certificate found in ca-cert-file [$SSLCACertFile]", null)
       val cert: X509Certificate = PemManagersProvider.loadCertificate(SSLCertFile).asInstanceOf[X509Certificate]

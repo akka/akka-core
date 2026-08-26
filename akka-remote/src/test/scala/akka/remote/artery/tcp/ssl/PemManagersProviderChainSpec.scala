@@ -5,7 +5,6 @@
 package akka.remote.artery.tcp.ssl
 
 import java.security.cert.X509Certificate
-import java.util.Arrays
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509KeyManager
 import javax.net.ssl.X509TrustManager
@@ -34,7 +33,7 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
   private val otherCa =
     PemManagersProvider.loadCertificate(nameToPath("ssl/pem/selfsigned-certificate.pem")).asInstanceOf[X509Certificate]
 
-  private def presentedChain(cacerts: java.util.List[X509Certificate]): Array[X509Certificate] = {
+  private def presentedChain(cacerts: Seq[X509Certificate]): Array[X509Certificate] = {
     val keyManagers = PemManagersProvider.buildKeyManagers(privateKey, leafCert, cacerts)
     val km = keyManagers.collectFirst { case k: X509KeyManager => k }.get
     km.getCertificateChain("private-key")
@@ -58,7 +57,7 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
 
     "present only the real issuer in the certificate chain, not every CA in the bundle" in {
       // Bundle order mirrors a rotation file: old (unrelated/expired) CA first, real CA second.
-      val chain = presentedChain(Arrays.asList(otherCa, realCa))
+      val chain = presentedChain(Seq(otherCa, realCa))
 
       // A peer validating this chain with a non-path-building TrustManager must still
       // succeed: the only CA in the chain besides the leaf should be the real issuer.
