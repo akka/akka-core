@@ -339,16 +339,14 @@ private[remote] class ArteryTcpTransport(
 
     // If something in the inboundConnectionFlow fails, e.g. framing, the connection will be torn down,
     // but other parts of the inbound streams don't have to be restarted.
-    val maxFrameLength =
-      if (largeMessageChannelEnabled)
-        math.max(settings.Advanced.MaximumFrameSize, settings.Advanced.MaximumLargeFrameSize)
-      else
-        settings.Advanced.MaximumFrameSize
+    val maxFrameLength = settings.Advanced.MaximumFrameSize
+    val maxLargeFrameLength =
+      if (largeMessageChannelEnabled) settings.Advanced.MaximumLargeFrameSize else maxFrameLength
     val newInboundConnectionFlow = {
       Flow[ByteString]
         .via(inboundKillSwitch.flow)
         // must create new FlightRecorder event sink for each connection because they can't be shared
-        .via(new TcpFraming(maxFrameLength))
+        .via(new TcpFraming(maxFrameLength, maxLargeFrameLength))
         .alsoTo(inboundStream)
         .filter(_ => false) // don't send back anything in this TCP socket
         .map(_ => ByteString.empty) // make it a Flow[ByteString] again

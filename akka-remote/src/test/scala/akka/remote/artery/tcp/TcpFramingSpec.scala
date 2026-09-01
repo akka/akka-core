@@ -104,7 +104,46 @@ class TcpFramingSpec extends AkkaSpec("""
       val bytes = TcpFraming.encodeConnectionHeader(3) ++ encodeFrameHeader(payload.size) ++ payload
       val failed = Source(List(bytes)).via(framingFlow).runWith(Sink.seq).failed.futureValue
       failed shouldBe a[FramingException]
-      failed.getMessage should startWith("Too long frame")
+      failed.getMessage should startWith("Invalid frame length")
+    }
+
+    "reject negative frame length" in {
+      val bytes = TcpFraming.encodeConnectionHeader(3) ++ encodeFrameHeader(-1) ++ payload5
+      val failed = Source(List(bytes)).via(framingFlow).runWith(Sink.seq).failed.futureValue
+      failed shouldBe a[FramingException]
+      failed.getMessage should startWith("Invalid frame length")
+    }
+
+    "reject negative frame length without corrupting subsequent parsing" in {
+      // a naive implementation would move the parser's cursor backwards instead of failing,
+      // which would then also mis-parse whatever frame follows
+      val bytes =
+        TcpFraming.encodeConnectionHeader(3) ++ encodeFrameHeader(-1) ++ payload5 ++ frameBytes(1)
+      val failed = Source(List(bytes)).via(framingFlow).runWith(Sink.seq).failed.futureValue
+      failed shouldBe a[FramingException]
+      failed.getMessage should startWith("Invalid frame length")
+    }
+
+    "reject frames larger than the applicable per-stream max, even when large frames are allowed on another stream" in {
+      val maxLargeFrameLength = 200
+      val perStreamFramingFlow = Flow[ByteString].via(new TcpFraming(maxFrameLength, maxLargeFrameLength))
+
+      // ordinary stream (2) must still be bounded by maxFrameLength, not maxLargeFrameLength
+      val payload = ByteString((1 to maxFrameLength + 1).map(_.toByte).toArray)
+      val bytes = TcpFraming.encodeConnectionHeader(2) ++ encodeFrameHeader(payload.size) ++ payload
+      val failed = Source(List(bytes)).via(perStreamFramingFlow).runWith(Sink.seq).failed.futureValue
+      failed shouldBe a[FramingException]
+      failed.getMessage should startWith("Invalid frame length")
+    }
+
+    "accept frames within the larger bound on the large message stream" in {
+      val maxLargeFrameLength = 200
+      val perStreamFramingFlow = Flow[ByteString].via(new TcpFraming(maxFrameLength, maxLargeFrameLength))
+
+      val payload = ByteString((1 to maxFrameLength + 1).map(_.toByte).toArray)
+      val bytes = TcpFraming.encodeConnectionHeader(3) ++ encodeFrameHeader(payload.size) ++ payload
+      val frames = Source(List(bytes)).via(perStreamFramingFlow).runWith(Sink.seq).futureValue
+      frames.head.streamId should ===(3)
     }
 
   }

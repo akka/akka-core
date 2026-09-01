@@ -9,6 +9,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 import akka.annotation.InternalApi
+import akka.remote.artery.ArteryTransport.LargeStreamId
 import akka.stream.Attributes
 import akka.stream.impl.io.ByteStringParser
 import akka.stream.impl.io.ByteStringParser.ByteReader
@@ -59,7 +60,14 @@ import akka.util.ByteString
 /**
  * INTERNAL API
  */
-@InternalApi private[akka] class TcpFraming(maxFrameLength: Int) extends ByteStringParser[EnvelopeBuffer] {
+@InternalApi private[akka] class TcpFraming(maxFrameLength: Int, maxLargeFrameLength: Int = -1)
+    extends ByteStringParser[EnvelopeBuffer] {
+
+  // large frames are only expected on the dedicated large message stream, other streams
+  // must be bounded by the (smaller) ordinary maxFrameLength; -1 means "not configured",
+  // i.e. same bound as ordinary frames
+  private def maxFrameLengthFor(streamId: Int): Int =
+    if (streamId == LargeStreamId && maxLargeFrameLength >= 0) maxLargeFrameLength else maxFrameLength
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new ParsingLogic {
 
@@ -88,8 +96,10 @@ import akka.util.ByteString
 
       override def parse(reader: ByteReader): ParseResult[EnvelopeBuffer] = {
         val frameLength = reader.readIntLE()
-        if (frameLength > maxFrameLength)
-          throw new FramingException(s"Too long frame [$frameLength], max length is [$maxFrameLength]")
+        val currentMaxFrameLength = maxFrameLengthFor(streamId)
+        if (frameLength < 0 || frameLength > currentMaxFrameLength)
+          throw new FramingException(
+            s"Invalid frame length [$frameLength], must be between 0 and [$currentMaxFrameLength]")
         val buffer = createBuffer(reader.take(frameLength))
         ParseResult(Some(buffer), this)
       }
