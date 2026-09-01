@@ -233,6 +233,13 @@ import akka.stream.stage._
     logics(i).handlers.length
   }
 
+  // Once a stage finalizes its `logics` slot is cleared (see finalizeStage) so its captured runtime state
+  // (buffers, closures, promises) is not kept reachable for the remaining lifetime of the interpreter just
+  // because a sibling stage in the same fused graph is still running. A tiny memento (name + attributes, no
+  // stage state) is kept here so a live toSnapshot (used by MaterializerState.streamSnapshots, which may run
+  // while some stages have finished and others are still active) can still report the finished stage.
+  private[this] val finishedLogicSnapshots = new Array[LogicSnapshot](logics.length)
+
   private[this] var _subFusingMaterializer: Materializer = _
   private[this] lazy val defaultErrorReportingLogLevel = LogLevels.defaultErrorLevel(materializer.system)
 
@@ -327,7 +334,8 @@ import akka.stream.stage._
     var i = 0
     while (i < logics.length) {
       val logic = logics(i)
-      if (shutdownCounter(logic.stageId) != StageFinalized) finalizeStage(logic)
+      // a null slot means the stage already finalized earlier (see finalizeStage)
+      if ((logic ne null) && shutdownCounter(logic.stageId) != StageFinalized) finalizeStage(logic)
       i += 1
     }
   }
@@ -527,6 +535,7 @@ import akka.stream.stage._
         println(
           s"$Name CANCEL ${inOwnerName(connection)} -> ${outOwnerName(connection)} (${connection.outHandler}) [${outLogicName(connection)}]")
       connection.portState |= OutClosed
+      releaseIfDead(connection)
       completeConnection(connection.outOwner.stageId)
       val cause = connection.slot.asInstanceOf[Cancelled].cause
       connection.slot = Empty
@@ -540,6 +549,7 @@ import akka.stream.stage._
           println(
             s"$Name COMPLETE ${outOwnerName(connection)} -> ${inOwnerName(connection)} (${connection.inHandler}) [${inLogicName(connection)}]")
         connection.portState |= InClosed
+        releaseIfDead(connection)
         activeStage = connection.inOwner
         completeConnection(connection.inOwner.stageId)
         if ((connection.portState & InFailed) == 0) connection.inHandler.onUpstreamFinish()
@@ -631,8 +641,17 @@ import akka.stream.stage._
     } catch {
       case NonFatal(e) =>
         log.error(e, s"Error during postStop in [{}]: {}", logic.toString, e.getMessage)
+    } finally {
+      finishedLogicSnapshots(logic.stageId) = LogicSnapshotImpl(logic.stageId, logic.toString, logic.attributes)
+      logics(logic.stageId) = null
     }
   }
+
+  // A connection that has closed on both ends is dead and will never be touched again. Drop the interpreter's
+  // reference to it so it stops pinning its (possibly already finalized) owners and handlers.
+  private def releaseIfDead(connection: Connection): Unit =
+    if ((connection.portState & (InClosed | OutClosed)) == (InClosed | OutClosed))
+      connections(connection.id) = null
 
   private[stream] def chasePush(connection: Connection): Unit = {
     if (chaseCounter > 0 && chasedPush == NoEvent) {
@@ -652,6 +671,7 @@ import akka.stream.stage._
     val currentState = connection.portState
     if (Debug) println(s"$Name   complete($connection) [$currentState]")
     connection.portState = currentState | OutClosed
+    releaseIfDead(connection)
 
     // Push-Close needs special treatment, cannot be chased, convert back to ordinary event
     if (chasedPush == connection) {
@@ -667,6 +687,7 @@ import akka.stream.stage._
     val currentState = connection.portState
     if (Debug) println(s"$Name   fail($connection, $ex) [$currentState]")
     connection.portState = currentState | OutClosed
+    releaseIfDead(connection)
     if ((currentState & (InClosed | OutClosed)) == 0) {
       connection.portState = currentState | (OutClosed | InFailed)
       connection.slot = Failed(ex, connection.slot)
@@ -686,6 +707,7 @@ import akka.stream.stage._
     val currentState = connection.portState
     if (Debug) println(s"$Name   cancel($connection) [$currentState]")
     connection.portState = currentState | InClosed
+    releaseIfDead(connection)
     if ((currentState & OutClosed) == 0) {
       connection.slot = Cancelled(cause)
       if ((currentState & (Pulling | Pushing | InClosed)) == 0) enqueue(connection)
@@ -708,16 +730,16 @@ import akka.stream.stage._
    */
   def toSnapshot: RunningInterpreter = {
 
+    // a null slot means the stage already finalized (see finalizeStage), fall back to its saved memento
     val logicSnapshots = logics.zipWithIndex.map {
       case (logic, idx) =>
-        LogicSnapshotImpl(idx, logic.toString, logic.attributes)
+        if (logic ne null) LogicSnapshotImpl(idx, logic.toString, logic.attributes) else finishedLogicSnapshots(idx)
     }
-    val logicIndexes = logics.zipWithIndex.map { case (stage, idx) => stage -> idx }.toMap
     val connectionSnapshots = connections.filter(_ != null).map { connection =>
       ConnectionSnapshotImpl(
         connection.id,
-        logicSnapshots(logicIndexes(connection.inOwner)),
-        logicSnapshots(logicIndexes(connection.outOwner)),
+        logicSnapshots(connection.inOwner.stageId),
+        logicSnapshots(connection.outOwner.stageId),
         connection.portState match {
           case InReady | Pushing                                           => ConnectionSnapshot.ShouldPull
           case OutReady | Pulling                                          => ConnectionSnapshot.ShouldPush
