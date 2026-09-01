@@ -143,11 +143,18 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
             throw new IllegalArgumentException(s"Unknown timer key: $other")
         }
 
+      // Match the established incarnation once known, to not accept a delayed Ack/Nack from a previous incarnation.
+      private def isFromCurrentRemote(from: UniqueAddress): Boolean =
+        outboundContext.associationState.uniqueRemoteAddress() match {
+          case Some(uniqueRemoteAddress) => from == uniqueRemoteAddress
+          case None                      => from.address == remoteAddress
+        }
+
       // ControlMessageObserver, external call
       override def notify(inboundEnvelope: InboundEnvelope): Unit = {
         inboundEnvelope.message match {
-          case ack: Ack   => if (ack.from.address == remoteAddress) ackCallback.invoke(ack)
-          case nack: Nack => if (nack.from.address == remoteAddress) nackCallback.invoke(nack)
+          case ack: Ack   => if (isFromCurrentRemote(ack.from)) ackCallback.invoke(ack)
+          case nack: Nack => if (isFromCurrentRemote(nack.from)) nackCallback.invoke(nack)
           case _          => // not interested
         }
       }
