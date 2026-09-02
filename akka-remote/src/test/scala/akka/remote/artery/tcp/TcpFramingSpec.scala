@@ -21,7 +21,7 @@ class TcpFramingSpec extends AkkaSpec("""
   import TcpFraming.encodeFrameHeader
 
   private val maxFrameLength = 100
-  private val framingFlow = Flow[ByteString].via(new TcpFraming(maxFrameLength))
+  private val framingFlow = Flow[ByteString].via(new TcpFraming(maxFrameLength, maxFrameLength))
 
   private val payload5 = ByteString((1 to 5).map(_.toByte).toArray)
 
@@ -144,6 +144,11 @@ class TcpFramingSpec extends AkkaSpec("""
       val bytes = TcpFraming.encodeConnectionHeader(3) ++ encodeFrameHeader(payload.size) ++ payload
       val frames = Source(List(bytes)).via(perStreamFramingFlow).runWith(Sink.seq).futureValue
       frames.head.streamId should ===(3)
+    }
+
+    "reject non-positive frame length bounds up front" in {
+      intercept[IllegalArgumentException](new TcpFraming(0, maxFrameLength))
+      intercept[IllegalArgumentException](new TcpFraming(maxFrameLength, -1))
     }
 
   }
