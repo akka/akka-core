@@ -47,8 +47,10 @@ class ArteryMessageSerializerSpec extends AkkaSpec {
         "test",
         1234567890123L,
         uniqueAddress()),
-      "SystemMessageDelivery.Ack" -> SystemMessageDelivery.Ack(98765432109876L, uniqueAddress()),
-      "SystemMessageDelivery.Nack" -> SystemMessageDelivery.Nack(98765432109876L, uniqueAddress()),
+      "SystemMessageDelivery.Ack" -> SystemMessageDelivery.Ack(98765432109876L, uniqueAddress(), Some(4711L)),
+      "SystemMessageDelivery.Nack" -> SystemMessageDelivery.Nack(98765432109876L, uniqueAddress(), Some(4711L)),
+      "SystemMessageDelivery.Ack without toUid" -> SystemMessageDelivery.Ack(98765432109876L, uniqueAddress(), None),
+      "SystemMessageDelivery.Nack without toUid" -> SystemMessageDelivery.Nack(98765432109876L, uniqueAddress(), None),
       "RemoteWatcher.ArteryHeartbeat" -> RemoteWatcher.ArteryHeartbeat,
       "RemoteWatcher.ArteryHeartbeatRsp" -> RemoteWatcher.ArteryHeartbeatRsp(Long.MaxValue)).foreach {
       case (scenario, item) =>
