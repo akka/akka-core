@@ -224,6 +224,8 @@ class GraphStageLogicSpec extends StreamSpec with GraphInterpreterSpecKit with S
 
       // note: a bit dangerous assumptions about connection and logic positions here
       // if anything around creating the logics and connections in the builder changes this may fail
+      val gLogic = interpreter.logics(1)
+      val passThroughLogic = interpreter.logics(2)
       interpreter.complete(interpreter.connections(0))
       interpreter.cancel(interpreter.connections(1), SubscriptionWithCancelException.NoMoreElementsNeeded)
       interpreter.execute(2)
@@ -233,8 +235,14 @@ class GraphStageLogicSpec extends StreamSpec with GraphInterpreterSpecKit with S
 
       interpreter.isCompleted should ===(false)
       interpreter.isSuspended should ===(false)
-      interpreter.isStageCompleted(interpreter.logics(1)) should ===(true)
-      interpreter.isStageCompleted(interpreter.logics(2)) should ===(false)
+      interpreter.isStageCompleted(gLogic) should ===(true)
+      interpreter.isStageCompleted(passThroughLogic) should ===(false)
+      // finished stages and fully closed connections are released from the interpreter so they can be gc:ed
+      interpreter.logics(1) should ===(null)
+      interpreter.logics(2) should ===(passThroughLogic)
+      interpreter.connections(0) should ===(null)
+      interpreter.connections(1) should ===(null)
+      interpreter.connections(2) should not be null
     }
 
     "not allow push from constructor" in {
