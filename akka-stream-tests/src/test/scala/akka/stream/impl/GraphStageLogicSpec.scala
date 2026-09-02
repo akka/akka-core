@@ -245,6 +245,51 @@ class GraphStageLogicSpec extends StreamSpec with GraphInterpreterSpecKit with S
       interpreter.connections(2) should not be null
     }
 
+    "release a finished stage from the connections of a still running neighbour" in new Builder {
+      object finishing extends GraphStage[FlowShape[Int, Int]] {
+        val in = Inlet[Int]("in")
+        val out = Outlet[Int]("out")
+        override val shape = FlowShape(in, out)
+        override def createLogic(attr: Attributes) = new GraphStageLogic(shape) {
+          setHandler(in, eagerTerminateInput)
+          setHandler(out, eagerTerminateOutput)
+        }
+      }
+      object keepsRunning extends GraphStage[FlowShape[Int, Int]] {
+        val in = Inlet[Int]("in")
+        val out = Outlet[Int]("out")
+        override val shape = FlowShape(in, out)
+        override def createLogic(attr: Attributes) = new GraphStageLogic(shape) {
+          setHandler(in, ignoreTerminateInput)
+          setHandler(out, ignoreTerminateOutput)
+        }
+      }
+
+      builder(finishing, keepsRunning)
+        .connect(Upstream, finishing.in)
+        .connect(finishing.out, keepsRunning.in)
+        .connect(keepsRunning.out, Downstream)
+        .init()
+
+      val finishingLogic = interpreter.logics(1)
+      val keepsRunningLogic = interpreter.logics(2)
+
+      interpreter.complete(interpreter.connections(0))
+      interpreter.execute(10)
+
+      interpreter.isStageCompleted(finishingLogic) should ===(true)
+      interpreter.isStageCompleted(keepsRunningLogic) should ===(false)
+      interpreter.isCompleted should ===(false)
+
+      // keepsRunning keeps the closed connection in portToConn for port state queries, but it must not
+      // keep the finished stage alive through it
+      val deadConnection = keepsRunningLogic.portToConn(keepsRunning.in.id)
+      deadConnection.outOwner should ===(null)
+      deadConnection.outHandler should ===(null)
+      deadConnection.inOwner should ===(null)
+      deadConnection.inHandler should ===(null)
+    }
+
     "not allow push from constructor" in {
       object source extends GraphStage[SourceShape[Int]] {
         val out = Outlet[Int]("out")
