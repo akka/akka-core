@@ -727,9 +727,9 @@ import akka.stream.stage._
         logicSnapshots(connection.inOwner.stageId),
         logicSnapshots(connection.outOwner.stageId),
         connection.portState match {
-          case InReady | Pushing                                           => ConnectionSnapshot.ShouldPull
-          case OutReady | Pulling                                          => ConnectionSnapshot.ShouldPush
-          case x if (x & (InClosed | OutClosed)) == (InClosed | OutClosed) =>
+          case InReady | Pushing                      => ConnectionSnapshot.ShouldPull
+          case OutReady | Pulling                     => ConnectionSnapshot.ShouldPush
+          case x if (x & (InClosed | OutClosed)) != 0 =>
             // At least one side of the connection is closed: we show it as closed
             ConnectionSnapshot.Closed
           case _ =>
