@@ -637,6 +637,10 @@ import akka.stream.stage._
   // keeps the connection in its portToConn for port state queries and would otherwise pin its finished neighbour.
   private def releaseIfDead(connection: Connection): Unit =
     if ((connection.portState & (InClosed | OutClosed)) == (InClosed | OutClosed)) {
+      // complete already aborts a chase, fail and cancel only do so when the connection was still open, and a
+      // chased event would be delivered to the handlers dropped below, where it cannot reach a closed port anyway
+      if (chasedPush eq connection) chasedPush = NoEvent
+      if (chasedPull eq connection) chasedPull = NoEvent
       connections(connection.id) = null
       connection.inOwner = null
       connection.outOwner = null
