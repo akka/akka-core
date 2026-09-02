@@ -308,16 +308,20 @@ import akka.stream.stage._
     var i = 0
     while (i < logics.length) {
       val logic = logics(i)
-      logic.interpreter = this
-      try {
-        logic.beforePreStart()
-        logic.preStart()
-      } catch {
-        case NonFatal(e) =>
-          log.error(e, "Error during preStart in [{}]: {}", logic.toString, e.getMessage)
-          logic.failStage(e)
+      // a null slot means the stage already finalized earlier (see finalizeStage), which can happen when an
+      // aborted shell is initialized a second time
+      if (logic ne null) {
+        logic.interpreter = this
+        try {
+          logic.beforePreStart()
+          logic.preStart()
+        } catch {
+          case NonFatal(e) =>
+            log.error(e, "Error during preStart in [{}]: {}", logic.toString, e.getMessage)
+            logic.failStage(e)
+        }
+        afterStageHasRun(logic)
       }
-      afterStageHasRun(logic)
       i += 1
     }
   }
