@@ -202,19 +202,19 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       sink.request(100)
       sink.expectNext(TestSysMsg("msg-1"))
       sink.expectNext(TestSysMsg("msg-2"))
-      replyProbe.expectMsg(Ack(1L, addressB, Some(addressB.uid)))
-      replyProbe.expectMsg(Ack(2L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(1L, addressB, OptionVal.Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2L, addressB, OptionVal.Some(addressB.uid)))
       // 3 and 4 was dropped
-      replyProbe.expectMsg(Nack(2L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Nack(2L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNoMessage(100.millis) // 3 was dropped
       inboundContextB.deliverLastReply()
       // resending 3, 4, 5
       sink.expectNext(TestSysMsg("msg-3"))
-      replyProbe.expectMsg(Ack(3L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-4"))
-      replyProbe.expectMsg(Ack(4L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(4L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-5"))
-      replyProbe.expectMsg(Ack(5L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(5L, addressB, OptionVal.Some(addressB.uid)))
       replyProbe.expectNoMessage(100.millis)
       inboundContextB.deliverLastReply()
       sink.expectComplete()
@@ -234,17 +234,17 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
         .runWith(TestSink[TestSysMsg]())
 
       sink.request(100)
-      replyProbe.expectMsg(Nack(0L, addressB, Some(addressB.uid))) // from receiving 2
-      replyProbe.expectMsg(Nack(0L, addressB, Some(addressB.uid))) // from receiving 3
+      replyProbe.expectMsg(Nack(0L, addressB, OptionVal.Some(addressB.uid))) // from receiving 2
+      replyProbe.expectMsg(Nack(0L, addressB, OptionVal.Some(addressB.uid))) // from receiving 3
       sink.expectNoMessage(100.millis) // 1 was dropped
       inboundContextB.deliverLastReply() // it's ok to not delivery all nacks
       // resending 1, 2, 3
       sink.expectNext(TestSysMsg("msg-1"))
-      replyProbe.expectMsg(Ack(1L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(1L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-2"))
-      replyProbe.expectMsg(Ack(2L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-3"))
-      replyProbe.expectMsg(Ack(3L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       sink.expectComplete()
     }
@@ -264,17 +264,17 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
 
       sink.request(100)
       sink.expectNext(TestSysMsg("msg-1"))
-      replyProbe.expectMsg(Ack(1L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(1L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       sink.expectNext(TestSysMsg("msg-2"))
-      replyProbe.expectMsg(Ack(2L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       sink.expectNoMessage(200.millis) // 3 was dropped
       // resending 3 due to timeout
       sink.expectNext(TestSysMsg("msg-3"))
-      replyProbe.expectMsg(4.seconds, Ack(3L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(4.seconds, Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       // continue resending
-      replyProbe.expectMsg(4.seconds, Ack(3L, addressB, Some(addressB.uid)))
+      replyProbe.expectMsg(4.seconds, Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       replyProbe.expectNoMessage(2200.millis)
       sink.expectComplete()
@@ -317,7 +317,7 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       controlSubject.sendControl(
         InboundEnvelope(
           OptionVal.None,
-          Ack(1L, staleFrom, Some(addressA.uid)),
+          Ack(1L, staleFrom, OptionVal.Some(addressA.uid)),
           OptionVal.None,
           addressA.uid,
           OptionVal.None))
@@ -329,7 +329,7 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       controlSubject.sendControl(
         InboundEnvelope(
           OptionVal.None,
-          Ack(1L, addressB, Some(addressA.uid)),
+          Ack(1L, addressB, OptionVal.Some(addressA.uid)),
           OptionVal.None,
           addressA.uid,
           OptionVal.None))
@@ -353,7 +353,7 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       controlSubject.sendControl(
         InboundEnvelope(
           OptionVal.None,
-          Ack(1L, addressB, Some(addressA.uid + 1)),
+          Ack(1L, addressB, OptionVal.Some(addressA.uid + 1)),
           OptionVal.None,
           addressA.uid,
           OptionVal.None))
@@ -365,7 +365,7 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       controlSubject.sendControl(
         InboundEnvelope(
           OptionVal.None,
-          Ack(1L, addressB, Some(addressA.uid)),
+          Ack(1L, addressB, OptionVal.Some(addressA.uid)),
           OptionVal.None,
           addressA.uid,
           OptionVal.None))
@@ -386,7 +386,12 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       sink.expectNext(1L) // initial send
 
       controlSubject.sendControl(
-        InboundEnvelope(OptionVal.None, Ack(1L, addressB, None), OptionVal.None, addressA.uid, OptionVal.None))
+        InboundEnvelope(
+          OptionVal.None,
+          Ack(1L, addressB, OptionVal.none[Long]),
+          OptionVal.None,
+          addressA.uid,
+          OptionVal.None))
       sink.expectComplete()
     }
 

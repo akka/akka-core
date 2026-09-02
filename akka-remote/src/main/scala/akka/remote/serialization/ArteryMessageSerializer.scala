@@ -17,6 +17,7 @@ import akka.remote.artery.OutboundHandshake.{ HandshakeReq, HandshakeRsp }
 import akka.remote.artery.compress.{ CompressionProtocol, CompressionTable }
 import akka.remote.artery.compress.CompressionProtocol._
 import akka.serialization.{ BaseSerializer, Serialization, SerializationExtension, SerializerWithStringManifest }
+import akka.util.OptionVal
 
 /** INTERNAL API */
 private[akka] object ArteryMessageSerializer {
@@ -228,22 +229,22 @@ private[akka] final class ArteryMessageSerializer(val system: ExtendedActorSyste
   def serializeSystemMessageDeliveryAck(
       seqNo: Long,
       from: UniqueAddress,
-      toUid: Option[Long]): ArteryControlFormats.SystemMessageDeliveryAck = {
+      toUid: OptionVal[Long]): ArteryControlFormats.SystemMessageDeliveryAck = {
     val builder =
       ArteryControlFormats.SystemMessageDeliveryAck.newBuilder.setSeqNo(seqNo).setFrom(serializeUniqueAddress(from))
-    toUid.foreach(builder.setToUid)
+    if (toUid.isDefined) builder.setToUid(toUid.get)
     builder.build
   }
 
   def deserializeSystemMessageDeliveryAck(
       bytes: Array[Byte],
-      create: (Long, UniqueAddress, Option[Long]) => AnyRef): AnyRef = {
+      create: (Long, UniqueAddress, OptionVal[Long]) => AnyRef): AnyRef = {
     val protoAck = ArteryControlFormats.SystemMessageDeliveryAck.parseFrom(bytes)
 
     create(
       protoAck.getSeqNo,
       deserializeUniqueAddress(protoAck.getFrom),
-      if (protoAck.hasToUid) Some(protoAck.getToUid) else None)
+      if (protoAck.hasToUid) OptionVal.Some(protoAck.getToUid) else OptionVal.none[Long])
   }
 
   def serializeWithAddress(from: UniqueAddress): MessageLite =

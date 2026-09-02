@@ -42,11 +42,11 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
   final case class SystemMessageEnvelope(message: AnyRef, seqNo: Long, ackReplyTo: UniqueAddress) extends ArteryMessage
 
   /**
-   * `from` is the incarnation that acknowledges, `toUid` the incarnation of the sender of the acknowledged
-   * system message. `toUid` is empty when the reply comes from a node of version 2.10.21 or earlier.
+   * `from` is the incarnation that acknowledges, `toUid` the incarnation this reply is addressed to.
+   * `toUid` is empty when the reply comes from a node of version 2.10.21 or earlier.
    */
-  final case class Ack(seqNo: Long, from: UniqueAddress, toUid: Option[Long]) extends Reply
-  final case class Nack(seqNo: Long, from: UniqueAddress, toUid: Option[Long]) extends Reply
+  final case class Ack(seqNo: Long, from: UniqueAddress, toUid: OptionVal[Long]) extends Reply
+  final case class Nack(seqNo: Long, from: UniqueAddress, toUid: OptionVal[Long]) extends Reply
 
   /**
    * Sent when an incarnation of an Association is quarantined. Consumed by the
@@ -156,10 +156,12 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
         }
 
       // A reply queued up for a previous incarnation of this system can be flushed to this one when the
-      // remote reconnects, and its sequence numbers would be meaningless here. Empty for replies from
-      // nodes that don't send the uid yet, then only the address matching above applies.
-      private def isForThisIncarnation(toUid: Option[Long]): Boolean =
-        toUid.forall(_ == localAddress.uid)
+      // remote reconnects, and its sequence numbers would be meaningless here.
+      private def isForThisIncarnation(toUid: OptionVal[Long]): Boolean =
+        toUid match {
+          case OptionVal.Some(uid) => uid == localAddress.uid
+          case _                   => true // reply from a node that doesn't send the uid, only address matched
+        }
 
       // ControlMessageObserver, external call
       override def notify(inboundEnvelope: InboundEnvelope): Unit = {
@@ -379,7 +381,7 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
               case Some(seqNo) => seqNo
             }
             if (n == expectedSeqNo) {
-              inboundContext.sendControl(ackReplyTo.address, Ack(n, localAddress, Some(ackReplyTo.uid)))
+              inboundContext.sendControl(ackReplyTo.address, Ack(n, localAddress, OptionVal.Some(ackReplyTo.uid)))
               sequenceNumbers = sequenceNumbers.updated(ackReplyTo, n + 1)
               val unwrapped = env.withMessage(sysEnv.message)
               push(out, unwrapped)
@@ -390,7 +392,9 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
                   n,
                   fromRemoteAddressStr,
                   expectedSeqNo)
-              inboundContext.sendControl(ackReplyTo.address, Ack(expectedSeqNo - 1, localAddress, Some(ackReplyTo.uid)))
+              inboundContext.sendControl(
+                ackReplyTo.address,
+                Ack(expectedSeqNo - 1, localAddress, OptionVal.Some(ackReplyTo.uid)))
               pull(in)
             } else {
               if (nackCount < MaxNegativeAcknowledgementLogging) {
@@ -408,7 +412,7 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
               }
               inboundContext.sendControl(
                 ackReplyTo.address,
-                Nack(expectedSeqNo - 1, localAddress, Some(ackReplyTo.uid)))
+                Nack(expectedSeqNo - 1, localAddress, OptionVal.Some(ackReplyTo.uid)))
               pull(in)
             }
           case _ =>

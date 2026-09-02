@@ -5513,7 +5513,7 @@ public final class ArteryControlFormats {
 
     /**
      * <pre>
-     * uid of the incarnation that sent the acknowledged system message, absent from
+     * uid of the incarnation this reply is addressed to, absent from
      * nodes of version 2.10.21 and earlier
      * </pre>
      *
@@ -5523,7 +5523,7 @@ public final class ArteryControlFormats {
     boolean hasToUid();
     /**
      * <pre>
-     * uid of the incarnation that sent the acknowledged system message, absent from
+     * uid of the incarnation this reply is addressed to, absent from
      * nodes of version 2.10.21 and earlier
      * </pre>
      *
@@ -5622,7 +5622,7 @@ public final class ArteryControlFormats {
     private long toUid_ = 0L;
     /**
      * <pre>
-     * uid of the incarnation that sent the acknowledged system message, absent from
+     * uid of the incarnation this reply is addressed to, absent from
      * nodes of version 2.10.21 and earlier
      * </pre>
      *
@@ -5635,7 +5635,7 @@ public final class ArteryControlFormats {
     }
     /**
      * <pre>
-     * uid of the incarnation that sent the acknowledged system message, absent from
+     * uid of the incarnation this reply is addressed to, absent from
      * nodes of version 2.10.21 and earlier
      * </pre>
      *
@@ -6244,7 +6244,7 @@ public final class ArteryControlFormats {
       private long toUid_ ;
       /**
        * <pre>
-       * uid of the incarnation that sent the acknowledged system message, absent from
+       * uid of the incarnation this reply is addressed to, absent from
        * nodes of version 2.10.21 and earlier
        * </pre>
        *
@@ -6257,7 +6257,7 @@ public final class ArteryControlFormats {
       }
       /**
        * <pre>
-       * uid of the incarnation that sent the acknowledged system message, absent from
+       * uid of the incarnation this reply is addressed to, absent from
        * nodes of version 2.10.21 and earlier
        * </pre>
        *
@@ -6270,7 +6270,7 @@ public final class ArteryControlFormats {
       }
       /**
        * <pre>
-       * uid of the incarnation that sent the acknowledged system message, absent from
+       * uid of the incarnation this reply is addressed to, absent from
        * nodes of version 2.10.21 and earlier
        * </pre>
        *
@@ -6287,7 +6287,7 @@ public final class ArteryControlFormats {
       }
       /**
        * <pre>
-       * uid of the incarnation that sent the acknowledged system message, absent from
+       * uid of the incarnation this reply is addressed to, absent from
        * nodes of version 2.10.21 and earlier
        * </pre>
        *

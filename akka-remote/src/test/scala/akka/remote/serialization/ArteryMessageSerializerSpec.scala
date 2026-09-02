@@ -20,6 +20,7 @@ import akka.remote.artery.compress.CompressionProtocol.{
 }
 import akka.remote.artery.compress.CompressionTable
 import akka.serialization.SerializationExtension
+import akka.util.OptionVal
 import akka.testkit.AkkaSpec
 
 class ArteryMessageSerializerSpec extends AkkaSpec {
@@ -47,10 +48,19 @@ class ArteryMessageSerializerSpec extends AkkaSpec {
         "test",
         1234567890123L,
         uniqueAddress()),
-      "SystemMessageDelivery.Ack" -> SystemMessageDelivery.Ack(98765432109876L, uniqueAddress(), Some(4711L)),
-      "SystemMessageDelivery.Nack" -> SystemMessageDelivery.Nack(98765432109876L, uniqueAddress(), Some(4711L)),
-      "SystemMessageDelivery.Ack without toUid" -> SystemMessageDelivery.Ack(98765432109876L, uniqueAddress(), None),
-      "SystemMessageDelivery.Nack without toUid" -> SystemMessageDelivery.Nack(98765432109876L, uniqueAddress(), None),
+      "SystemMessageDelivery.Ack" -> SystemMessageDelivery.Ack(98765432109876L, uniqueAddress(), OptionVal.Some(4711L)),
+      "SystemMessageDelivery.Nack" -> SystemMessageDelivery.Nack(
+        98765432109876L,
+        uniqueAddress(),
+        OptionVal.Some(4711L)),
+      "SystemMessageDelivery.Ack without toUid" -> SystemMessageDelivery.Ack(
+        98765432109876L,
+        uniqueAddress(),
+        OptionVal.none[Long]),
+      "SystemMessageDelivery.Nack without toUid" -> SystemMessageDelivery.Nack(
+        98765432109876L,
+        uniqueAddress(),
+        OptionVal.none[Long]),
       "RemoteWatcher.ArteryHeartbeat" -> RemoteWatcher.ArteryHeartbeat,
       "RemoteWatcher.ArteryHeartbeatRsp" -> RemoteWatcher.ArteryHeartbeatRsp(Long.MaxValue)).foreach {
       case (scenario, item) =>

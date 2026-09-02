@@ -48,9 +48,9 @@ class SystemMessageAckerSpec extends AkkaSpec("""
 
       downstream.request(10)
       upstream.sendNext(SystemMessageEnvelope("b1", 1, addressB))
-      replyProbe.expectMsg(Ack(1, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(1, addressA, OptionVal.Some(addressB.uid)))
       upstream.sendNext(SystemMessageEnvelope("b2", 2, addressB))
-      replyProbe.expectMsg(Ack(2, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2, addressA, OptionVal.Some(addressB.uid)))
       downstream.cancel()
     }
 
@@ -61,11 +61,11 @@ class SystemMessageAckerSpec extends AkkaSpec("""
 
       downstream.request(10)
       upstream.sendNext(SystemMessageEnvelope("b1", 1, addressB))
-      replyProbe.expectMsg(Ack(1, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(1, addressA, OptionVal.Some(addressB.uid)))
       upstream.sendNext(SystemMessageEnvelope("b2", 2, addressB))
-      replyProbe.expectMsg(Ack(2, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2, addressA, OptionVal.Some(addressB.uid)))
       upstream.sendNext(SystemMessageEnvelope("b1", 1, addressB))
-      replyProbe.expectMsg(Ack(2, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2, addressA, OptionVal.Some(addressB.uid)))
       downstream.cancel()
     }
 
@@ -76,9 +76,9 @@ class SystemMessageAckerSpec extends AkkaSpec("""
 
       downstream.request(10)
       upstream.sendNext(SystemMessageEnvelope("b1", 1, addressB))
-      replyProbe.expectMsg(Ack(1, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(1, addressA, OptionVal.Some(addressB.uid)))
       upstream.sendNext(SystemMessageEnvelope("b3", 3, addressB))
-      replyProbe.expectMsg(Nack(1, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Nack(1, addressA, OptionVal.Some(addressB.uid)))
       downstream.cancel()
     }
 
@@ -89,7 +89,7 @@ class SystemMessageAckerSpec extends AkkaSpec("""
 
       downstream.request(10)
       upstream.sendNext(SystemMessageEnvelope("b2", 2, addressB))
-      replyProbe.expectMsg(Nack(0, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Nack(0, addressA, OptionVal.Some(addressB.uid)))
       downstream.cancel()
     }
 
@@ -100,25 +100,25 @@ class SystemMessageAckerSpec extends AkkaSpec("""
 
       downstream.request(10)
       upstream.sendNext(SystemMessageEnvelope("b1", 1, addressB))
-      replyProbe.expectMsg(Ack(1, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(1, addressA, OptionVal.Some(addressB.uid)))
       upstream.sendNext(SystemMessageEnvelope("b2", 2, addressB))
-      replyProbe.expectMsg(Ack(2, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2, addressA, OptionVal.Some(addressB.uid)))
 
       upstream.sendNext(SystemMessageEnvelope("c1", 1, addressC))
-      replyProbe.expectMsg(Ack(1, addressA, Some(addressC.uid)))
+      replyProbe.expectMsg(Ack(1, addressA, OptionVal.Some(addressC.uid)))
       upstream.sendNext(SystemMessageEnvelope("c3", 3, addressC))
-      replyProbe.expectMsg(Nack(1, addressA, Some(addressC.uid)))
+      replyProbe.expectMsg(Nack(1, addressA, OptionVal.Some(addressC.uid)))
       upstream.sendNext(SystemMessageEnvelope("c2", 2, addressC))
-      replyProbe.expectMsg(Ack(2, addressA, Some(addressC.uid)))
+      replyProbe.expectMsg(Ack(2, addressA, OptionVal.Some(addressC.uid)))
       upstream.sendNext(SystemMessageEnvelope("c3", 3, addressC))
-      replyProbe.expectMsg(Ack(3, addressA, Some(addressC.uid)))
+      replyProbe.expectMsg(Ack(3, addressA, OptionVal.Some(addressC.uid)))
       upstream.sendNext(SystemMessageEnvelope("c4", 4, addressC))
-      replyProbe.expectMsg(Ack(4, addressA, Some(addressC.uid)))
+      replyProbe.expectMsg(Ack(4, addressA, OptionVal.Some(addressC.uid)))
 
       upstream.sendNext(SystemMessageEnvelope("b4", 4, addressB))
-      replyProbe.expectMsg(Nack(2, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Nack(2, addressA, OptionVal.Some(addressB.uid)))
       upstream.sendNext(SystemMessageEnvelope("b3", 3, addressB))
-      replyProbe.expectMsg(Ack(3, addressA, Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(3, addressA, OptionVal.Some(addressB.uid)))
 
       downstream.cancel()
     }

@@ -61,7 +61,7 @@ message SystemMessageEnvelope {
 message SystemMessageDeliveryAck {
   required uint64 seqNo = 1;
   required UniqueAddress from = 2;
-  // uid of the incarnation that sent the acknowledged system message, absent from
+  // uid of the incarnation this reply is addressed to, absent from
   // nodes of version 2.10.21 and earlier
   optional uint64 toUid = 3;
 }
