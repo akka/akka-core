@@ -626,6 +626,9 @@ import akka.stream.stage._
       // clear the slot so the stage state (buffers, closures, promises) is not kept reachable for the remaining
       // lifetime of the interpreter just because a sibling stage in the same fused graph is still running
       logics(logic.stageId) = null
+      // activeStage points at the last stage that ran until the next event is processed, which would keep this
+      // stage reachable for as long as the interpreter stays idle
+      if (activeStage eq logic) activeStage = null
     }
   }
 
