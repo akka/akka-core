@@ -298,6 +298,34 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       Await.result(output, 30.seconds) should ===((1 to N).map(n => TestSysMsg("msg-" + n)).toVector)
     }
 
+    "not accept Ack/Nack from a previous incarnation of the remote system (same address, different uid)" in {
+      val controlSubject = new TestControlMessageSubject
+      val inboundContextA = new TestInboundContext(addressA, controlSubject)
+      val outboundContextA = inboundContextA.association(addressB.address).asInstanceOf[TestOutboundContext]
+      // establish the current incarnation's uid, as a completed handshake would
+      Await.result(outboundContextA.completeHandshake(addressB), 3.seconds)
+
+      val sink = send(sendCount = 1, resendInterval = 500.millis, outboundContextA)
+        .map(_.message.asInstanceOf[SystemMessageEnvelope].seqNo)
+        .runWith(TestSink[Long]())
+
+      sink.request(100)
+      sink.expectNext(1L) // initial send
+
+      // Ack from a stale incarnation of addressB: same address, but an old (no longer current) uid
+      val staleFrom = addressB.copy(uid = addressB.uid + 1)
+      controlSubject.sendControl(
+        InboundEnvelope(OptionVal.None, Ack(1L, staleFrom), OptionVal.None, addressA.uid, OptionVal.None))
+
+      // the stale Ack must not clear the unacknowledged buffer, so the message is resent
+      sink.expectNext(1L)
+
+      // an Ack with the current uid must still be accepted normally
+      controlSubject.sendControl(
+        InboundEnvelope(OptionVal.None, Ack(1L, addressB), OptionVal.None, addressA.uid, OptionVal.None))
+      sink.expectComplete()
+    }
+
     "deliver all during throttling and random dropping" in {
       val N = 100
       val dropRate = 0.05
