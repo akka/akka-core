@@ -60,14 +60,10 @@ import akka.util.ByteString
 /**
  * INTERNAL API
  */
-@InternalApi private[akka] class TcpFraming(maxFrameLength: Int, maxLargeFrameLength: Int = -1)
+@InternalApi private[akka] class TcpFraming(maxFrameLength: Int, maxLargeFrameLength: Int)
     extends ByteStringParser[EnvelopeBuffer] {
-
-  // large frames are only expected on the dedicated large message stream, other streams
-  // must be bounded by the (smaller) ordinary maxFrameLength; -1 means "not configured",
-  // i.e. same bound as ordinary frames
-  private def maxFrameLengthFor(streamId: Int): Int =
-    if (streamId == LargeStreamId && maxLargeFrameLength >= 0) maxLargeFrameLength else maxFrameLength
+  require(maxFrameLength > 0, s"maxFrameLength must be greater than zero, was [$maxFrameLength]")
+  require(maxLargeFrameLength > 0, s"maxLargeFrameLength must be greater than zero, was [$maxLargeFrameLength]")
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new ParsingLogic {
 
@@ -91,15 +87,19 @@ import akka.util.ByteString
         ParseResult(None, ReadFrame(reader.readByte()))
     }
     case class ReadFrame(streamId: Int) extends Step {
+      // large frames are only expected on the dedicated large message stream, other streams
+      // must be bounded by the (smaller) ordinary maxFrameLength
+      private val maxFrameLengthForStream = if (streamId == LargeStreamId) maxLargeFrameLength else maxFrameLength
+
       override def onTruncation(): Unit =
         failStage(new FramingException("Stream finished but there was a truncated final frame in the buffer"))
 
       override def parse(reader: ByteReader): ParseResult[EnvelopeBuffer] = {
+        // the length is sent by the remote peer, so it can be anything, including negative
         val frameLength = reader.readIntLE()
-        val currentMaxFrameLength = maxFrameLengthFor(streamId)
-        if (frameLength < 0 || frameLength > currentMaxFrameLength)
+        if (frameLength < 0 || frameLength > maxFrameLengthForStream)
           throw new FramingException(
-            s"Invalid frame length [$frameLength], must be between 0 and [$currentMaxFrameLength]")
+            s"Invalid frame length [$frameLength], must be between 0 and [$maxFrameLengthForStream]")
         val buffer = createBuffer(reader.take(frameLength))
         ParseResult(Some(buffer), this)
       }
