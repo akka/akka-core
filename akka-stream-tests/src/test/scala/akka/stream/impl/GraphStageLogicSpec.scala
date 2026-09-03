@@ -4,6 +4,8 @@
 
 package akka.stream.impl
 
+import java.util.concurrent.atomic.AtomicReference
+
 import scala.concurrent.duration.Duration
 
 import org.scalatest.concurrent.ScalaFutures
@@ -11,6 +13,7 @@ import org.scalatest.concurrent.ScalaFutures
 import akka.NotUsed
 import akka.stream._
 import akka.stream.impl.fusing._
+import akka.stream.impl.fusing.GraphInterpreter.Connection
 import akka.stream.scaladsl._
 import akka.stream.stage._
 import akka.stream.stage.GraphStageLogic.{ EagerTerminateInput, EagerTerminateOutput }
@@ -313,6 +316,43 @@ class GraphStageLogicSpec extends StreamSpec with GraphInterpreterSpecKit with S
       connection.outOwner should ===(null)
       connection.inHandler should ===(null)
       connection.outHandler should ===(null)
+    }
+
+    "keep a dead connection intact while its event is still being processed" in new Builder {
+      // the same contract as above, for the case the instrumentation actually trips over: a connection that dies
+      // inside a handler, while the interpreter is still down in processPush/processPull
+      val inletConnection = new AtomicReference[Connection]()
+      val ownersDuringHandler = new AtomicReference[String]("handler did not run")
+
+      object completeOnUpstreamFinish extends GraphStage[FlowShape[Int, Int]] {
+        val in = Inlet[Int]("in")
+        val out = Outlet[Int]("out")
+        override val shape = FlowShape(in, out)
+        override def createLogic(attr: Attributes) = new GraphStageLogic(shape) {
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = ()
+            override def onUpstreamFinish(): Unit = {
+              completeStage() // closes this stage's ports, so the inlet connection is dead from here on
+              val connection = inletConnection.get()
+              ownersDuringHandler.set(s"${connection.inOwner ne null},${connection.outOwner ne null}")
+            }
+          })
+          setHandler(out, eagerTerminateOutput)
+        }
+      }
+
+      builder(completeOnUpstreamFinish)
+        .connect(Upstream, completeOnUpstreamFinish.in)
+        .connect(completeOnUpstreamFinish.out, Downstream)
+        .init()
+
+      inletConnection.set(interpreter.connections(0))
+      interpreter.complete(interpreter.connections(0))
+      interpreter.execute(10)
+
+      ownersDuringHandler.get() should ===("true,true")
+      inletConnection.get().inOwner should ===(null)
+      inletConnection.get().outOwner should ===(null)
     }
 
     "not allow push from constructor" in {
