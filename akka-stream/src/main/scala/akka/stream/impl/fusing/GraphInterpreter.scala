@@ -532,7 +532,7 @@ import akka.stream.stage._
       val cause = connection.slot.asInstanceOf[Cancelled].cause
       connection.slot = Empty
       connection.outHandler.onDownstreamFinish(cause)
-      releaseIfDead(connection)
+      retireIfDead(connection)
     } else if ((code & (OutClosed | InClosed)) == OutClosed) {
       // COMPLETIONS
 
@@ -545,7 +545,7 @@ import akka.stream.stage._
         completeConnection(connection.inOwner.stageId)
         if ((connection.portState & InFailed) == 0) connection.inHandler.onUpstreamFinish()
         else connection.inHandler.onUpstreamFailure(connection.slot.asInstanceOf[Failed].ex)
-        releaseIfDead(connection)
+        retireIfDead(connection)
       } else {
         // Push is pending, first process push, then re-enqueue closing event
         processPush(connection)
@@ -640,17 +640,17 @@ import akka.stream.stage._
   // Connections that are closed on both ends, waiting for their references to be dropped, see releaseDeadConnections
   private[this] var deadConnections: List[Connection] = Nil
 
-  // A connection that has closed on both ends is dead and will never be signalled again, so the interpreter drops
-  // it here and its owners and handlers are dropped once the current batch is done. An owner that is still running
-  // keeps the connection in its portToConn for port state queries and would otherwise pin its finished neighbour.
-  private def releaseIfDead(connection: Connection): Unit =
+  // A connection that has closed on both ends is dead and will never be signalled again, so the interpreter
+  // retires it here. What it holds on to is dropped later, see releaseDeadConnections. An owner that is still
+  // running keeps the connection in its portToConn for port state queries and would otherwise pin its finished
+  // neighbour. An empty connections slot marks a connection that was already retired, so it is not retired twice.
+  private def retireIfDead(connection: Connection): Unit =
     if ((connection.portState & (InClosed | OutClosed)) == (InClosed | OutClosed) &&
         (connections(connection.id) ne null)) {
       // complete already aborts a chase, fail and cancel only do so when the connection was still open, and a
       // chased event would be delivered to a closed port
       if (chasedPush eq connection) chasedPush = NoEvent
       if (chasedPull eq connection) chasedPull = NoEvent
-      // also marks the connection as already retired, so it is not collected twice
       connections(connection.id) = null
       deadConnections = connection :: deadConnections
     }
@@ -699,7 +699,7 @@ import akka.stream.stage._
     } else if ((currentState & (InClosed | Pushing | Pulling | OutClosed)) == 0) enqueue(connection)
 
     if ((currentState & OutClosed) == 0) completeConnection(connection.outOwner.stageId)
-    releaseIfDead(connection)
+    retireIfDead(connection)
   }
 
   @InternalStableApi
@@ -719,7 +719,7 @@ import akka.stream.stage._
       }
     }
     if ((currentState & OutClosed) == 0) completeConnection(connection.outOwner.stageId)
-    releaseIfDead(connection)
+    retireIfDead(connection)
   }
 
   @InternalStableApi
@@ -738,7 +738,7 @@ import akka.stream.stage._
       }
     }
     if ((currentState & InClosed) == 0) completeConnection(connection.inOwner.stageId)
-    releaseIfDead(connection)
+    retireIfDead(connection)
   }
 
   /**
