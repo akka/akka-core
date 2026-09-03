@@ -7,9 +7,10 @@ set -e
 # from genca.sh/gencerts.sh (which regenerate the whole `exampleca` fixture set) so that
 # adding this second CA does not touch any existing fixture.
 
+mkdir -p rotation-ca2
 cd rotation-ca2
 
-rm -f exampleca2.crt artery-node004.example.com.crt artery-node004.example.com.pem
+rm -f exampleca2.crt artery-node004.example.com.crt artery-node004.example.com.pem ca-bundle.crt
 
 openssl ecparam -genkey -name prime256v1 -out ca2.key
 
@@ -36,5 +37,9 @@ openssl x509 -req -in node2.csr -CA exampleca2.crt -CAkey ca2.key -CAcreateseria
 # RotatingKeysSSLEngineProvider requires the node private key as PKCS#1 or non-encrypted
 # PKCS#8 PEM -- not the CA's key algorithm, which can be anything (EC here, as for `exampleca`).
 openssl rsa -in node2.key -out artery-node004.example.com.pem
+
+# Bundle both CAs together so a node issued by either one is trusted -- this is the
+# file RotatingKeysSSLEngineProvider's ca-cert-file points at during a rotation overlap.
+cat ../exampleca.crt exampleca2.crt > ca-bundle.crt
 
 rm -f ca2.key node2.key node2.csr node2.ext exampleca2.srl

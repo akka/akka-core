@@ -5,6 +5,7 @@
 package akka.remote.artery.tcp.ssl
 
 import java.nio.file.Files
+import java.nio.file.Paths
 import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
@@ -58,16 +59,13 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
         }.flatten
         anchors.size must be(2)
         anchors.toSet must be(cacerts.toSet)
-      } finally Files.deleteIfExists(java.nio.file.Paths.get(bundlePath))
+      } finally Files.deleteIfExists(Paths.get(bundlePath))
     }
 
   }
 
   private def writeBundle(resources: String*): String = {
-    val bytes = resources.iterator
-      .map(nameToPath)
-      .flatMap(p => Files.readAllBytes(java.nio.file.Paths.get(p)) :+ '\n'.toByte)
-      .toArray
+    val bytes = resources.iterator.map(nameToPath).flatMap(p => Files.readAllBytes(Paths.get(p)) :+ '\n'.toByte).toArray
     val tmp = Files.createTempFile("ca-bundle-", ".pem")
     Files.write(tmp, bytes)
     tmp.toString

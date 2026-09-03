@@ -92,6 +92,13 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
   private def constructContext(): ConfiguredContext = {
     val (privateKey, cert, cacerts) = readFiles()
     try {
+      log.debug("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      if (PemManagersProvider.findIssuer(cert, cacerts).isEmpty)
+        log.warning(
+          "None of the [{}] CA certificate(s) in ca-cert-file [{}] issued the node certificate; it will be " +
+          "presented without an issuer certificate. Check that ca-cert-file contains the issuing CA.",
+          cacerts.size,
+          SSLCACertFile)
       val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, cacerts)
       val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacerts)
 
@@ -114,7 +121,7 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
     try {
       val cacerts: Seq[Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
       if (cacerts.isEmpty)
-        throw new SslTransportException(s"No certificate found in ca-cert-file [$SSLCACertFile]", null)
+        throw new SslTransportException(s"No certificate found in ca-cert-file [$SSLCACertFile]")
       val cert: X509Certificate = PemManagersProvider.loadCertificate(SSLCertFile).asInstanceOf[X509Certificate]
       val privateKey: PrivateKey = PemManagersProvider.loadPrivateKey(SSLKeyFile)
       (privateKey, cert, cacerts)
