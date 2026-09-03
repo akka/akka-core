@@ -27,7 +27,14 @@ class TlsResourcesSpec extends AnyWordSpec with Matchers {
   val baseRsaClient = "rsa-client"
   val baseIslandServer = "island"
   val baseServers = Set("one", "two")
-  val arteryNodeSet = Set("artery-nodes/artery-node001", "artery-nodes/artery-node002", "artery-nodes/artery-node003")
+  // artery-node004 lives under rotation-ca2/ (issued by the second CA for the CA-rotation
+  // tests) but satisfies the same fixture invariants as the artery-nodes/ set.
+  val arteryNodeSet =
+    Set(
+      "artery-nodes/artery-node001",
+      "artery-nodes/artery-node002",
+      "artery-nodes/artery-node003",
+      "rotation-ca2/artery-node004")
 
   "example.com certificate family" must {
     "all include `example.com` as SAN" in {

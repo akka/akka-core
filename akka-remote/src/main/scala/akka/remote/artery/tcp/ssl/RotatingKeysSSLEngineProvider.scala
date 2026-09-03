@@ -39,6 +39,9 @@ import akka.stream.TLSRole
  * This provider does not perform hostname verification, but instead allows checking
  * that the remote certificate has a subject name that matches the subject name of
  * the configured certificate.
+ *
+ * The `ca-cert-file` may hold a single certificate, or several concatenated together so
+ * that an old and a new CA can both be trusted during a rotation.
  */
 final class RotatingKeysSSLEngineProvider(val config: Config, protected val log: MarkerLoggingAdapter)
     extends SSLEngineProvider {
@@ -87,10 +90,17 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
 
   // Construct the cached instance
   private def constructContext(): ConfiguredContext = {
-    val (privateKey, cert, cacert) = readFiles()
+    val (privateKey, cert, cacerts) = readFiles()
     try {
-      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, cacert)
-      val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacert)
+      log.debug("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      if (PemManagersProvider.findIssuer(cert, cacerts).isEmpty)
+        log.warning(
+          "None of the [{}] CA certificate(s) in ca-cert-file [{}] issued the node certificate; it will be " +
+          "presented without an issuer certificate. Check that ca-cert-file contains the issuing CA.",
+          cacerts.size,
+          SSLCACertFile)
+      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, cacerts)
+      val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacerts)
 
       val sessionVerifier = new PeerSubjectVerifier(cert)
 
@@ -107,12 +117,14 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
     }
   }
 
-  private def readFiles(): (PrivateKey, X509Certificate, Certificate) = {
+  private def readFiles(): (PrivateKey, X509Certificate, Seq[Certificate]) = {
     try {
-      val cacert: Certificate = PemManagersProvider.loadCertificate(SSLCACertFile)
+      val cacerts: Seq[Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
+      if (cacerts.isEmpty)
+        throw new SslTransportException(s"No certificate found in ca-cert-file [$SSLCACertFile]")
       val cert: X509Certificate = PemManagersProvider.loadCertificate(SSLCertFile).asInstanceOf[X509Certificate]
       val privateKey: PrivateKey = PemManagersProvider.loadPrivateKey(SSLKeyFile)
-      (privateKey, cert, cacert)
+      (privateKey, cert, cacerts)
     } catch {
       case e: FileNotFoundException =>
         throw new SslTransportException(

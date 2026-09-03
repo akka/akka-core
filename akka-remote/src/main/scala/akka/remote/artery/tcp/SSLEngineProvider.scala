@@ -33,7 +33,9 @@ trait SSLEngineProvider {
 
 }
 
-class SslTransportException(message: String, cause: Throwable) extends RuntimeException(message, cause)
+class SslTransportException(message: String, cause: Throwable) extends RuntimeException(message, cause) {
+  def this(message: String) = this(message, null)
+}
 
 object SSLEngineProviderSetup {
 

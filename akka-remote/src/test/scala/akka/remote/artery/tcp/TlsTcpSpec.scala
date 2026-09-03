@@ -61,6 +61,47 @@ class TlsTcpWithRotatingKeysSSLEngineSpec extends TlsTcpSpec(ConfigFactory.parse
     }
     """))
 
+// Two nodes issued by two different CAs, both trusted via a single ca-cert-file bundle
+// containing both CAs -- the scenario a CA rotation produces. See
+// RotatingKeysSSLEngineProviderSpec / PemManagersProviderSpec for lower-level tests of
+// the same trust and certificate-chain behavior.
+class TlsTcpWithRotatingKeysAndTwoCABundleSpec extends ArteryMultiNodeSpec(ConfigFactory.parseString(s"""
+    akka.remote.artery.ssl {
+       ssl-engine-provider = akka.remote.artery.tcp.ssl.RotatingKeysSSLEngineProvider
+       rotating-keys-engine {
+         key-file = ${TlsTcpSpec.resourcePath("ssl/artery-nodes/artery-node001.example.com.pem")}
+         cert-file = ${TlsTcpSpec.resourcePath("ssl/artery-nodes/artery-node001.example.com.crt")}
+         ca-cert-file = ${TlsTcpSpec.resourcePath("ssl/rotation-ca2/ca-bundle.crt")}
+       }
+    }
+    """).withFallback(TlsTcpSpec.config)) with ImplicitSender {
+
+  "Artery with TLS/TCP using RotatingKeysSSLEngineProvider and a two-CA bundle" must {
+    "let a node issued by the first CA talk to a node issued by the second CA" in {
+      if (!arteryTcpTlsEnabled())
+        pending
+
+      val systemB = newRemoteSystem(
+        extraConfig = Some(s"""
+          akka.remote.artery.ssl.rotating-keys-engine {
+            key-file = ${TlsTcpSpec.resourcePath("ssl/rotation-ca2/artery-node004.example.com.pem")}
+            cert-file = ${TlsTcpSpec.resourcePath("ssl/rotation-ca2/artery-node004.example.com.crt")}
+          }
+        """),
+        name = Some("systemB"))
+      val addressB = address(systemB)
+      val rootB = RootActorPath(addressB)
+
+      systemB.actorOf(TestActors.echoActorProps, "echo")
+      system.actorSelection(rootB / "user" / "echo") ! Identify("echo")
+      val echoRef = expectMsgType[ActorIdentity].ref.get
+
+      echoRef ! "ping-1"
+      expectMsg("ping-1")
+    }
+  }
+}
+
 object TlsTcpSpec {
   def resourcePath(name: String): String = getClass.getClassLoader.getResource(name).getPath
 

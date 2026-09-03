@@ -158,9 +158,14 @@ or not, so during rotation, both the old and the new certificate can work togeth
 the same CA. So, when we issue our certificates, we’ll use cert-managers CA `Issuer` type.
 
 The CA Issuer itself needs a certificate to do its signing, and this certificate we’ll also provision using
-cert-manager. That certificate we’re not going to rotate - its private key never gets shared with anything outside
-of cert-manager, and so rotating it is not as necessary. Because of this, it will use a self signed certificate,
-and provisioning that certificate can be done by using a cert-manager self signed `Issuer` type.
+cert-manager. In this walkthrough we’re not going to rotate that certificate - its private key never gets shared
+with anything outside of cert-manager, and so rotating it is not as necessary. Because of this, it will use a self
+signed certificate, and provisioning that certificate can be done by using a cert-manager self signed `Issuer` type.
+
+If you do need to rotate the CA certificate itself, `ca-cert-file` may point to a file containing more than one
+PEM-encoded CA certificate concatenated together. Every certificate in the file is trusted, so during a CA rotation
+you can list both the old and the new CA in that file for the overlap window until every node has picked up a
+certificate issued by the new CA. Provisioning such a bundle is outside the scope of this cert-manager walkthrough.
 
 So, in total, we’re going to have two issuers, a self signed issuer that issues certificates for the CA issuer,
 and then that CA issuer will issue certificates that are frequently rotated for our Akka service to use. The
