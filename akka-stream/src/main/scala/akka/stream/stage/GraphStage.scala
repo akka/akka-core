@@ -324,6 +324,14 @@ abstract class GraphStageLogic private[stream] (val inCount: Int, val outCount: 
 
   /**
    * INTERNAL API
+   *
+   * Set once the stage has been finalized, so that postStop is not run a second time if the interpreter
+   * reaches the stage again after it stopped.
+   */
+  private[stream] var stageFinalized: Boolean = false
+
+  /**
+   * INTERNAL API
    */
   private[stream] var attributes: Attributes = Attributes.none
 
