@@ -590,7 +590,9 @@ import akka.stream.stage._
   }
 
   def afterStageHasRun(logic: GraphStageLogic): Boolean =
-    if (isStageCompleted(logic)) {
+    // a stage that already stopped can be reached again, for example by the runBatch that SimpleBoundaryEvent
+    // runs right after it finalized the boundary itself, and must not be counted or stopped twice
+    if (isStageCompleted(logic) && !logic.stageFinalized) {
       runningStages -= 1
       finalizeStage(logic)
       true
@@ -613,15 +615,17 @@ import akka.stream.stage._
     else shutdownCounter(logic.stageId) &= KeepGoingMask
 
   @InternalStableApi
-  private[stream] def finalizeStage(logic: GraphStageLogic): Unit = {
-    try {
-      logic.postStop()
-      logic.afterPostStop()
-    } catch {
-      case NonFatal(e) =>
-        log.error(e, s"Error during postStop in [{}]: {}", logic.toString, e.getMessage)
+  private[stream] def finalizeStage(logic: GraphStageLogic): Unit =
+    if (!logic.stageFinalized) {
+      logic.stageFinalized = true
+      try {
+        logic.postStop()
+        logic.afterPostStop()
+      } catch {
+        case NonFatal(e) =>
+          log.error(e, s"Error during postStop in [{}]: {}", logic.toString, e.getMessage)
+      }
     }
-  }
 
   private[stream] def chasePush(connection: Connection): Unit = {
     if (chaseCounter > 0 && chasedPush == NoEvent) {

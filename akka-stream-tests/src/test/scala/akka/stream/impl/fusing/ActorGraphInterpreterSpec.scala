@@ -27,6 +27,7 @@ import akka.stream.testkit.StreamSpec
 import akka.stream.testkit.TestPublisher
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.Utils._
+import akka.stream.testkit.scaladsl.StreamTestKit
 import akka.testkit.EventFilter
 import akka.testkit.TestLatch
 
@@ -400,6 +401,34 @@ class ActorGraphInterpreterSpec extends StreamSpec {
       ise.getCause.getCause should (have.message("violating your spec"))
 
       upstream.expectCancellation()
+    }
+
+    "not finalize a stage twice when a subscriber violates the spec" in {
+      // a boundary logic was finalized once by SimpleBoundaryEvent.execute and then again by the runBatch that
+      // follows it, so postStop ran twice and afterPostStop tripped over its own cleared state, see #25537
+      EventFilter.error(start = "Error during postStop", occurrences = 0).intercept {
+        StreamTestKit.assertAllStagesStopped {
+          val filthySubscriber = new Subscriber[Int] {
+            override def onSubscribe(s: Subscription): Unit = s.request(1)
+            override def onError(t: Throwable): Unit = ()
+            override def onComplete(): Unit = ()
+            override def onNext(t: Int): Unit = throw TE("violating your spec")
+          }
+
+          val upstream = TestPublisher.probe[Int]()
+          val downstream = TestSubscriber.probe[Int]()
+
+          Source
+            .fromPublisher(upstream)
+            .alsoTo(Sink.fromSubscriber(downstream))
+            .runWith(Sink.fromSubscriber(filthySubscriber))
+
+          upstream.sendNext(0)
+          downstream.requestNext(0)
+          downstream.expectError()
+          upstream.expectCancellation()
+        }(SystemMaterializer(system).materializer)
+      }
     }
 
     "trigger postStop in all stages when abruptly terminated (and no upstream boundaries)" in {
