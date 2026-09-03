@@ -656,9 +656,9 @@ import akka.stream.stage._
     }
 
   // Drops what a dead connection holds on to. Kept out of complete/fail/cancel/processEvent on purpose: bytecode
-  // instrumentation (Lightbend Telemetry) wraps processPush and processPull and inspects the connection after the
-  // call, so the owners and handlers have to stay in place until those frames are gone. Only ever called from
-  // execute, runAsyncInput and finish, none of which are instrumented that way.
+  // instrumentation wraps processPush and processPull and inspects the connection after the call, so the owners
+  // and handlers have to stay in place until those frames are gone. Only ever called from execute, runAsyncInput
+  // and finish, none of which are instrumented that way.
   private def releaseDeadConnections(): Unit =
     if (deadConnections.nonEmpty) {
       var remaining = deadConnections
