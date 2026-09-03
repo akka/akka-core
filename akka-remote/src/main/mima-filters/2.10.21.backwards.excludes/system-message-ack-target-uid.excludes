@@ -1,0 +1,13 @@
+# fix: address Ack/Nack to a specific incarnation of the sender, internal API
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.remote.ArteryControlFormats#SystemMessageDeliveryAckOrBuilder.hasToUid")
+ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.remote.ArteryControlFormats#SystemMessageDeliveryAckOrBuilder.getToUid")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.artery.SystemMessageDelivery#Ack.copy")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.artery.SystemMessageDelivery#Ack.this")
+ProblemFilters.exclude[MissingTypesProblem]("akka.remote.artery.SystemMessageDelivery$Ack$")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.artery.SystemMessageDelivery#Ack.apply")
+ProblemFilters.exclude[IncompatibleSignatureProblem]("akka.remote.artery.SystemMessageDelivery#Ack.unapply")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.artery.SystemMessageDelivery#Nack.copy")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.artery.SystemMessageDelivery#Nack.this")
+ProblemFilters.exclude[MissingTypesProblem]("akka.remote.artery.SystemMessageDelivery$Nack$")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.artery.SystemMessageDelivery#Nack.apply")
+ProblemFilters.exclude[IncompatibleSignatureProblem]("akka.remote.artery.SystemMessageDelivery#Nack.unapply")

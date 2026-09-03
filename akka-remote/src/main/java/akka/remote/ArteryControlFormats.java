@@ -5510,6 +5510,27 @@ public final class ArteryControlFormats {
      * <code>required .UniqueAddress from = 2;</code>
      */
     akka.remote.ArteryControlFormats.UniqueAddressOrBuilder getFromOrBuilder();
+
+    /**
+     * <pre>
+     * uid of the incarnation this reply is addressed to, absent from
+     * nodes of version 2.10.21 and earlier
+     * </pre>
+     *
+     * <code>optional uint64 toUid = 3;</code>
+     * @return Whether the toUid field is set.
+     */
+    boolean hasToUid();
+    /**
+     * <pre>
+     * uid of the incarnation this reply is addressed to, absent from
+     * nodes of version 2.10.21 and earlier
+     * </pre>
+     *
+     * <code>optional uint64 toUid = 3;</code>
+     * @return The toUid.
+     */
+    long getToUid();
   }
   /**
    * <pre>
@@ -5597,6 +5618,35 @@ public final class ArteryControlFormats {
       return from_ == null ? akka.remote.ArteryControlFormats.UniqueAddress.getDefaultInstance() : from_;
     }
 
+    public static final int TOUID_FIELD_NUMBER = 3;
+    private long toUid_ = 0L;
+    /**
+     * <pre>
+     * uid of the incarnation this reply is addressed to, absent from
+     * nodes of version 2.10.21 and earlier
+     * </pre>
+     *
+     * <code>optional uint64 toUid = 3;</code>
+     * @return Whether the toUid field is set.
+     */
+    @java.lang.Override
+    public boolean hasToUid() {
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <pre>
+     * uid of the incarnation this reply is addressed to, absent from
+     * nodes of version 2.10.21 and earlier
+     * </pre>
+     *
+     * <code>optional uint64 toUid = 3;</code>
+     * @return The toUid.
+     */
+    @java.lang.Override
+    public long getToUid() {
+      return toUid_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -5629,6 +5679,9 @@ public final class ArteryControlFormats {
       if (((bitField0_ & 0x00000002) != 0)) {
         output.writeMessage(2, getFrom());
       }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        output.writeUInt64(3, toUid_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -5645,6 +5698,10 @@ public final class ArteryControlFormats {
       if (((bitField0_ & 0x00000002) != 0)) {
         size += akka.protobufv3.internal.CodedOutputStream
           .computeMessageSize(2, getFrom());
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        size += akka.protobufv3.internal.CodedOutputStream
+          .computeUInt64Size(3, toUid_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -5671,6 +5728,11 @@ public final class ArteryControlFormats {
         if (!getFrom()
             .equals(other.getFrom())) return false;
       }
+      if (hasToUid() != other.hasToUid()) return false;
+      if (hasToUid()) {
+        if (getToUid()
+            != other.getToUid()) return false;
+      }
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -5690,6 +5752,11 @@ public final class ArteryControlFormats {
       if (hasFrom()) {
         hash = (37 * hash) + FROM_FIELD_NUMBER;
         hash = (53 * hash) + getFrom().hashCode();
+      }
+      if (hasToUid()) {
+        hash = (37 * hash) + TOUID_FIELD_NUMBER;
+        hash = (53 * hash) + akka.protobufv3.internal.Internal.hashLong(
+            getToUid());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -5839,6 +5906,7 @@ public final class ArteryControlFormats {
           fromBuilder_.dispose();
           fromBuilder_ = null;
         }
+        toUid_ = 0L;
         return this;
       }
 
@@ -5882,6 +5950,10 @@ public final class ArteryControlFormats {
               ? from_
               : fromBuilder_.build();
           to_bitField0_ |= 0x00000002;
+        }
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.toUid_ = toUid_;
+          to_bitField0_ |= 0x00000004;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -5936,6 +6008,9 @@ public final class ArteryControlFormats {
         if (other.hasFrom()) {
           mergeFrom(other.getFrom());
         }
+        if (other.hasToUid()) {
+          setToUid(other.getToUid());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -5983,6 +6058,11 @@ public final class ArteryControlFormats {
                 bitField0_ |= 0x00000002;
                 break;
               } // case 18
+              case 24: {
+                toUid_ = input.readUInt64();
+                bitField0_ |= 0x00000004;
+                break;
+              } // case 24
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -6159,6 +6239,66 @@ public final class ArteryControlFormats {
           from_ = null;
         }
         return fromBuilder_;
+      }
+
+      private long toUid_ ;
+      /**
+       * <pre>
+       * uid of the incarnation this reply is addressed to, absent from
+       * nodes of version 2.10.21 and earlier
+       * </pre>
+       *
+       * <code>optional uint64 toUid = 3;</code>
+       * @return Whether the toUid field is set.
+       */
+      @java.lang.Override
+      public boolean hasToUid() {
+        return ((bitField0_ & 0x00000004) != 0);
+      }
+      /**
+       * <pre>
+       * uid of the incarnation this reply is addressed to, absent from
+       * nodes of version 2.10.21 and earlier
+       * </pre>
+       *
+       * <code>optional uint64 toUid = 3;</code>
+       * @return The toUid.
+       */
+      @java.lang.Override
+      public long getToUid() {
+        return toUid_;
+      }
+      /**
+       * <pre>
+       * uid of the incarnation this reply is addressed to, absent from
+       * nodes of version 2.10.21 and earlier
+       * </pre>
+       *
+       * <code>optional uint64 toUid = 3;</code>
+       * @param value The toUid to set.
+       * @return This builder for chaining.
+       */
+      public Builder setToUid(long value) {
+
+        toUid_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * uid of the incarnation this reply is addressed to, absent from
+       * nodes of version 2.10.21 and earlier
+       * </pre>
+       *
+       * <code>optional uint64 toUid = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearToUid() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        toUid_ = 0L;
+        onChanged();
+        return this;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -9150,14 +9290,15 @@ public final class ArteryControlFormats {
       "(\r\"\212\001\n\025SystemMessageEnvelope\022\017\n\007message\030" +
       "\001 \002(\014\022\024\n\014serializerId\030\002 \002(\005\022\027\n\017messageMa" +
       "nifest\030\003 \001(\014\022\r\n\005seqNo\030\004 \002(\004\022\"\n\nackReplyT" +
-      "o\030\005 \002(\0132\016.UniqueAddress\"G\n\030SystemMessage" +
+      "o\030\005 \002(\0132\016.UniqueAddress\"V\n\030SystemMessage" +
       "DeliveryAck\022\r\n\005seqNo\030\001 \002(\004\022\034\n\004from\030\002 \002(\013" +
-      "2\016.UniqueAddress\"K\n\007Address\022\020\n\010protocol\030" +
-      "\001 \002(\t\022\016\n\006system\030\002 \002(\t\022\020\n\010hostname\030\003 \002(\t\022" +
-      "\014\n\004port\030\004 \002(\r\"7\n\rUniqueAddress\022\031\n\007addres" +
-      "s\030\001 \002(\0132\010.Address\022\013\n\003uid\030\002 \002(\004\"!\n\022Artery" +
-      "HeartbeatRsp\022\013\n\003uid\030\001 \002(\004\" \n\010FlushAck\022\024\n" +
-      "\014expectedAcks\030\001 \001(\005B\017\n\013akka.remoteH\001"
+      "2\016.UniqueAddress\022\r\n\005toUid\030\003 \001(\004\"K\n\007Addre" +
+      "ss\022\020\n\010protocol\030\001 \002(\t\022\016\n\006system\030\002 \002(\t\022\020\n\010" +
+      "hostname\030\003 \002(\t\022\014\n\004port\030\004 \002(\r\"7\n\rUniqueAd" +
+      "dress\022\031\n\007address\030\001 \002(\0132\010.Address\022\013\n\003uid\030" +
+      "\002 \002(\004\"!\n\022ArteryHeartbeatRsp\022\013\n\003uid\030\001 \002(\004" +
+      "\" \n\010FlushAck\022\024\n\014expectedAcks\030\001 \001(\005B\017\n\013ak" +
+      "ka.remoteH\001"
     };
     descriptor = akka.protobufv3.internal.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -9204,7 +9345,7 @@ public final class ArteryControlFormats {
     internal_static_SystemMessageDeliveryAck_fieldAccessorTable = new
       akka.protobufv3.internal.GeneratedMessageV3.FieldAccessorTable(
         internal_static_SystemMessageDeliveryAck_descriptor,
-        new java.lang.String[] { "SeqNo", "From", });
+        new java.lang.String[] { "SeqNo", "From", "ToUid", });
     internal_static_Address_descriptor =
       getDescriptor().getMessageTypes().get(7);
     internal_static_Address_fieldAccessorTable = new

@@ -17,6 +17,7 @@ import akka.remote.artery.OutboundHandshake.{ HandshakeReq, HandshakeRsp }
 import akka.remote.artery.compress.{ CompressionProtocol, CompressionTable }
 import akka.remote.artery.compress.CompressionProtocol._
 import akka.serialization.{ BaseSerializer, Serialization, SerializationExtension, SerializerWithStringManifest }
+import akka.util.OptionVal
 
 /** INTERNAL API */
 private[akka] object ArteryMessageSerializer {
@@ -74,18 +75,20 @@ private[akka] final class ArteryMessageSerializer(val system: ExtendedActorSyste
 
   override def toBinary(o: AnyRef): Array[Byte] = o match { // most frequent ones first
     case env: SystemMessageDelivery.SystemMessageEnvelope => serializeSystemMessageEnvelope(env).toByteArray
-    case SystemMessageDelivery.Ack(seqNo, from)           => serializeSystemMessageDeliveryAck(seqNo, from).toByteArray
-    case HandshakeReq(from, to)                           => serializeHandshakeReq(from, to).toByteArray
-    case HandshakeRsp(from)                               => serializeWithAddress(from).toByteArray
-    case RemoteWatcher.ArteryHeartbeat                    => Array.emptyByteArray
-    case RemoteWatcher.ArteryHeartbeatRsp(from)           => serializeArteryHeartbeatRsp(from).toByteArray
-    case SystemMessageDelivery.Nack(seqNo, from)          => serializeSystemMessageDeliveryAck(seqNo, from).toByteArray
-    case q: Quarantined                                   => serializeQuarantined(q).toByteArray
-    case Flush                                            => Array.emptyByteArray
-    case FlushAck(expectedAcks)                           => serializeFlushAck(expectedAcks).toByteArray
-    case ActorSystemTerminating(from)                     => serializeWithAddress(from).toByteArray
-    case ActorSystemTerminatingAck(from)                  => serializeWithAddress(from).toByteArray
-    case adv: ActorRefCompressionAdvertisement            => serializeActorRefCompressionAdvertisement(adv).toByteArray
+    case SystemMessageDelivery.Ack(seqNo, from, toUid) =>
+      serializeSystemMessageDeliveryAck(seqNo, from, toUid).toByteArray
+    case HandshakeReq(from, to)                 => serializeHandshakeReq(from, to).toByteArray
+    case HandshakeRsp(from)                     => serializeWithAddress(from).toByteArray
+    case RemoteWatcher.ArteryHeartbeat          => Array.emptyByteArray
+    case RemoteWatcher.ArteryHeartbeatRsp(from) => serializeArteryHeartbeatRsp(from).toByteArray
+    case SystemMessageDelivery.Nack(seqNo, from, toUid) =>
+      serializeSystemMessageDeliveryAck(seqNo, from, toUid).toByteArray
+    case q: Quarantined                        => serializeQuarantined(q).toByteArray
+    case Flush                                 => Array.emptyByteArray
+    case FlushAck(expectedAcks)                => serializeFlushAck(expectedAcks).toByteArray
+    case ActorSystemTerminating(from)          => serializeWithAddress(from).toByteArray
+    case ActorSystemTerminatingAck(from)       => serializeWithAddress(from).toByteArray
+    case adv: ActorRefCompressionAdvertisement => serializeActorRefCompressionAdvertisement(adv).toByteArray
     case ActorRefCompressionAdvertisementAck(from, id) =>
       serializeCompressionTableAdvertisementAck(from, id).toByteArray
     case adv: ClassManifestCompressionAdvertisement => serializeCompressionAdvertisement(adv)(identity).toByteArray
@@ -225,13 +228,23 @@ private[akka] final class ArteryMessageSerializer(val system: ExtendedActorSyste
 
   def serializeSystemMessageDeliveryAck(
       seqNo: Long,
-      from: UniqueAddress): ArteryControlFormats.SystemMessageDeliveryAck =
-    ArteryControlFormats.SystemMessageDeliveryAck.newBuilder.setSeqNo(seqNo).setFrom(serializeUniqueAddress(from)).build
+      from: UniqueAddress,
+      toUid: OptionVal[Long]): ArteryControlFormats.SystemMessageDeliveryAck = {
+    val builder =
+      ArteryControlFormats.SystemMessageDeliveryAck.newBuilder.setSeqNo(seqNo).setFrom(serializeUniqueAddress(from))
+    if (toUid.isDefined) builder.setToUid(toUid.get)
+    builder.build
+  }
 
-  def deserializeSystemMessageDeliveryAck(bytes: Array[Byte], create: (Long, UniqueAddress) => AnyRef): AnyRef = {
+  def deserializeSystemMessageDeliveryAck(
+      bytes: Array[Byte],
+      create: (Long, UniqueAddress, OptionVal[Long]) => AnyRef): AnyRef = {
     val protoAck = ArteryControlFormats.SystemMessageDeliveryAck.parseFrom(bytes)
 
-    create(protoAck.getSeqNo, deserializeUniqueAddress(protoAck.getFrom))
+    create(
+      protoAck.getSeqNo,
+      deserializeUniqueAddress(protoAck.getFrom),
+      if (protoAck.hasToUid) OptionVal.Some(protoAck.getToUid) else OptionVal.none[Long])
   }
 
   def serializeWithAddress(from: UniqueAddress): MessageLite =

@@ -202,19 +202,19 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       sink.request(100)
       sink.expectNext(TestSysMsg("msg-1"))
       sink.expectNext(TestSysMsg("msg-2"))
-      replyProbe.expectMsg(Ack(1L, addressB))
-      replyProbe.expectMsg(Ack(2L, addressB))
+      replyProbe.expectMsg(Ack(1L, addressB, OptionVal.Some(addressB.uid)))
+      replyProbe.expectMsg(Ack(2L, addressB, OptionVal.Some(addressB.uid)))
       // 3 and 4 was dropped
-      replyProbe.expectMsg(Nack(2L, addressB))
+      replyProbe.expectMsg(Nack(2L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNoMessage(100.millis) // 3 was dropped
       inboundContextB.deliverLastReply()
       // resending 3, 4, 5
       sink.expectNext(TestSysMsg("msg-3"))
-      replyProbe.expectMsg(Ack(3L, addressB))
+      replyProbe.expectMsg(Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-4"))
-      replyProbe.expectMsg(Ack(4L, addressB))
+      replyProbe.expectMsg(Ack(4L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-5"))
-      replyProbe.expectMsg(Ack(5L, addressB))
+      replyProbe.expectMsg(Ack(5L, addressB, OptionVal.Some(addressB.uid)))
       replyProbe.expectNoMessage(100.millis)
       inboundContextB.deliverLastReply()
       sink.expectComplete()
@@ -234,17 +234,17 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
         .runWith(TestSink[TestSysMsg]())
 
       sink.request(100)
-      replyProbe.expectMsg(Nack(0L, addressB)) // from receiving 2
-      replyProbe.expectMsg(Nack(0L, addressB)) // from receiving 3
+      replyProbe.expectMsg(Nack(0L, addressB, OptionVal.Some(addressB.uid))) // from receiving 2
+      replyProbe.expectMsg(Nack(0L, addressB, OptionVal.Some(addressB.uid))) // from receiving 3
       sink.expectNoMessage(100.millis) // 1 was dropped
       inboundContextB.deliverLastReply() // it's ok to not delivery all nacks
       // resending 1, 2, 3
       sink.expectNext(TestSysMsg("msg-1"))
-      replyProbe.expectMsg(Ack(1L, addressB))
+      replyProbe.expectMsg(Ack(1L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-2"))
-      replyProbe.expectMsg(Ack(2L, addressB))
+      replyProbe.expectMsg(Ack(2L, addressB, OptionVal.Some(addressB.uid)))
       sink.expectNext(TestSysMsg("msg-3"))
-      replyProbe.expectMsg(Ack(3L, addressB))
+      replyProbe.expectMsg(Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       sink.expectComplete()
     }
@@ -264,17 +264,17 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
 
       sink.request(100)
       sink.expectNext(TestSysMsg("msg-1"))
-      replyProbe.expectMsg(Ack(1L, addressB))
+      replyProbe.expectMsg(Ack(1L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       sink.expectNext(TestSysMsg("msg-2"))
-      replyProbe.expectMsg(Ack(2L, addressB))
+      replyProbe.expectMsg(Ack(2L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       sink.expectNoMessage(200.millis) // 3 was dropped
       // resending 3 due to timeout
       sink.expectNext(TestSysMsg("msg-3"))
-      replyProbe.expectMsg(4.seconds, Ack(3L, addressB))
+      replyProbe.expectMsg(4.seconds, Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       // continue resending
-      replyProbe.expectMsg(4.seconds, Ack(3L, addressB))
+      replyProbe.expectMsg(4.seconds, Ack(3L, addressB, OptionVal.Some(addressB.uid)))
       inboundContextB.deliverLastReply()
       replyProbe.expectNoMessage(2200.millis)
       sink.expectComplete()
@@ -315,14 +315,83 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
       // Ack from a stale incarnation of addressB: same address, but an old (no longer current) uid
       val staleFrom = addressB.copy(uid = addressB.uid + 1)
       controlSubject.sendControl(
-        InboundEnvelope(OptionVal.None, Ack(1L, staleFrom), OptionVal.None, addressA.uid, OptionVal.None))
+        InboundEnvelope(
+          OptionVal.None,
+          Ack(1L, staleFrom, OptionVal.Some(addressA.uid)),
+          OptionVal.None,
+          addressA.uid,
+          OptionVal.None))
 
       // the stale Ack must not clear the unacknowledged buffer, so the message is resent
       sink.expectNext(1L)
 
       // an Ack with the current uid must still be accepted normally
       controlSubject.sendControl(
-        InboundEnvelope(OptionVal.None, Ack(1L, addressB), OptionVal.None, addressA.uid, OptionVal.None))
+        InboundEnvelope(
+          OptionVal.None,
+          Ack(1L, addressB, OptionVal.Some(addressA.uid)),
+          OptionVal.None,
+          addressA.uid,
+          OptionVal.None))
+      sink.expectComplete()
+    }
+
+    "not accept Ack/Nack addressed to a previous incarnation of this system (same address, different uid)" in {
+      val controlSubject = new TestControlMessageSubject
+      val inboundContextA = new TestInboundContext(addressA, controlSubject)
+      val outboundContextA = inboundContextA.association(addressB.address).asInstanceOf[TestOutboundContext]
+      Await.result(outboundContextA.completeHandshake(addressB), 3.seconds)
+
+      val sink = send(sendCount = 1, resendInterval = 500.millis, outboundContextA)
+        .map(_.message.asInstanceOf[SystemMessageEnvelope].seqNo)
+        .runWith(TestSink[Long]())
+
+      sink.request(100)
+      sink.expectNext(1L) // initial send
+
+      // reply that addressB queued up for the previous incarnation of this system, flushed here after reconnect
+      controlSubject.sendControl(
+        InboundEnvelope(
+          OptionVal.None,
+          Ack(1L, addressB, OptionVal.Some(addressA.uid + 1)),
+          OptionVal.None,
+          addressA.uid,
+          OptionVal.None))
+
+      // it must not clear the unacknowledged buffer, so the message is resent
+      sink.expectNext(1L)
+
+      // a reply addressed to this incarnation must still be accepted normally
+      controlSubject.sendControl(
+        InboundEnvelope(
+          OptionVal.None,
+          Ack(1L, addressB, OptionVal.Some(addressA.uid)),
+          OptionVal.None,
+          addressA.uid,
+          OptionVal.None))
+      sink.expectComplete()
+    }
+
+    "accept Ack/Nack without target uid, from a node that doesn't send it" in {
+      val controlSubject = new TestControlMessageSubject
+      val inboundContextA = new TestInboundContext(addressA, controlSubject)
+      val outboundContextA = inboundContextA.association(addressB.address).asInstanceOf[TestOutboundContext]
+      Await.result(outboundContextA.completeHandshake(addressB), 3.seconds)
+
+      val sink = send(sendCount = 1, resendInterval = 500.millis, outboundContextA)
+        .map(_.message.asInstanceOf[SystemMessageEnvelope].seqNo)
+        .runWith(TestSink[Long]())
+
+      sink.request(100)
+      sink.expectNext(1L) // initial send
+
+      controlSubject.sendControl(
+        InboundEnvelope(
+          OptionVal.None,
+          Ack(1L, addressB, OptionVal.none[Long]),
+          OptionVal.None,
+          addressA.uid,
+          OptionVal.None))
       sink.expectComplete()
     }
 
