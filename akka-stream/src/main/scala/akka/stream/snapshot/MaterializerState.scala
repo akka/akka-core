@@ -118,7 +118,7 @@ sealed trait RunningInterpreter extends InterpreterSnapshot {
 
   /**
    * Each of the materialized graph stage logics running inside the interpreter. Logics that already stopped are
-   * released by the interpreter and only show up as an unnamed placeholder.
+   * released by the interpreter and show up as a placeholder without name or attributes.
    */
   def logics: immutable.Seq[LogicSnapshot]
 
@@ -133,7 +133,8 @@ sealed trait RunningInterpreter extends InterpreterSnapshot {
   def runningLogicsCount: Int
 
   /**
-   * All logics that has completed and is no longer executing, as unnamed placeholders, see [[logics]]
+   * All logics that have completed and are no longer executing. Released by the interpreter, so they carry
+   * neither name nor attributes, see [[logics]]
    */
   def stoppedLogics: immutable.Seq[LogicSnapshot]
 }
