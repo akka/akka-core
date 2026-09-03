@@ -701,6 +701,9 @@ import akka.util.OptionVal
   }
 
   def toSnapshot: InterpreterSnapshot = {
+    // No slot can be null here: the interpreter only releases a logic when it finalizes it, and nothing is
+    // finalized before init. Once initialized the snapshot comes from the interpreter, which does deal with
+    // released slots.
     if (!isInitialized)
       UninitializedInterpreterImpl(logics.zipWithIndex.map {
         case (logic, idx) =>
