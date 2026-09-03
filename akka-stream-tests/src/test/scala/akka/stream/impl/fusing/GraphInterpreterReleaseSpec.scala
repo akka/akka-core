@@ -5,12 +5,16 @@
 package akka.stream.impl.fusing
 
 import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-import akka.stream.{ Attributes, Outlet, SourceShape }
-import akka.stream.scaladsl.Source
-import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler }
+import akka.stream.{ Attributes, FlowShape, Inlet, Materializer, Outlet, SourceShape }
+import akka.stream.impl.PhasedFusingActorMaterializer
+import akka.stream.impl.SubFusingActorMaterializerImpl
+import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
 import akka.stream.testkit.StreamSpec
+import akka.stream.testkit.Utils.TE
 import akka.stream.testkit.scaladsl.TestSink
 
 object GraphInterpreterReleaseSpec {
@@ -32,6 +36,21 @@ object GraphInterpreterReleaseSpec {
           complete(out)
         }
       })
+    }
+  }
+
+  // Pass through, counting how many times the logic is started and stopped.
+  class LifecycleCounting(preStarts: AtomicInteger, postStops: AtomicInteger) extends GraphStage[FlowShape[Int, Int]] {
+    val in = Inlet[Int]("in")
+    val out = Outlet[Int]("out")
+    override val shape = FlowShape(in, out)
+
+    override def createLogic(attr: Attributes) = new GraphStageLogic(shape) with InHandler with OutHandler {
+      override def preStart(): Unit = preStarts.incrementAndGet()
+      override def postStop(): Unit = postStops.incrementAndGet()
+      override def onPush(): Unit = push(out, grab(in))
+      override def onPull(): Unit = pull(in)
+      setHandlers(in, out, this)
     }
   }
 }
@@ -59,6 +78,40 @@ class GraphInterpreterReleaseSpec extends StreamSpec {
       }
 
       probe.cancel()
+    }
+
+    "not start a released logic again when an aborted shell is initialized a second time" in {
+      // ActorGraphInterpreter.postStop initializes every shell in newShells, and a shell ends up in both
+      // activeInterpreters and newShells when an event for it is processed before its registration is
+      // finished. Such a shell is aborted first, so by the time it is initialized again all its logics are
+      // finalized and released. Driving the shell directly here, the ordering that leads to it is a race.
+      val preStarts = new AtomicInteger()
+      val postStops = new AtomicInteger()
+
+      val shell = new AtomicReference[GraphInterpreterShell]()
+      val subFusingMaterializer = new SubFusingActorMaterializerImpl(
+        Materializer(system).asInstanceOf[PhasedFusingActorMaterializer],
+        registeredShell => {
+          shell.set(registeredShell)
+          testActor
+        })
+
+      // Source.maybe never completes, so the logics are still running when the shell is aborted
+      subFusingMaterializer.materialize(
+        Source.maybe[Int].via(new LifecycleCounting(preStarts, postStops)).to(Sink.ignore))
+
+      shell.get().init(testActor, subFusingMaterializer, _ => (), eventLimit = 1000)
+      preStarts.get() should ===(1)
+      postStops.get() should ===(0)
+
+      shell.get().tryAbort(TE("abrupt termination"))
+      postStops.get() should ===(1)
+
+      shell.get().init(testActor, subFusingMaterializer, _ => (), eventLimit = 1000)
+      withClue("a released logic must not be started or stopped again: ") {
+        preStarts.get() should ===(1)
+        postStops.get() should ===(1)
+      }
     }
   }
 }
