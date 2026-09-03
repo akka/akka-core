@@ -100,6 +100,7 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
 
       private val giveUpAfterNanos = outboundContext.settings.Advanced.GiveUpSystemMessageAfter.toNanos
       private var ackTimestamp = System.nanoTime()
+      private var highestAckedSeqNo = 0L
 
       private def localAddress = outboundContext.localAddress
       private def remoteAddress = outboundContext.remoteAddress
@@ -197,10 +198,16 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
         }
       }
 
+      // Only a reply that acknowledges something new counts as progress. Nacks that keep asking for a
+      // sequence number the buffer no longer holds must not keep the give up watchdog alive.
       private def ack(n: Long): Unit = {
-        ackTimestamp = System.nanoTime()
-        if (n <= seqNo)
+        if (n <= seqNo) {
+          if (n > highestAckedSeqNo) {
+            highestAckedSeqNo = n
+            ackTimestamp = System.nanoTime()
+          }
           clearUnacknowledged(n)
+        }
       }
 
       @tailrec private def clearUnacknowledged(ackedSeqNo: Long): Unit = {
@@ -307,6 +314,7 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
       private def clear(): Unit = {
         sendUnacknowledgedToDeadLetters()
         seqNo = 0L // sequence number for the first message will be 1
+        highestAckedSeqNo = 0L
         incarnation = outboundContext.associationState.incarnation
         unacknowledged.clear()
         resending.clear()
