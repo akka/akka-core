@@ -235,6 +235,24 @@ jobs:
           -Dakka.cluster.assert=on \
           clean ${{ matrix.command }}
 
+      - name: Test Reports
+        # Makes it easier to spot failures instead of looking at the logs.
+        if: ${{ failure() }}
+        # https://github.com/ScaCap/action-surefire-report/releases/
+        uses: scacap/action-surefire-report@v1.9.1
+        with:
+          report_paths: '**/target/test-reports/TEST-*.xml'
+          fail_if_no_tests: false
+
+      # Archive test results so we can do some diagnostics later
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: success() || failure()        # run this step even if previous step failed
+        with:
+          # matrix.command has slashes in it, which an artifact name may not contain
+          name: 'test-results-aeron-${{ strategy.job-index }}'
+          path: '**/target/test-reports/TEST-*.xml'
+
       - name: Email on failure
         if: ${{ failure() }}
         uses: dawidd6/action-send-mail@v12
