@@ -290,6 +290,31 @@ class GraphStageLogicSpec extends StreamSpec with GraphInterpreterSpecKit with S
       deadConnection.inHandler should ===(null)
     }
 
+    "keep a dead connection intact until the batch it died in is done" in new Builder {
+      // Bytecode instrumentation wraps processPush/processPull and looks at the connection after the call, so the
+      // owners and handlers of a connection that dies mid batch must survive until the interpreter is out of those
+      // frames. Dropping them eagerly in complete/fail/cancel would be visible to it as a null.
+      builder(passThrough).connect(Upstream, passThrough.in).connect(passThrough.out, Downstream).init()
+
+      val connection = interpreter.connections(0)
+      interpreter.complete(connection)
+      interpreter.cancel(connection, SubscriptionWithCancelException.NoMoreElementsNeeded)
+
+      // closed on both ends, so the interpreter has let go of it, but it still knows its owners
+      interpreter.connections(0) should ===(null)
+      connection.inOwner should not be null
+      connection.outOwner should not be null
+      connection.inHandler should not be null
+      connection.outHandler should not be null
+
+      interpreter.execute(1)
+
+      connection.inOwner should ===(null)
+      connection.outOwner should ===(null)
+      connection.inHandler should ===(null)
+      connection.outHandler should ===(null)
+    }
+
     "not allow push from constructor" in {
       object source extends GraphStage[SourceShape[Int]] {
         val out = Outlet[Int]("out")

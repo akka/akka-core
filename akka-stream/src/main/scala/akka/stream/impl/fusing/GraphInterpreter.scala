@@ -337,6 +337,7 @@ import akka.stream.stage._
       if ((logic ne null) && !isStageCompleted(logic)) finalizeStage(logic)
       i += 1
     }
+    releaseDeadConnections()
   }
 
   // Debug name for a connections input part, null once the connection has been released
@@ -465,6 +466,7 @@ import akka.stream.stage._
       // Event *must* be enqueued while not in the execute loop (events enqueued from external, possibly async events)
       chaseCounter = 0
     } finally {
+      releaseDeadConnections()
       currentInterpreterHolder(0) = previousInterpreter
     }
     if (Debug) println(s"$Name ---------------- $queueStatus (running=$runningStages, shutdown=$shutdownCounters)")
@@ -496,7 +498,10 @@ import akka.stream.stage._
             logic.failStage(ex)
         }
         afterStageHasRun(logic)
-      } finally currentInterpreterHolder(0) = previousInterpreter
+      } finally {
+        releaseDeadConnections()
+        currentInterpreterHolder(0) = previousInterpreter
+      }
     }
 
   // Decodes and processes a single event for the given connection
@@ -632,20 +637,40 @@ import akka.stream.stage._
     }
   }
 
-  // A connection that has closed on both ends is dead and will never be signalled again. Drop the interpreter's
-  // reference to it, and the references it holds to its owners and their handlers: an owner that is still running
+  // Connections that are closed on both ends, waiting for their references to be dropped, see releaseDeadConnections
+  private[this] var deadConnections: List[Connection] = Nil
+
+  // A connection that has closed on both ends is dead and will never be signalled again, so the interpreter drops
+  // it here and its owners and handlers are dropped once the current batch is done. An owner that is still running
   // keeps the connection in its portToConn for port state queries and would otherwise pin its finished neighbour.
   private def releaseIfDead(connection: Connection): Unit =
-    if ((connection.portState & (InClosed | OutClosed)) == (InClosed | OutClosed)) {
+    if ((connection.portState & (InClosed | OutClosed)) == (InClosed | OutClosed) &&
+        (connections(connection.id) ne null)) {
       // complete already aborts a chase, fail and cancel only do so when the connection was still open, and a
-      // chased event would be delivered to the handlers dropped below, where it cannot reach a closed port anyway
+      // chased event would be delivered to a closed port
       if (chasedPush eq connection) chasedPush = NoEvent
       if (chasedPull eq connection) chasedPull = NoEvent
+      // also marks the connection as already retired, so it is not collected twice
       connections(connection.id) = null
-      connection.inOwner = null
-      connection.outOwner = null
-      connection.inHandler = null
-      connection.outHandler = null
+      deadConnections = connection :: deadConnections
+    }
+
+  // Drops what a dead connection holds on to. Kept out of complete/fail/cancel/processEvent on purpose: bytecode
+  // instrumentation (Lightbend Telemetry) wraps processPush and processPull and inspects the connection after the
+  // call, so the owners and handlers have to stay in place until those frames are gone. Only ever called from
+  // execute, runAsyncInput and finish, none of which are instrumented that way.
+  private def releaseDeadConnections(): Unit =
+    if (deadConnections.nonEmpty) {
+      var remaining = deadConnections
+      deadConnections = Nil
+      while (remaining ne Nil) {
+        val connection = remaining.head
+        connection.inOwner = null
+        connection.outOwner = null
+        connection.inHandler = null
+        connection.outHandler = null
+        remaining = remaining.tail
+      }
     }
 
   private[stream] def chasePush(connection: Connection): Unit = {
