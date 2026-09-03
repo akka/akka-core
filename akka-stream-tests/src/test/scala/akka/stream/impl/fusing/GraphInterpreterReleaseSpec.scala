@@ -71,7 +71,6 @@ class GraphInterpreterReleaseSpec extends StreamSpec {
       // the stage that produced the element is done now, but the stream is still running
       awaitAssert {
         System.gc()
-        System.runFinalization()
         withClue("finished stage logic was still strongly reachable: ") {
           captured.get().get() should ===(null)
         }
