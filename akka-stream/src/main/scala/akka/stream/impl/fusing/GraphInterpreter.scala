@@ -250,6 +250,8 @@ import akka.stream.stage._
   private[this] var chaseCounter = 0 // the first events in preStart blocks should be not chased
   private[this] var chasedPush: Connection = NoEvent
   private[this] var chasedPull: Connection = NoEvent
+  // Connections that are closed on both ends, waiting for their references to be dropped, see releaseDeadConnections
+  private[this] var deadConnections: List[Connection] = Nil
 
   private def queueStatus: String = {
     val contents = (queueHead until queueTail).map(idx => {
@@ -636,9 +638,6 @@ import akka.stream.stage._
       if (activeStage eq logic) activeStage = null
     }
   }
-
-  // Connections that are closed on both ends, waiting for their references to be dropped, see releaseDeadConnections
-  private[this] var deadConnections: List[Connection] = Nil
 
   // A connection that has closed on both ends is dead and will never be signalled again, so the interpreter
   // retires it here. What it holds on to is dropped later, see releaseDeadConnections. An owner that is still
