@@ -117,12 +117,13 @@ sealed trait UninitializedInterpreter extends InterpreterSnapshot
 sealed trait RunningInterpreter extends InterpreterSnapshot {
 
   /**
-   * Each of the materialized graph stage logics running inside the interpreter
+   * Each of the materialized graph stage logics running inside the interpreter. Logics that already stopped are
+   * released by the interpreter and show up as a placeholder without name or attributes.
    */
   def logics: immutable.Seq[LogicSnapshot]
 
   /**
-   * Each connection between logics in the interpreter
+   * Each connection between logics in the interpreter that is not closed on both ends yet
    */
   def connections: immutable.Seq[ConnectionSnapshot]
 
@@ -132,7 +133,8 @@ sealed trait RunningInterpreter extends InterpreterSnapshot {
   def runningLogicsCount: Int
 
   /**
-   * All logics that has completed and is no longer executing
+   * All logics that have completed and are no longer executing. Released by the interpreter, so they carry
+   * neither name nor attributes, see [[logics]]
    */
   def stoppedLogics: immutable.Seq[LogicSnapshot]
 }

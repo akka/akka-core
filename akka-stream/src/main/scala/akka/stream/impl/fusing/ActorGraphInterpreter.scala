@@ -695,12 +695,17 @@ import akka.util.OptionVal
       interpreterCompleted = true
       // Will only have an effect if the above call to the interpreter failed to emit a proper failure to the downstream
       // otherwise this will have no effect
+      // These calls can retire connections after finish() already released deadConnections, but that is fine: the
+      // shell is being torn down here, so nothing outlives the shell's own remaining lifetime.
       outputs.foreach(_.fail(reason))
       inputs.foreach(_.cancel(reason))
     }
   }
 
   def toSnapshot: InterpreterSnapshot = {
+    // No slot can be null here: the interpreter only releases a logic when it finalizes it, and nothing is
+    // finalized before init. Once initialized the snapshot comes from the interpreter, which does deal with
+    // released slots.
     if (!isInitialized)
       UninitializedInterpreterImpl(logics.zipWithIndex.map {
         case (logic, idx) =>

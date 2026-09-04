@@ -4,6 +4,8 @@
 
 package akka.stream.impl
 
+import java.util.concurrent.atomic.AtomicReference
+
 import scala.concurrent.duration.Duration
 
 import org.scalatest.concurrent.ScalaFutures
@@ -11,6 +13,7 @@ import org.scalatest.concurrent.ScalaFutures
 import akka.NotUsed
 import akka.stream._
 import akka.stream.impl.fusing._
+import akka.stream.impl.fusing.GraphInterpreter.Connection
 import akka.stream.scaladsl._
 import akka.stream.stage._
 import akka.stream.stage.GraphStageLogic.{ EagerTerminateInput, EagerTerminateOutput }
@@ -224,6 +227,8 @@ class GraphStageLogicSpec extends StreamSpec with GraphInterpreterSpecKit with S
 
       // note: a bit dangerous assumptions about connection and logic positions here
       // if anything around creating the logics and connections in the builder changes this may fail
+      val gLogic = interpreter.logics(1)
+      val passThroughLogic = interpreter.logics(2)
       interpreter.complete(interpreter.connections(0))
       interpreter.cancel(interpreter.connections(1), SubscriptionWithCancelException.NoMoreElementsNeeded)
       interpreter.execute(2)
@@ -233,8 +238,121 @@ class GraphStageLogicSpec extends StreamSpec with GraphInterpreterSpecKit with S
 
       interpreter.isCompleted should ===(false)
       interpreter.isSuspended should ===(false)
-      interpreter.isStageCompleted(interpreter.logics(1)) should ===(true)
-      interpreter.isStageCompleted(interpreter.logics(2)) should ===(false)
+      interpreter.isStageCompleted(gLogic) should ===(true)
+      interpreter.isStageCompleted(passThroughLogic) should ===(false)
+      // finished stages and fully closed connections are released from the interpreter so they can be gc:ed
+      interpreter.logics(1) should ===(null)
+      interpreter.logics(2) should ===(passThroughLogic)
+      interpreter.connections(0) should ===(null)
+      interpreter.connections(1) should ===(null)
+      interpreter.connections(2) should not be null
+    }
+
+    "release a finished stage from the connections of a still running neighbour" in new Builder {
+      object finishing extends GraphStage[FlowShape[Int, Int]] {
+        val in = Inlet[Int]("in")
+        val out = Outlet[Int]("out")
+        override val shape = FlowShape(in, out)
+        override def createLogic(attr: Attributes) = new GraphStageLogic(shape) {
+          setHandler(in, eagerTerminateInput)
+          setHandler(out, eagerTerminateOutput)
+        }
+      }
+      object keepsRunning extends GraphStage[FlowShape[Int, Int]] {
+        val in = Inlet[Int]("in")
+        val out = Outlet[Int]("out")
+        override val shape = FlowShape(in, out)
+        override def createLogic(attr: Attributes) = new GraphStageLogic(shape) {
+          setHandler(in, ignoreTerminateInput)
+          setHandler(out, ignoreTerminateOutput)
+        }
+      }
+
+      builder(finishing, keepsRunning)
+        .connect(Upstream, finishing.in)
+        .connect(finishing.out, keepsRunning.in)
+        .connect(keepsRunning.out, Downstream)
+        .init()
+
+      val finishingLogic = interpreter.logics(1)
+      val keepsRunningLogic = interpreter.logics(2)
+
+      interpreter.complete(interpreter.connections(0))
+      interpreter.execute(10)
+
+      interpreter.isStageCompleted(finishingLogic) should ===(true)
+      interpreter.isStageCompleted(keepsRunningLogic) should ===(false)
+      interpreter.isCompleted should ===(false)
+
+      // keepsRunning keeps the closed connection in portToConn for port state queries, but it must not
+      // keep the finished stage alive through it
+      val deadConnection = keepsRunningLogic.portToConn(keepsRunning.in.id)
+      deadConnection.outOwner should ===(null)
+      deadConnection.outHandler should ===(null)
+      deadConnection.inOwner should ===(null)
+      deadConnection.inHandler should ===(null)
+    }
+
+    "keep a dead connection intact until the batch it died in is done" in new Builder {
+      // Bytecode instrumentation wraps processPush/processPull and looks at the connection after the call, so the
+      // owners and handlers of a connection that dies mid batch must survive until the interpreter is out of those
+      // frames. Dropping them eagerly in complete/fail/cancel would be visible to it as a null.
+      builder(passThrough).connect(Upstream, passThrough.in).connect(passThrough.out, Downstream).init()
+
+      val connection = interpreter.connections(0)
+      interpreter.complete(connection)
+      interpreter.cancel(connection, SubscriptionWithCancelException.NoMoreElementsNeeded)
+
+      // closed on both ends, so the interpreter has let go of it, but it still knows its owners
+      interpreter.connections(0) should ===(null)
+      connection.inOwner should not be null
+      connection.outOwner should not be null
+      connection.inHandler should not be null
+      connection.outHandler should not be null
+
+      interpreter.execute(1)
+
+      connection.inOwner should ===(null)
+      connection.outOwner should ===(null)
+      connection.inHandler should ===(null)
+      connection.outHandler should ===(null)
+    }
+
+    "keep a dead connection intact while its event is still being processed" in new Builder {
+      // the same contract as above, for the case the instrumentation actually trips over: a connection that dies
+      // inside a handler, while the interpreter is still down in processPush/processPull
+      val inletConnection = new AtomicReference[Connection]()
+      val ownersDuringHandler = new AtomicReference[String]("handler did not run")
+
+      object completeOnUpstreamFinish extends GraphStage[FlowShape[Int, Int]] {
+        val in = Inlet[Int]("in")
+        val out = Outlet[Int]("out")
+        override val shape = FlowShape(in, out)
+        override def createLogic(attr: Attributes) = new GraphStageLogic(shape) {
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = ()
+            override def onUpstreamFinish(): Unit = {
+              completeStage() // closes this stage's ports, so the inlet connection is dead from here on
+              val connection = inletConnection.get()
+              ownersDuringHandler.set(s"${connection.inOwner ne null},${connection.outOwner ne null}")
+            }
+          })
+          setHandler(out, eagerTerminateOutput)
+        }
+      }
+
+      builder(completeOnUpstreamFinish)
+        .connect(Upstream, completeOnUpstreamFinish.in)
+        .connect(completeOnUpstreamFinish.out, Downstream)
+        .init()
+
+      inletConnection.set(interpreter.connections(0))
+      interpreter.complete(interpreter.connections(0))
+      interpreter.execute(10)
+
+      ownersDuringHandler.get() should ===("true,true")
+      inletConnection.get().inOwner should ===(null)
+      inletConnection.get().outOwner should ===(null)
     }
 
     "not allow push from constructor" in {
