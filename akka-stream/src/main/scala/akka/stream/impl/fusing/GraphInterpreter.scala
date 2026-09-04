@@ -326,6 +326,7 @@ import akka.stream.stage._
       }
       i += 1
     }
+    releaseDeadConnections()
   }
 
   /**

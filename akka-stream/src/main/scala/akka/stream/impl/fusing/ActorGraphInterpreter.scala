@@ -695,6 +695,8 @@ import akka.util.OptionVal
       interpreterCompleted = true
       // Will only have an effect if the above call to the interpreter failed to emit a proper failure to the downstream
       // otherwise this will have no effect
+      // These calls can retire connections after finish() already released deadConnections, but that is fine: the
+      // shell is being torn down here, so nothing outlives the shell's own remaining lifetime.
       outputs.foreach(_.fail(reason))
       inputs.foreach(_.cancel(reason))
     }
