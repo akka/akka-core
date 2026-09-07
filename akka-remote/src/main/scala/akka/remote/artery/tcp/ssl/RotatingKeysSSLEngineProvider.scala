@@ -92,20 +92,6 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
     try {
       val (privateKey, cert, cacerts) = readFiles()
       log.info("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
-      cachedContext.foreach {
-        case CachedContext(previous, _) if cacerts.size < previous.cacerts.size =>
-          // A rebuild that loads fewer CAs than the previous one produces no exception, so
-          // without this warning it goes unnoticed at default log levels: the SSLContext is
-          // cached as-is, missing a trust anchor, for the full ssl-context-cache-ttl. This can
-          // happen if ca-cert-file is read while a rotation is rewriting it.
-          log.warning(
-            "ca-cert-file [{}] now holds [{}] CA certificate(s), fewer than the [{}] loaded previously. " +
-            "If this persists, check that the file is not being read while it is rewritten.",
-            SSLCACertFile,
-            cacerts.size,
-            previous.cacerts.size)
-        case _ =>
-      }
       val issuer = PemManagersProvider.findIssuer(cert, cacerts)
       if (issuer.isEmpty)
         log.warning(
@@ -120,7 +106,7 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
 
       val ctx = SSLContext.getInstance(SSLProtocol)
       ctx.init(keyManagers, trustManagers, rng)
-      ConfiguredContext(ctx, sessionVerifier, cacerts)
+      ConfiguredContext(ctx, sessionVerifier)
     } catch {
       case e: GeneralSecurityException =>
         throw new SslTransportException(
@@ -190,9 +176,6 @@ object RotatingKeysSSLEngineProvider {
    * INTERNAL API
    */
   @InternalApi
-  private case class ConfiguredContext(
-      context: SSLContext,
-      sessionVerifier: SessionVerifier,
-      cacerts: Seq[X509Certificate])
+  private case class ConfiguredContext(context: SSLContext, sessionVerifier: SessionVerifier)
 
 }
