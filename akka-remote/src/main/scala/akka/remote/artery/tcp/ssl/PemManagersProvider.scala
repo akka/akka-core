@@ -65,13 +65,12 @@ private[ssl] object PemManagersProvider {
    * INTERNAL API
    *
    * The CA certificate from `cacerts` whose key actually signed `cert`, if present.
-   * Matching on the issuer/subject DN alone is not enough: a same-DN CA rotation (the CA
-   * is renewed in place, keeping its DN and changing only its key) leaves the bundle
-   * holding two CAs with the same subject DN, and only one of them is the real issuer.
    */
   @InternalApi
   private[ssl] def findIssuer(cert: X509Certificate, cacerts: Seq[X509Certificate]): Option[X509Certificate] =
     cacerts.iterator
+    // Subject DN alone isn't enough: a same-DN CA rotation (renewed in place, key changed)
+    // can leave two candidates with the same DN, only one of which actually signed cert.
       .filter(_.getSubjectX500Principal == cert.getIssuerX500Principal)
       .find(ca => Try(cert.verify(ca.getPublicKey)).isSuccess)
 
