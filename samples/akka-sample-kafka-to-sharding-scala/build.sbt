@@ -3,7 +3,7 @@ val AlpakkaKafkaVersion = "7.0.1"
 val AkkaManagementVersion = "1.6.0"
 val AkkaHttpVersion = "10.7.0"
 val EmbeddedKafkaVersion = "3.7.0"
-val LogbackVersion = "1.5.38"
+val LogbackVersion = "1.6.3"
 
 ThisBuild / scalaVersion := "2.13.15"
 ThisBuild / organization := "com.lightbend.akka.samples"
