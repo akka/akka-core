@@ -90,8 +90,8 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
 
   // Construct the cached instance
   private def constructContext(): ConfiguredContext = {
-    val (privateKey, cert, cacerts) = readFiles()
     try {
+      val (privateKey, cert, cacerts) = readFiles()
       log.info("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
       cachedContext.foreach {
         case CachedContext(previous, _) if cacerts.size < previous.cacerts.size =>

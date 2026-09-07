@@ -73,6 +73,25 @@ class RotatingKeysSSLEngineProviderConstructionSpec extends AnyWordSpec with Mat
       } finally Files.deleteIfExists(emptyCaCertFile)
     }
 
+    "wrap a malformed ca-cert-file in SslTransportException instead of letting it escape raw" in {
+      val garbageCaCertFile = Files.createTempFile("garbage-ca-cert-", ".crt")
+      try {
+        Files.write(garbageCaCertFile, "not a certificate".getBytes("UTF-8"))
+        val config = configFor(
+          nameToPath("ssl/node.example.com.pem"),
+          nameToPath("ssl/node.example.com.crt"),
+          garbageCaCertFile.toString)
+        val provider = new RotatingKeysSSLEngineProvider(config, NoMarkerLogging)
+
+        // CertificateException extends GeneralSecurityException, not IOException, so it isn't
+        // caught by readFiles()'s own catch clauses; it must still come out as
+        // SslTransportException like every other malformed-input case, not raw.
+        intercept[SslTransportException] {
+          provider.getSSLContext()
+        }
+      } finally Files.deleteIfExists(garbageCaCertFile)
+    }
+
     "warn when a ca-cert-file rebuild loads fewer CA certificates than before" in {
       // Simulates a ca-cert-file caught mid-rewrite: a rebuild that silently narrows the
       // trust set is exactly the failure this warning exists to surface, since it produces
