@@ -13,14 +13,13 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import akka.event.NoMarkerLogging
 import akka.remote.artery.tcp.SslTransportException
+import akka.remote.artery.tcp.ssl.TestResources.nameToPath
 
 /**
  * Lightweight unit test for [[RotatingKeysSSLEngineProvider]] construction, without
  * spinning up an ActorSystem or real network connections.
  */
 class RotatingKeysSSLEngineProviderConstructionSpec extends AnyWordSpec with Matchers {
-
-  private def nameToPath(name: String): String = getClass.getClassLoader.getResource(name).getPath
 
   private def configFor(keyFile: String, certFile: String, caCertFile: String): Config =
     ConfigFactory.parseString(s"""

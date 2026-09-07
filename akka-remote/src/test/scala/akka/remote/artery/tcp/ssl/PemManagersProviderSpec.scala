@@ -12,6 +12,8 @@ import javax.net.ssl.X509TrustManager
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import akka.remote.artery.tcp.ssl.TestResources.nameToPath
+
 /**
  *
  */
@@ -74,6 +76,4 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
       PemManagersProvider.loadCertificate(nameToPath(certFile)).asInstanceOf[X509Certificate],
       PemManagersProvider.loadCertificate(nameToPath(caCertFile)))
   }
-
-  private def nameToPath(name: String): String = getClass.getClassLoader.getResource(name).getPath
 }

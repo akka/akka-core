@@ -14,6 +14,8 @@ import javax.net.ssl.X509TrustManager
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import akka.remote.artery.tcp.ssl.TestResources.nameToPath
+
 /**
  * Guards the certificate-chain selection in [[PemManagersProvider.buildKeyManagers]]: the
  * presented chain must contain only the leaf and the CA that actually issued it, not every
@@ -22,8 +24,6 @@ import org.scalatest.wordspec.AnyWordSpec
  * expired CA were placed ahead of the real issuer.
  */
 class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
-
-  private def nameToPath(name: String): String = getClass.getClassLoader.getResource(name).getPath
 
   private def loadCert(name: String): X509Certificate =
     PemManagersProvider.loadCertificate(nameToPath(name)).asInstanceOf[X509Certificate]
