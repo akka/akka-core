@@ -44,12 +44,8 @@ private[ssl] object PemManagersProvider {
     keyStore.load(null)
 
     keyStore.setCertificateEntry("cert", cert)
-    // Present only the leaf and the CA that actually issued it, never the rest of a
-    // rotation bundle: a peer validating with a TrustManager that does not build alternate
-    // paths (e.g. SunX509) rejects the chain if an unrelated CA is placed ahead of the real
-    // issuer. `issuer` is None when no CA in the bundle actually signed `cert` (a
-    // misconfigured deployment); present the leaf alone rather than padding the chain with
-    // an unrelated CA.
+    // Present only the leaf and its issuer, never the rest of a rotation bundle: a
+    // non-path-building TrustManager (e.g. SunX509) rejects an unrelated CA ahead of it.
     val chain: Array[Certificate] = issuer match {
       case Some(ca) =>
         keyStore.setCertificateEntry("cacert", ca)
