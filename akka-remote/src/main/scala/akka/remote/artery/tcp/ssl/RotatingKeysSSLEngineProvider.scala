@@ -92,7 +92,21 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
   private def constructContext(): ConfiguredContext = {
     val (privateKey, cert, cacerts) = readFiles()
     try {
-      log.debug("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      log.info("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      cachedContext.foreach {
+        case CachedContext(previous, _) if cacerts.size < previous.cacerts.size =>
+          // A rebuild that loads fewer CAs than the previous one produces no exception, so
+          // without this warning it goes unnoticed at default log levels: the SSLContext is
+          // cached as-is, missing a trust anchor, for the full ssl-context-cache-ttl. This can
+          // happen if ca-cert-file is read while a rotation is rewriting it.
+          log.warning(
+            "ca-cert-file [{}] now holds [{}] CA certificate(s), fewer than the [{}] loaded previously. " +
+            "If this persists, check that the file is not being read while it is rewritten.",
+            SSLCACertFile,
+            cacerts.size,
+            previous.cacerts.size)
+        case _ =>
+      }
       if (PemManagersProvider.findIssuer(cert, cacerts).isEmpty)
         log.warning(
           "None of the [{}] CA certificate(s) in ca-cert-file [{}] issued the node certificate; it will be " +
@@ -106,7 +120,7 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
 
       val ctx = SSLContext.getInstance(SSLProtocol)
       ctx.init(keyManagers, trustManagers, rng)
-      ConfiguredContext(ctx, sessionVerifier)
+      ConfiguredContext(ctx, sessionVerifier, cacerts)
     } catch {
       case e: GeneralSecurityException =>
         throw new SslTransportException(
@@ -176,6 +190,6 @@ object RotatingKeysSSLEngineProvider {
    * INTERNAL API
    */
   @InternalApi
-  private case class ConfiguredContext(context: SSLContext, sessionVerifier: SessionVerifier)
+  private case class ConfiguredContext(context: SSLContext, sessionVerifier: SessionVerifier, cacerts: Seq[Certificate])
 
 }
