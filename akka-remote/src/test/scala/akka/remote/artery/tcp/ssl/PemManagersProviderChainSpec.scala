@@ -37,7 +37,8 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
 
   private def presentedChain(key: PrivateKey, leaf: X509Certificate)(
       cacerts: Seq[X509Certificate]): Array[X509Certificate] = {
-    val keyManagers = PemManagersProvider.buildKeyManagers(key, leaf, cacerts)
+    val issuer = PemManagersProvider.findIssuer(leaf, cacerts)
+    val keyManagers = PemManagersProvider.buildKeyManagers(key, leaf, issuer)
     val km = keyManagers.collectFirst { case k: X509KeyManager => k }.get
     km.getCertificateChain("private-key")
   }

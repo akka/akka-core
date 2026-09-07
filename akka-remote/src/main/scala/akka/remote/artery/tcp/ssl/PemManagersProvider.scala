@@ -39,19 +39,18 @@ private[ssl] object PemManagersProvider {
   private[ssl] def buildKeyManagers(
       privateKey: PrivateKey,
       cert: X509Certificate,
-      cacerts: Seq[Certificate]): Array[KeyManager] = {
+      issuer: Option[X509Certificate]): Array[KeyManager] = {
     val keyStore = KeyStore.getInstance("JKS")
     keyStore.load(null)
 
     keyStore.setCertificateEntry("cert", cert)
-    // Present only the leaf and the CA that actually issued it. The other CAs in a
-    // rotation bundle are trust anchors, not part of this certificate's chain: a peer
-    // validating with a TrustManager that does not build alternate paths (e.g. SunX509)
-    // rejects the chain if one of those unrelated CAs is invalid. If no CA in the bundle
-    // issued `cert` the deployment is misconfigured (reference.conf requires the issuing
-    // CA to be in ca-cert-file), so present the leaf alone rather than padding the chain
-    // with unrelated CAs.
-    val chain: Array[Certificate] = findIssuer(cert, cacerts) match {
+    // Present only the leaf and the CA that actually issued it, never the rest of a
+    // rotation bundle: a peer validating with a TrustManager that does not build alternate
+    // paths (e.g. SunX509) rejects the chain if an unrelated CA is placed ahead of the real
+    // issuer. `issuer` is None when no CA in the bundle actually signed `cert` (a
+    // misconfigured deployment); present the leaf alone rather than padding the chain with
+    // an unrelated CA.
+    val chain: Array[Certificate] = issuer match {
       case Some(ca) => Array(cert, ca)
       case None     => Array(cert)
     }

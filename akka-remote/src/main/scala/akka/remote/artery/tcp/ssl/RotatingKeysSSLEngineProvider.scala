@@ -107,13 +107,14 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
             previous.cacerts.size)
         case _ =>
       }
-      if (PemManagersProvider.findIssuer(cert, cacerts).isEmpty)
+      val issuer = PemManagersProvider.findIssuer(cert, cacerts)
+      if (issuer.isEmpty)
         log.warning(
           "None of the [{}] CA certificate(s) in ca-cert-file [{}] issued the node certificate; it will be " +
           "presented without an issuer certificate. Check that ca-cert-file contains the issuing CA.",
           cacerts.size,
           SSLCACertFile)
-      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, cacerts)
+      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, issuer)
       val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacerts)
 
       val sessionVerifier = new PeerSubjectVerifier(cert)
