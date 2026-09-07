@@ -51,8 +51,10 @@ private[ssl] object PemManagersProvider {
     // misconfigured deployment); present the leaf alone rather than padding the chain with
     // an unrelated CA.
     val chain: Array[Certificate] = issuer match {
-      case Some(ca) => Array(cert, ca)
-      case None     => Array(cert)
+      case Some(ca) =>
+        keyStore.setCertificateEntry("cacert", ca)
+        Array(cert, ca)
+      case None => Array(cert)
     }
     keyStore.setKeyEntry("private-key", privateKey, "changeit".toCharArray, chain)
 
