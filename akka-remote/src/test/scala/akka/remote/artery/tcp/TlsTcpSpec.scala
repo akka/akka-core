@@ -63,8 +63,8 @@ class TlsTcpWithRotatingKeysSSLEngineSpec extends TlsTcpSpec(ConfigFactory.parse
 
 // Two nodes issued by two different CAs, both trusted via a single ca-cert-file bundle
 // containing both CAs -- the scenario a CA rotation produces. See
-// RotatingKeysSSLEngineProviderSpec / PemManagersProviderSpec for lower-level tests of
-// the same trust and certificate-chain behavior.
+// RotatingKeysSSLEngineProviderSpec for context rebuild/key rotation, and
+// PemManagersProviderChainSpec for lower-level tests of the same certificate-chain behavior.
 class TlsTcpWithRotatingKeysAndTwoCABundleSpec extends ArteryMultiNodeSpec(ConfigFactory.parseString(s"""
     akka.remote.artery.ssl {
        ssl-engine-provider = akka.remote.artery.tcp.ssl.RotatingKeysSSLEngineProvider

@@ -20,7 +20,7 @@ import javax.net.ssl.TrustManagerFactory
 
 import scala.concurrent.blocking
 import scala.jdk.CollectionConverters._
-import scala.util.control.NonFatal
+import scala.util.Try
 
 import akka.annotation.InternalApi
 import akka.pki.pem.DERPrivateKeyLoader
@@ -72,17 +72,10 @@ private[ssl] object PemManagersProvider {
    * holding two CAs with the same subject DN, and only one of them is the real issuer.
    */
   @InternalApi
-  private[ssl] def findIssuer(cert: X509Certificate, cacerts: Seq[Certificate]): Option[X509Certificate] =
-    cacerts.iterator.collect { case ca: X509Certificate => ca }.find { ca =>
-      ca.getSubjectX500Principal == cert.getIssuerX500Principal && {
-        try {
-          cert.verify(ca.getPublicKey)
-          true
-        } catch {
-          case NonFatal(_) => false
-        }
-      }
-    }
+  private[ssl] def findIssuer(cert: X509Certificate, cacerts: Seq[X509Certificate]): Option[X509Certificate] =
+    cacerts.iterator
+      .filter(_.getSubjectX500Principal == cert.getIssuerX500Principal)
+      .find(ca => Try(cert.verify(ca.getPublicKey)).isSuccess)
 
   /**
    * INTERNAL API
@@ -125,14 +118,20 @@ private[ssl] object PemManagersProvider {
   /**
    * INTERNAL API
    *
-   * Loads every PEM-encoded certificate from `filename`, in file order. Use this for a
-   * CA trust file, which may legitimately contain more than one certificate, for example
-   * during a CA rotation.
+   * Loads every PEM-encoded certificate from `filename`. Use this for a CA trust file,
+   * which may legitimately contain more than one certificate, for example during a CA
+   * rotation.
    */
   @InternalApi
-  private[ssl] def loadCertificates(filename: String): Seq[Certificate] = blocking {
+  private[ssl] def loadCertificates(filename: String): Seq[X509Certificate] = blocking {
     val bytes = Files.readAllBytes(new File(filename).toPath)
-    certFactory.generateCertificates(new ByteArrayInputStream(bytes)).asScala.toVector
+    // CertificateFactory.getInstance("X.509") only ever produces X509Certificate instances.
+    certFactory
+      .generateCertificates(new ByteArrayInputStream(bytes))
+      .asScala
+      .iterator
+      .map(_.asInstanceOf[X509Certificate])
+      .toVector
   }
 
 }

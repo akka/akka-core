@@ -4,8 +4,6 @@
 
 package akka.remote.artery.tcp.ssl
 
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.security.PrivateKey
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
@@ -45,30 +43,21 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
     }
 
     "load every CA from a multi-cert PEM bundle" in {
-      // Concatenate two independent, valid, non-expired root CAs into a single bundle
-      // file, mirroring a CA rotation bundle that must trust both an old and a new CA
-      // for an overlap window.
-      val bundlePath = writeBundle("ssl/exampleca.crt", "ssl/rotation-ca2/exampleca2.crt")
-      try {
-        val cacerts = PemManagersProvider.loadCertificates(bundlePath)
-        cacerts.size must be(2)
+      // ssl/rotation-ca2/ca-bundle.crt is exampleca.crt and rotation-ca2/exampleca2.crt
+      // concatenated -- two independent, valid, non-expired root CAs, mirroring a CA
+      // rotation bundle that must trust both an old and a new CA for an overlap window.
+      // Loading it here also guards that the committed bundle stays valid.
+      val cacerts = PemManagersProvider.loadCertificates(nameToPath("ssl/rotation-ca2/ca-bundle.crt"))
+      cacerts.size must be(2)
 
-        val trustManagers = PemManagersProvider.buildTrustManagers(cacerts)
-        val anchors = trustManagers.collect {
-          case tm: X509TrustManager => tm.getAcceptedIssuers.toList
-        }.flatten
-        anchors.size must be(2)
-        anchors.toSet must be(cacerts.toSet)
-      } finally Files.deleteIfExists(Paths.get(bundlePath))
+      val trustManagers = PemManagersProvider.buildTrustManagers(cacerts)
+      val anchors = trustManagers.collect {
+        case tm: X509TrustManager => tm.getAcceptedIssuers.toList
+      }.flatten
+      anchors.size must be(2)
+      anchors.toSet must be(cacerts.toSet)
     }
 
-  }
-
-  private def writeBundle(resources: String*): String = {
-    val bytes = resources.iterator.map(nameToPath).flatMap(p => Files.readAllBytes(Paths.get(p)) :+ '\n'.toByte).toArray
-    val tmp = Files.createTempFile("ca-bundle-", ".pem")
-    Files.write(tmp, bytes)
-    tmp.toString
   }
 
   private def withFiles(keyFile: String, certFile: String, caCertFile: String)(

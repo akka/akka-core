@@ -35,7 +35,16 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
   // that a rotation bundle still carries during the overlap window.
   private val otherCa = loadCert("ssl/pem/selfsigned-certificate.pem")
 
-  private def presentedChain(key: PrivateKey, leaf: X509Certificate)(
+  // cert-manager renewing a CA in place keeps the subject DN and changes only the key,
+  // so caOld and caNew share a subject DN but only caNew actually signed node.
+  private val caOld = loadCert("ssl/rotation-same-dn/ca-old.crt")
+  private val caNew = loadCert("ssl/rotation-same-dn/ca-new.crt")
+  private val sameDnNode = loadCert("ssl/rotation-same-dn/node.crt")
+  private val sameDnNodeKey = PemManagersProvider.loadPrivateKey(nameToPath("ssl/rotation-same-dn/node.pem"))
+
+  private def presentedChain(
+      key: PrivateKey,
+      leaf: X509Certificate,
       cacerts: Seq[X509Certificate]): Array[X509Certificate] = {
     val issuer = PemManagersProvider.findIssuer(leaf, cacerts)
     val keyManagers = PemManagersProvider.buildKeyManagers(key, leaf, issuer)
@@ -61,7 +70,7 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
 
     "present only the real issuer in the certificate chain, not every CA in the bundle" in {
       // Bundle order mirrors a rotation file: old (unrelated/expired) CA first, real CA second.
-      val chain = presentedChain(privateKey, leafCert)(Seq(otherCa, realCa))
+      val chain = presentedChain(privateKey, leafCert, Seq(otherCa, realCa))
 
       chain.length must be(2)
       chain(1) must be(realCa)
@@ -70,15 +79,10 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
     }
 
     "pick the CA that actually signed the leaf when two bundle CAs share the issuer DN" in {
-      // cert-manager renewing a CA in place keeps the subject DN and changes only the key.
-      val caOld = loadCert("ssl/rotation-same-dn/ca-old.crt")
-      val caNew = loadCert("ssl/rotation-same-dn/ca-new.crt")
-      val node = loadCert("ssl/rotation-same-dn/node.crt")
-      val nodeKey = PemManagersProvider.loadPrivateKey(nameToPath("ssl/rotation-same-dn/node.pem"))
       caOld.getSubjectX500Principal must be(caNew.getSubjectX500Principal)
 
       // Old CA first: a subject-DN-only match would wrongly pick it.
-      val chain = presentedChain(nodeKey, node)(Seq(caOld, caNew))
+      val chain = presentedChain(sameDnNodeKey, sameDnNode, Seq(caOld, caNew))
 
       chain.length must be(2)
       chain(1) must be(caNew)
@@ -86,7 +90,7 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
     }
 
     "present the leaf alone when no CA in the bundle issued it" in {
-      val chain = presentedChain(privateKey, leafCert)(Seq(otherCa))
+      val chain = presentedChain(privateKey, leafCert, Seq(otherCa))
 
       chain.length must be(1)
       chain(0) must be(leafCert)
@@ -95,9 +99,7 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
 
   "PemManagersProvider.findIssuer" must {
     "return None when only a same-DN non-issuing CA is present" in {
-      val caOld = loadCert("ssl/rotation-same-dn/ca-old.crt")
-      val node = loadCert("ssl/rotation-same-dn/node.crt")
-      PemManagersProvider.findIssuer(node, Seq(caOld)) must be(None)
+      PemManagersProvider.findIssuer(sameDnNode, Seq(caOld)) must be(None)
     }
   }
 }

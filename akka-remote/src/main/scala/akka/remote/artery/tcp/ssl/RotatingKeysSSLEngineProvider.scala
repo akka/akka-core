@@ -9,7 +9,6 @@ import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.PrivateKey
 import java.security.SecureRandom
-import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 import javax.net.ssl.KeyManager
 import javax.net.ssl.SSLContext
@@ -132,11 +131,11 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
     }
   }
 
-  private def readFiles(): (PrivateKey, X509Certificate, Seq[Certificate]) = {
+  private def readFiles(): (PrivateKey, X509Certificate, Seq[X509Certificate]) = {
     try {
-      val cacerts: Seq[Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
+      val cacerts: Seq[X509Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
       if (cacerts.isEmpty)
-        throw new SslTransportException(s"No certificate found in ca-cert-file [$SSLCACertFile]")
+        throw new SslTransportException(s"No certificate found in ca-cert-file [$SSLCACertFile]", null)
       val cert: X509Certificate = PemManagersProvider.loadCertificate(SSLCertFile).asInstanceOf[X509Certificate]
       val privateKey: PrivateKey = PemManagersProvider.loadPrivateKey(SSLKeyFile)
       (privateKey, cert, cacerts)
@@ -191,6 +190,9 @@ object RotatingKeysSSLEngineProvider {
    * INTERNAL API
    */
   @InternalApi
-  private case class ConfiguredContext(context: SSLContext, sessionVerifier: SessionVerifier, cacerts: Seq[Certificate])
+  private case class ConfiguredContext(
+      context: SSLContext,
+      sessionVerifier: SessionVerifier,
+      cacerts: Seq[X509Certificate])
 
 }
