@@ -78,11 +78,21 @@ class PemManagersProviderChainSpec extends AnyWordSpec with Matchers {
       noException must be thrownBy checkServerTrusted(realCa, chain)
     }
 
-    "pick the CA that actually signed the leaf when two bundle CAs share the issuer DN" in {
+    "pick the CA that actually signed the leaf when two bundle CAs share the issuer DN, old CA first" in {
       caOld.getSubjectX500Principal must be(caNew.getSubjectX500Principal)
 
       // Old CA first: a subject-DN-only match would wrongly pick it.
       val chain = presentedChain(sameDnNodeKey, sameDnNode, Seq(caOld, caNew))
+
+      chain.length must be(2)
+      chain(1) must be(caNew)
+      noException must be thrownBy checkServerTrusted(caNew, chain)
+    }
+
+    "pick the CA that actually signed the leaf when two bundle CAs share the issuer DN, new CA first" in {
+      // Same scenario with the bundle order reversed, so a selection that only happens to
+      // work by picking whichever same-DN candidate comes first would be caught here.
+      val chain = presentedChain(sameDnNodeKey, sameDnNode, Seq(caNew, caOld))
 
       chain.length must be(2)
       chain(1) must be(caNew)
