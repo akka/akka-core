@@ -91,7 +91,13 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
   private def constructContext(): ConfiguredContext = {
     try {
       val (privateKey, cert, cacerts) = readFiles()
-      log.info("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      // Worth the default log level on the first load, for startup visibility; every later
+      // rebuild happens on every ssl-context-cache-ttl expiry (default 5 min) with nothing
+      // new to say in the steady state, so it's debug-only after that.
+      if (cachedContext.isEmpty)
+        log.info("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      else
+        log.debug("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
       val issuer = PemManagersProvider.findIssuer(cert, cacerts)
       if (issuer.isEmpty)
         log.warning(
