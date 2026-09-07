@@ -82,6 +82,10 @@ private[ssl] object PemManagersProvider {
    */
   @InternalApi
   private[ssl] def buildTrustManagers(cacerts: Seq[Certificate]): Array[TrustManager] = {
+    // TrustManagerFactory.init on an empty keystore silently yields a trust-nothing
+    // TrustManager instead of failing, so an empty cacerts must be rejected here rather
+    // than left to whichever caller happens to guard against it.
+    require(cacerts.nonEmpty, "cacerts must not be empty")
     val trustStore = KeyStore.getInstance("JKS")
     trustStore.load(null)
     cacerts.zipWithIndex.foreach {

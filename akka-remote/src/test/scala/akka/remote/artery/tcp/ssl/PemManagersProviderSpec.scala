@@ -58,6 +58,13 @@ class PemManagersProviderSpec extends AnyWordSpec with Matchers {
       anchors.toSet must be(cacerts.toSet)
     }
 
+    "reject building trust managers from an empty CA list" in {
+      // TrustManagerFactory.init on an empty keystore silently yields a trust-nothing
+      // TrustManager rather than failing; buildTrustManagers must not let that happen
+      // quietly for any caller, not only the one that happens to guard against it today.
+      an[IllegalArgumentException] must be thrownBy PemManagersProvider.buildTrustManagers(Seq.empty)
+    }
+
   }
 
   private def withFiles(keyFile: String, certFile: String, caCertFile: String)(
