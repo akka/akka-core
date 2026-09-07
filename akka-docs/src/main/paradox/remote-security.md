@@ -165,7 +165,19 @@ signed certificate, and provisioning that certificate can be done by using a cer
 If you do need to rotate the CA certificate itself, `ca-cert-file` may point to a file containing more than one
 PEM-encoded CA certificate concatenated together. Every certificate in the file is trusted, so during a CA rotation
 you can list both the old and the new CA in that file for the overlap window until every node has picked up a
-certificate issued by the new CA. Provisioning such a bundle is outside the scope of this cert-manager walkthrough.
+certificate issued by the new CA. Provisioning such a bundle is outside the scope of this cert-manager walkthrough,
+but a few things matter to get right regardless of how it’s provisioned:
+
+* **Ordering.** Roll out the bundle containing both CAs to every node *before* issuing any node certificate
+  from the new CA. If a node presents a new-CA certificate before its peers have the new CA in their bundle,
+  those peers will reject it.
+* **Removing the old CA.** Once every node has picked up a certificate issued by the new CA, remove the old
+  CA from the bundle. Left in place, the old CA remains a trust anchor indefinitely, and whoever holds its
+  private key can still mint certificates this cluster will accept.
+* **Removal isn’t immediate.** A node’s existing connections keep the `SSLContext` they were built with, so
+  removing the old CA from the bundle doesn’t drop connections already established with old-CA peers - it
+  only stops new ones from being trusted. Wait for those connections to cycle naturally, or restart the nodes,
+  once the old CA is no longer needed.
 
 So, in total, we’re going to have two issuers, a self signed issuer that issues certificates for the CA issuer,
 and then that CA issuer will issue certificates that are frequently rotated for our Akka service to use. The
