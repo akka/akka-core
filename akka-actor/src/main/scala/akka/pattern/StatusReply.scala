@@ -47,6 +47,21 @@ final class StatusReply[+T] private (private val status: Try[T]) {
   def isError: Boolean = status.isFailure
   def isSuccess: Boolean = status.isSuccess
 
+  /**
+   * Return this StatusReply as a Try.
+   */
+  def toTry: Try[T] = status
+
+  /**
+   * Return this StatusReply as an Either.
+   */
+  def toEither: Either[Throwable, T] = status.toEither
+
+  /**
+   * Return this StatusReply as an Option, returning None and discarding the error if it's an Error.
+   */
+  def toOption: Option[T] = status.toOption
+
   override def equals(other: Any): Boolean = other match {
     case that: StatusReply[_] => status == that.status
     case _                    => false
