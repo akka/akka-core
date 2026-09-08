@@ -227,6 +227,12 @@ object Behaviors {
       val effectiveTag = if (tag == ClassTag.Nothing) ThrowableClassTag else tag
       Supervisor(Behavior.validateAsInitial(wrapped), strategy)(effectiveTag)
     }
+
+    /** Specify the [[SupervisorStrategy]] to be invoked when the wrapped behavior throws by use flatten ways. */
+    def whenFailure[Thr <: Throwable](strategy: SupervisorStrategy)(
+        implicit tag: ClassTag[Thr] = ThrowableClassTag): SuperviseBehavior[T] = {
+      new SuperviseBehavior[T](wrapped).whenFailure(strategy)(tag)
+    }
   }
 
   /**
