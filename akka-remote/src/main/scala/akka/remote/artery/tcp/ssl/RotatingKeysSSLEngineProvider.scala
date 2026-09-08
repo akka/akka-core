@@ -98,10 +98,14 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
       else
         log.debug("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
       val issuer = PemManagersProvider.findIssuer(cert, cacerts)
+      // Deliberately not fatal like the empty-file case: trust anchors are unaffected here,
+      // only the presented chain is missing its issuer, and that chain still validates
+      // against peers that trust the issuing CA independently.
       if (issuer.isEmpty)
         log.warning(
           "None of the [{}] CA certificate(s) in ca-cert-file [{}] issued the node certificate; it will be " +
-          "presented without an issuer certificate. Check that ca-cert-file contains the issuing CA.",
+          "presented without an issuer certificate, which may prevent peers from validating it. " +
+          "Check that ca-cert-file contains the CA that issued cert-file.",
           cacerts.size,
           SSLCACertFile)
       val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, issuer)

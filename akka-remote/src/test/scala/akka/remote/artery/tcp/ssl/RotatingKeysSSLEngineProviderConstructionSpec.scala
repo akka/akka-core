@@ -67,5 +67,20 @@ class RotatingKeysSSLEngineProviderConstructionSpec extends AnyWordSpec with Mat
         }
       } finally Files.deleteIfExists(garbageCaCertFile)
     }
+
+    "degrade to presenting the leaf alone, not fail, when no CA in ca-cert-file issued the node certificate" in {
+      // Deliberate, unlike the empty-file case above: this node's trust anchors (used to
+      // validate peers) are unaffected, only the chain it presents is missing its issuer.
+      // That chain still validates against peers that trust the issuing CA independently,
+      // so failing every handshake here would trade a situational problem for a guaranteed
+      // outage. See RotatingKeysSSLEngineProvider.scala for the log.warning this triggers.
+      val config = configFor(
+        nameToPath("ssl/node.example.com.pem"),
+        nameToPath("ssl/node.example.com.crt"),
+        nameToPath("ssl/pem/selfsigned-certificate.pem")) // unrelated to node.example.com's issuer
+      val provider = new RotatingKeysSSLEngineProvider(config, NoMarkerLogging)
+
+      noException must be thrownBy provider.getSSLContext()
+    }
   }
 }
