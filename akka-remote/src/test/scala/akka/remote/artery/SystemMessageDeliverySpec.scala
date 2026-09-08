@@ -14,6 +14,7 @@ import com.typesafe.config.ConfigFactory
 
 import akka.NotUsed
 import akka.actor.ActorIdentity
+import akka.actor.Address
 import akka.actor.ActorSystem
 import akka.actor.ExtendedActorSystem
 import akka.actor.Identify
@@ -111,6 +112,20 @@ abstract class AbstractSystemMessageDeliverySpec(c: Config) extends ArteryMultiN
     if (ThreadLocalRandom.current().nextDouble() < dropRate) Nil
     else List(elem)
   }
+
+  protected def giveUpQuicklyInboundContext(
+      subject: TestControlMessageSubject,
+      giveUpAfter: FiniteDuration): TestInboundContext =
+    new TestInboundContext(addressA, subject) {
+      override protected def createAssociation(remoteAddress: Address): TestOutboundContext =
+        new TestOutboundContext(addressA, remoteAddress, subject) {
+          override lazy val settings: ArterySettings =
+            ArterySettings(
+              ConfigFactory
+                .parseString(s"advanced.give-up-system-message-after = ${giveUpAfter.toMillis} ms")
+                .withFallback(ConfigFactory.load().getConfig("akka.remote.artery")))
+        }
+    }
 }
 
 class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(SystemMessageDeliverySpec.config) {
@@ -393,6 +408,56 @@ class SystemMessageDeliverySpec extends AbstractSystemMessageDeliverySpec(System
           addressA.uid,
           OptionVal.None))
       sink.expectComplete()
+    }
+
+    "give up when the remote stops replying" in {
+      val giveUpAfter = 1.second
+      val controlSubject = new TestControlMessageSubject
+      val inboundContextA = giveUpQuicklyInboundContext(controlSubject, giveUpAfter)
+      val outboundContextA = inboundContextA.association(addressB.address).asInstanceOf[TestOutboundContext]
+      Await.result(outboundContextA.completeHandshake(addressB), 3.seconds)
+
+      val sink = send(sendCount = 2, resendInterval = 200.millis, outboundContextA)
+        .map(_.message.asInstanceOf[SystemMessageEnvelope].seqNo)
+        .runWith(TestSink[Long]())
+
+      // no further demand, so resends are not emitted and the next signal is the give up failure
+      sink.request(2)
+      sink.expectNext(1L)
+      sink.expectNext(2L)
+
+      sink.within(giveUpAfter * 4)(sink.expectError()) shouldBe a[GaveUpSystemMessageException]
+    }
+
+    "give up when negative acknowledgements never make progress" in {
+      val giveUpAfter = 1.second
+      val controlSubject = new TestControlMessageSubject
+      val inboundContextA = giveUpQuicklyInboundContext(controlSubject, giveUpAfter)
+      val outboundContextA = inboundContextA.association(addressB.address).asInstanceOf[TestOutboundContext]
+      Await.result(outboundContextA.completeHandshake(addressB), 3.seconds)
+
+      val sink = send(sendCount = 2, resendInterval = 200.millis, outboundContextA)
+        .map(_.message.asInstanceOf[SystemMessageEnvelope].seqNo)
+        .runWith(TestSink[Long]())
+
+      // no further demand, so resends are not emitted and the next signal is the give up failure
+      sink.request(2)
+      sink.expectNext(1L)
+      sink.expectNext(2L)
+
+      // addressB keeps asking for seqNo 1, which it never received, so nothing can be acknowledged
+      val nacking = system.scheduler.scheduleWithFixedDelay(Duration.Zero, giveUpAfter / 5) { () =>
+        controlSubject.sendControl(
+          InboundEnvelope(
+            OptionVal.None,
+            Nack(0L, addressB, OptionVal.Some(addressA.uid)),
+            OptionVal.None,
+            addressA.uid,
+            OptionVal.None))
+      }(system.dispatcher)
+
+      try sink.within(giveUpAfter * 4)(sink.expectError()) shouldBe a[GaveUpSystemMessageException]
+      finally nacking.cancel()
     }
 
     "deliver all during throttling and random dropping" in {
