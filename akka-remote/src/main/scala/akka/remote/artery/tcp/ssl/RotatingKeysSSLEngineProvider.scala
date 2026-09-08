@@ -9,7 +9,6 @@ import java.io.IOException
 import java.security.GeneralSecurityException
 import java.security.PrivateKey
 import java.security.SecureRandom
-import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 import javax.net.ssl.KeyManager
 import javax.net.ssl.SSLContext
@@ -39,6 +38,9 @@ import akka.stream.TLSRole
  * This provider does not perform hostname verification, but instead allows checking
  * that the remote certificate has a subject name that matches the subject name of
  * the configured certificate.
+ *
+ * The `ca-cert-file` may hold a single certificate, or several concatenated together so
+ * that an old and a new CA can both be trusted during a rotation.
  */
 final class RotatingKeysSSLEngineProvider(val config: Config, protected val log: MarkerLoggingAdapter)
     extends SSLEngineProvider {
@@ -87,10 +89,27 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
 
   // Construct the cached instance
   private def constructContext(): ConfiguredContext = {
-    val (privateKey, cert, cacert) = readFiles()
     try {
-      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, cacert)
-      val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacert)
+      val (privateKey, cert, cacerts) = readFiles()
+      // info only for startup visibility; later rebuilds happen every ssl-context-cache-ttl
+      // (default 5 min) with nothing new to say, so debug after that.
+      if (cachedContext.isEmpty)
+        log.info("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      else
+        log.debug("Loaded [{}] CA certificate(s) from ca-cert-file [{}]", cacerts.size, SSLCACertFile)
+      val issuer = PemManagersProvider.findIssuer(cert, cacerts)
+      // Deliberately not fatal like the empty-file case: trust anchors are unaffected here,
+      // only the presented chain is missing its issuer, and that chain still validates
+      // against peers that trust the issuing CA independently.
+      if (issuer.isEmpty)
+        log.warning(
+          "None of the [{}] CA certificate(s) in ca-cert-file [{}] issued the node certificate; it will be " +
+          "presented without an issuer certificate, which may prevent peers from validating it. " +
+          "Check that ca-cert-file contains the CA that issued cert-file.",
+          cacerts.size,
+          SSLCACertFile)
+      val keyManagers: Array[KeyManager] = PemManagersProvider.buildKeyManagers(privateKey, cert, issuer)
+      val trustManagers: Array[TrustManager] = PemManagersProvider.buildTrustManagers(cacerts)
 
       val sessionVerifier = new PeerSubjectVerifier(cert)
 
@@ -107,12 +126,14 @@ final class RotatingKeysSSLEngineProvider(val config: Config, protected val log:
     }
   }
 
-  private def readFiles(): (PrivateKey, X509Certificate, Certificate) = {
+  private def readFiles(): (PrivateKey, X509Certificate, Seq[X509Certificate]) = {
     try {
-      val cacert: Certificate = PemManagersProvider.loadCertificate(SSLCACertFile)
+      val cacerts: Seq[X509Certificate] = PemManagersProvider.loadCertificates(SSLCACertFile)
+      if (cacerts.isEmpty)
+        throw new SslTransportException(s"No certificate found in ca-cert-file [$SSLCACertFile]", null)
       val cert: X509Certificate = PemManagersProvider.loadCertificate(SSLCertFile).asInstanceOf[X509Certificate]
       val privateKey: PrivateKey = PemManagersProvider.loadPrivateKey(SSLKeyFile)
-      (privateKey, cert, cacert)
+      (privateKey, cert, cacerts)
     } catch {
       case e: FileNotFoundException =>
         throw new SslTransportException(
