@@ -44,6 +44,7 @@ private[io] abstract class TcpConnection(val tcp: TcpExt, val channel: SocketCha
   private[this] var readingSuspended = pullMode
   private[this] var interestedInResume: Option[ActorRef] = None
   private[this] var closedMessage: Option[CloseInformation] = None // for ConnectionClosed message in postStop
+  private[this] var notifiedOnClose = false // true when interested parties were already notified in stopWith
   private var watchedActor: ActorRef = context.system.deadLetters
   private var registration: Option[ChannelRegistration] = None
 
@@ -199,11 +200,25 @@ private[io] abstract class TcpConnection(val tcp: TcpExt, val channel: SocketCha
 
   /** stopWith sets this state while waiting for the SelectionHandler to execute the `cancelAndClose` thunk */
   def unregistering: Receive = {
-    case Unregistered => context.stop(self) // postStop will notify interested parties
-    case _            =>
+    case Unregistered =>
+      // NIO cleanup done; linger briefly so any in-flight WriteCommands that race with
+      // the connection close (e.g. from an Akka HTTP stream) are answered with CommandFailed
+      // instead of silently landing in dead letters.
+      context.setReceiveTimeout(TcpConnection.DrainTimeout)
+      context.become(draining)
+    case _ =>
     // Ignore everything else, we might end up here without user interaction, e.g. if the peer sends a RST packet
     // In this case, we notify the user handler, which might have already concurrently sent us more commands
     // that we can only drop at this point.
+  }
+
+  /** post-close drain: absorbs any writes that race with connection teardown */
+  def draining: Receive = {
+    case write: WriteCommand =>
+      if (TraceLogging) log.debug("Dropping write to already-closed connection")
+      sender() ! CommandFailed(write)
+    case ReceiveTimeout => context.stop(self) // postStop will notify interested parties
+    case _              => // ignore
   }
 
   // AUXILIARIES and IMPLEMENTATION
@@ -389,6 +404,12 @@ private[io] abstract class TcpConnection(val tcp: TcpExt, val channel: SocketCha
       case None =>
         context.stop(self)
       case Some(reg) =>
+        // Eagerly notify interested parties before the actor stops. This ensures they
+        // receive the close event while the actor is still alive in the `draining` state,
+        // so any writes they send in response are answered with CommandFailed instead of
+        // silently becoming dead letters.
+        closeInfo.notificationsTo.foreach(_ ! closeInfo.closedEvent)
+        notifiedOnClose = true
         context.become(unregistering)
         reg.cancelAndClose(() => self ! Unregistered)
     }
@@ -409,6 +430,9 @@ private[io] abstract class TcpConnection(val tcp: TcpExt, val channel: SocketCha
       for {
         msg <- closedMessage
         ref <- interestedInClose
+        // Skip actors already notified eagerly in stopWith (e.g. the connection handler),
+        // but still notify the pending write commander if it differs from those already notified.
+        if !notifiedOnClose || !msg.notificationsTo.contains(ref)
       } ref ! msg.closedEvent
 
     if (!channel.isOpen || isCommandFailed || registration.isEmpty)
@@ -581,6 +605,9 @@ private[io] object TcpConnection {
   }
 
   val doNothing: () => Unit = () => ()
+
+  /** How long the connection actor lingers after close to absorb in-flight writes. */
+  val DrainTimeout: FiniteDuration = 100.milliseconds
 
   val DroppingWriteBecauseWritingIsSuspendedException =
     new IOException("Dropping write because writing is suspended") with NoStackTrace
