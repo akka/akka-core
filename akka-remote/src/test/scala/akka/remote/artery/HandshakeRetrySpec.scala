@@ -9,6 +9,7 @@ import scala.concurrent.duration._
 import com.typesafe.config.ConfigFactory
 
 import akka.actor._
+import akka.testkit.GHExcludeAeronTest
 import akka.testkit.ImplicitSender
 import akka.testkit.TestActors
 
@@ -26,7 +27,7 @@ class HandshakeRetrySpec extends ArteryMultiNodeSpec(HandshakeRetrySpec.commonCo
 
   "Artery handshake" must {
 
-    "be retried during handshake-timeout (no message loss)" in {
+    "be retried during handshake-timeout (no message loss)" taggedAs (GHExcludeAeronTest) in {
       def sel = system.actorSelection(s"akka://systemB@localhost:$portB/user/echo")
       sel ! "hello"
       expectNoMessage(1.second)
