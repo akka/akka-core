@@ -24,6 +24,8 @@ resource exhaustion.  Circuit breakers can also allow savvy developers to mark p
 the site that use the functionality unavailable, or perhaps show some cached content as 
 appropriate while the breaker is open.
 
+Like any other pattern, circuit breakers have their own challenges: circuit breakers can misinterpret a partial failure as total system failure and inadvertently bring down the entire system. In particular, sharded systems and cell-based architectures are vulnerable to this issue. For example, let’s say only one of your database shards is overloaded and other shards are working normally. Usually in such circumstances, the circuit breaker either assumes the entire database (i.e. all shards) is overloaded and trips which negatively impacts the normal shards, or the circuit breaker assumes the required threshold hasn’t been exceeded and doesn’t do anything to mitigate overloading of the problematic shard. In either case, the result is not optimal. A workaround is that the server indicates to the client exactly which specific part is overloaded and the client uses a corresponding mini circuit breaker. However, this workaround can be complex and expensive.
+
 The Akka library provides an implementation of a circuit breaker called 
 @apidoc[CircuitBreaker] which has the behavior described below.
 
