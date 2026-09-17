@@ -5,6 +5,7 @@
 package akka.stream.impl.fusing
 
 import akka.stream.scaladsl.{ Balance, Broadcast, Merge, Zip }
+import akka.stream.snapshot.ConnectionSnapshot
 import akka.stream.testkit.StreamSpec
 
 class GraphInterpreterSpec extends StreamSpec with GraphInterpreterSpecKit {
@@ -19,6 +20,17 @@ class GraphInterpreterSpec extends StreamSpec with GraphInterpreterSpecKit {
     val bcast = Broadcast[Int](2)
     val merge = Merge[Int](2)
     val balance = Balance[Int](2)
+
+    "snapshot a connection that is closed on one end only" in new Builder {
+      builder(identity).connect(Upstream, identity.in).connect(identity.out, Downstream).init()
+
+      // not executed, so the completion is not delivered downstream yet and the connection is
+      // closed on the upstream end only
+      interpreter.complete(interpreter.connections(0))
+
+      interpreter.toSnapshot.connections.map(_.state) should ===(
+        Vector(ConnectionSnapshot.Closed, ConnectionSnapshot.ShouldPull))
+    }
 
     "implement identity" in new TestSetup {
       val source = new UpstreamProbe[Int]("source")

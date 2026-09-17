@@ -10,6 +10,7 @@ import javax.net.ssl.SSLContext
 import scala.concurrent.Promise
 
 import akka.stream.{ FlowShape, Materializer }
+import akka.stream.impl.fusing.GraphInterpreter
 import akka.stream.scaladsl.{ Flow, GraphDSL, Keep, Merge, Partition, Sink, Source, Tcp }
 import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.AkkaSpec
@@ -76,7 +77,10 @@ class MaterializerStateSpec extends AkkaSpec() {
           val snapshot = MaterializerState.streamSnapshots(mat).futureValue
           snapshot should have size (1)
           snapshot.head.activeInterpreters should have size (1)
-          snapshot.head.activeInterpreters.head.stoppedLogics should have size (2) // Source.single and a detach
+          val stoppedLogics = snapshot.head.activeInterpreters.head.stoppedLogics
+          stoppedLogics should have size (2) // Source.single and a detach
+          // a stopped logic is released by the interpreter, only the fact that it stopped is kept
+          stoppedLogics.map(_.label).toSet should ===(Set(GraphInterpreter.StoppedLogicLabel))
         }, remainingOrDefault)
 
       } finally {
