@@ -225,6 +225,13 @@ abstract class ClusterSharding {
    * The default `ShardAllocationStrategy` is configured by `least-shard-allocation-strategy` properties.
    */
   def defaultShardAllocationStrategy(settings: ClusterShardingSettings): ShardAllocationStrategy
+
+  /**
+   * Direct the shard region or proxy actor for the given entity to resolve the location of the given shard
+   * and cache it.  This may result in the shard being allocated on some node in the cluster.  No message will
+   * be sent to any entity within the shard.
+   */
+  def preResolveShard[M, E](entity: Entity[M, E], shard: String): Unit
 }
 
 object Entity {
