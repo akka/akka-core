@@ -7,6 +7,7 @@ package akka.routing
 import java.time.LocalDateTime
 import java.util.concurrent.ThreadLocalRandom
 
+import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.jdk.DurationConverters._
@@ -207,6 +208,23 @@ case class DefaultOptimalSizeExploringResizer(
     record = newRecord
   }
 
+  /**
+   * Messages a routee has left to complete, including the one it is currently processing.
+   *
+   * A just created routee can still be observed through its `UnstartedCell` while the actor is already
+   * processing a message that was handed over to the real cell, and `Cell.numberOfMessages` does not
+   * count that message, so re-read `underlying` once it has been repointed.
+   */
+  @tailrec private def messagesInRoutee(routee: ActorRefWithCell): Int =
+    routee.underlying match {
+      case cell: ActorCell =>
+        cell.mailbox.numberOfMessages + (if (cell.currentMessage != null) 1 else 0)
+      case unstarted =>
+        val queued = unstarted.numberOfMessages
+        if (routee.underlying eq unstarted) queued
+        else messagesInRoutee(routee)
+    }
+
   private[routing] def updatedStats(
       currentRoutees: immutable.IndexedSeq[Routee],
       messageCounter: Long): (PerformanceLog, ResizeRecord) = {
@@ -214,13 +232,8 @@ case class DefaultOptimalSizeExploringResizer(
     val currentSize = currentRoutees.length
 
     val messagesInRoutees = currentRoutees.map {
-      case ActorRefRoutee(a: ActorRefWithCell) =>
-        a.underlying match {
-          case cell: ActorCell =>
-            cell.mailbox.numberOfMessages + (if (cell.currentMessage != null) 1 else 0)
-          case cell => cell.numberOfMessages
-        }
-      case _ => 0
+      case ActorRefRoutee(a: ActorRefWithCell) => messagesInRoutee(a)
+      case _                                   => 0
     }
 
     val totalQueueLength = messagesInRoutees.sum
