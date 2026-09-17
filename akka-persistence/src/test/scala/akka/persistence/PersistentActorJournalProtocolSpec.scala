@@ -14,10 +14,12 @@ import akka.testkit._
 
 object PersistentActorJournalProtocolSpec {
 
-  val config = ConfigFactory.parseString("""
+  def configWithResequencers(n: Int) =
+    ConfigFactory.parseString(s"""
 puppet {
   class = "akka.persistence.JournalPuppet"
   max-message-batch-size = 10
+  num-resequencers = $n
 }
 akka.persistence.journal.plugin = puppet
 akka.persistence.snapshot-store.plugin = "akka.persistence.no-snapshot-store"
@@ -100,7 +102,7 @@ class JournalPuppet extends Actor {
 
 import PersistentActorJournalProtocolSpec._
 
-class PersistentActorJournalProtocolSpec extends AkkaSpec(config) with ImplicitSender {
+class PersistentActorJournalProtocolSpec(n: Int) extends AkkaSpec(configWithResequencers(n)) with ImplicitSender {
 
   val journal = JournalPuppet(system).probe
 
@@ -145,7 +147,7 @@ class PersistentActorJournalProtocolSpec extends AkkaSpec(config) with ImplicitS
     subject
   }
 
-  "A PersistentActor’s journal protocol" must {
+  s"A PersistentActor’s journal protocol (num-resequencers == $n)" must {
 
     "not send WriteMessages while a write is still outstanding" when {
 
@@ -257,6 +259,59 @@ class PersistentActorJournalProtocolSpec extends AkkaSpec(config) with ImplicitS
       }
 
     }
+  }
+}
 
+class OneResequencer extends PersistentActorJournalProtocolSpec(1)
+class TwoResequencers extends PersistentActorJournalProtocolSpec(2) {
+  "A PersistentActor's journal protocol (num-resequencers == 2)" must {
+    "not be affected by out-of-global-order persists in an actor using a different resequencer" in {
+      val firstSubject = startActor("test-7")
+      val (evenSubject, oddSubject, evenPid, oddPid) = {
+        val firstEven = (firstSubject.hashCode & 0x1) == 0
+
+        @annotation.tailrec
+        def second(n: Int): (ActorRef, Int) = {
+          if (n == Int.MinValue) {
+            fail("Iterated through almost 2^32 candidates without a parity change; today is not your lucky day")
+          }
+
+          val pid = s"test-$n"
+          val candidate = startActor(pid)
+          val isEven = (candidate.hashCode & 0x1) == 0
+
+          if (isEven == firstEven) second(n + 1)
+          else candidate -> n
+        }
+
+        val (secondSubject, secondPid) = second(8)
+
+        if (firstEven) (firstSubject, secondSubject, 7, secondPid)
+        else (secondSubject, firstSubject, secondPid, 7)
+      }
+
+      evenSubject ! Persist(evenPid, "even-1")
+      val firstEvenWrite = expectWrite(evenSubject, Msgs("even-1"))
+      oddSubject ! Persist(oddPid, "odd-1")
+      val firstOddWrite = expectWrite(oddSubject, Msgs("odd-1"))
+      confirm(firstOddWrite)
+      // since even and odd use different resequencers, odd gets its response before even, despite persisting after even
+      expectMsg(Done(oddPid, 1))
+      oddSubject ! Persist(oddPid, "odd-2")
+      val secondOddWrite = expectWrite(oddSubject, Msgs("odd-2"))
+      confirm(firstEvenWrite)
+      expectMsg(Done(evenPid, 1))
+      evenSubject ! Persist(evenPid, "even-2")
+      val secondEvenWrite = expectWrite(evenSubject, Msgs("even-2"))
+      confirm(secondEvenWrite)
+      expectMsg(Done(evenPid, 1))
+      confirm(secondOddWrite)
+      expectMsg(Done(oddPid, 1))
+
+      evenSubject ! PoisonPill
+      expectMsg(PostStop(s"test-$evenPid"))
+      oddSubject ! PoisonPill
+      expectMsg(PostStop(s"test-$oddPid"))
+    }
   }
 }
