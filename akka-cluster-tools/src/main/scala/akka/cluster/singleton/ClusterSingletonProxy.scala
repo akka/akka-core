@@ -143,6 +143,10 @@ object ClusterSingletonProxy {
 
   private case object TryToIdentifySingleton extends NoSerializationVerificationNeeded
 
+  // The singleton is often started right after the first attempt, at startup and at hand-over,
+  // so retry quickly at first and back off to the singleton-identification-interval.
+  private val FirstIdentifyRetryDelay = 50.millis
+
 }
 
 /**
@@ -173,6 +177,7 @@ final class ClusterSingletonProxy(singletonManagerPath: String, settings: Cluste
   var identifyId = createIdentifyId(identifyCounter)
   def createIdentifyId(i: Int) = "identify-singleton-" + singletonPath.mkString("/") + i
   var identifyTimer: Option[Cancellable] = None
+  private var identifyRetryDelay = singletonIdentificationInterval
 
   val cluster = Cluster(context.system)
   var singleton: Option[ActorRef] = None
@@ -220,18 +225,19 @@ final class ClusterSingletonProxy(singletonManagerPath: String, settings: Cluste
    * Discard old singleton ActorRef and send a periodic message to self to identify the singleton.
    */
   def identifySingleton(): Unit = {
-    import context.dispatcher
     log.debug("Creating singleton identification timer...")
     identifyCounter += 1
     identifyId = createIdentifyId(identifyCounter)
     singleton = None
     cancelTimer()
+    identifyRetryDelay = ClusterSingletonProxy.FirstIdentifyRetryDelay.min(singletonIdentificationInterval)
+    scheduleIdentify(Duration.Zero)
+  }
+
+  private def scheduleIdentify(delay: FiniteDuration): Unit = {
+    import context.dispatcher
     identifyTimer = Some(
-      context.system.scheduler.scheduleWithFixedDelay(
-        Duration.Zero,
-        singletonIdentificationInterval,
-        self,
-        ClusterSingletonProxy.TryToIdentifySingleton))
+      context.system.scheduler.scheduleOnce(delay, self, ClusterSingletonProxy.TryToIdentifySingleton))
   }
 
   def trackChange(block: () => Unit): Unit = {
@@ -296,6 +302,10 @@ final class ClusterSingletonProxy(singletonManagerPath: String, settings: Cluste
             log.debug("Trying to identify singleton at [{}]", singletonAddress)
             context.actorSelection(singletonAddress) ! Identify(identifyId)
           }
+          // cancel in case this was a message from a previous, already fired, timer
+          cancelTimer()
+          scheduleIdentify(identifyRetryDelay)
+          identifyRetryDelay = (identifyRetryDelay * 2).min(singletonIdentificationInterval)
         case _ =>
         // ignore, if the timer is not present it means we have successfully identified
       }
