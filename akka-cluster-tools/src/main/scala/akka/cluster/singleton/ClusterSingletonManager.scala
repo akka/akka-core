@@ -941,11 +941,17 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       case None =>
         // new oldest will initiate the hand-over
         if (!preparingForFullShutdown) {
-          startSingleTimer(TakeOverRetryTimer, TakeOverRetry(1), handOverRetryInterval)
+          if (selfExited && isOnlyMember) self ! TakeOverRetry(1)
+          else startSingleTimer(TakeOverRetryTimer, TakeOverRetry(1), handOverRetryInterval)
         }
         goto(WasOldest).using(WasOldestData(singleton, newOldestOption = None))
     }
   }
+
+  // No other member, in any status, that could take over, so no reason to wait for hand-over.
+  // An Exiting node does not accept joins.
+  private def isOnlyMember: Boolean =
+    cluster.state.members.forall(_.uniqueAddress == cluster.selfUniqueAddress)
 
   when(Oldest) {
     case Event(OldestChanged(oldestOption), OldestData(singleton)) =>
@@ -1033,10 +1039,11 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       logInfo(ClusterLogMarker.singletonTerminated, "Singleton actor [{}] was terminated", ref.path)
       stay().using(d.copy(singleton = None))
 
-    case Event(SelfExiting, _) =>
+    case Event(SelfExiting, WasOldestData(_, newOldestOption)) =>
       selfMemberExited()
       // complete memberExitingProgress when handOverDone
       sender() ! Done // reply to ask
+      if (newOldestOption.isEmpty && !preparingForFullShutdown && isOnlyMember) self ! TakeOverRetry(1)
       stay()
 
     case Event(MemberDowned(m), WasOldestData(singleton, _)) if m.uniqueAddress == cluster.selfUniqueAddress =>
