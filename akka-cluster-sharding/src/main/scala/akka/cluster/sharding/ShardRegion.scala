@@ -1199,10 +1199,30 @@ private[akka] class ShardRegion(
     }
 
   private def tryCompleteGracefulShutdownIfInProgress(): Unit =
-    if (gracefulShutdownInProgress && shards.isEmpty && shardBuffers.isEmpty) {
-      log.debug("{}: Completed graceful shutdown of region.", typeName)
-      context.stop(self) // all shards have been rebalanced, complete graceful shutdown
+    if (gracefulShutdownInProgress && shards.isEmpty) {
+      // In a single node cluster the coordinator will not reply to the GetShardHome requests
+      // for the buffered messages, so there is no reason to wait for that.
+      if (shardBuffers.nonEmpty && isOnlyMember) {
+        var shardIds = List.empty[ShardId]
+        shardBuffers.foreach((shardId, _) => shardIds ::= shardId)
+        val dropped = shardIds.map { shardId =>
+          shardBuffers.drop(shardId, "No other member that can host the shard", context.system.deadLetters)
+        }.sum
+        log.info(
+          "{}: Dropped [{}] buffered messages at graceful shutdown, no other member that can host the shards.",
+          typeName,
+          dropped)
+      }
+      if (shardBuffers.isEmpty) {
+        log.debug("{}: Completed graceful shutdown of region.", typeName)
+        context.stop(self) // all shards have been rebalanced, complete graceful shutdown
+      }
     }
+
+  // No other member, in any status, that could host the shards.
+  // Note that membersByAge can't be used for this since it only has members with the coordinator role.
+  private def isOnlyMember: Boolean =
+    cluster.state.members.forall(_.uniqueAddress == cluster.selfUniqueAddress)
 
   def startRegistration(): Unit = {
     nextRegistrationDelay = initRegistrationDelay
