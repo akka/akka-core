@@ -18,6 +18,7 @@ object JoinConfigCompatCheckerSpec {
      akka.actor.provider = "cluster"
      akka.coordinated-shutdown.terminate-actor-system = on
      akka.remote.artery.canonical.port = 0
+     akka.remote.artery.canonical.hostname = "127.0.0.1"
      akka.cluster.jmx.multi-mbeans-in-same-jvm = on
      akka.remote.artery.advanced.aeron.idle-cpu-level = 3
      """)
