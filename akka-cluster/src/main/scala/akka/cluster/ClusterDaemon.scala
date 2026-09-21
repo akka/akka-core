@@ -980,6 +980,10 @@ private[cluster] class ClusterCoreDaemon(publisher: ActorRef, joinConfigCompatCh
         // immediate gossip to speed up the leaving process
         gossipToOldest(Set(leavingMember))
         gossip()
+        // single node cluster, no reason to wait for the leader actions tick
+        // after publish, so that MemberLeft is published before MemberExited
+        if (newMembers.size == 1)
+          leaderActions()
       }
     }
   }
