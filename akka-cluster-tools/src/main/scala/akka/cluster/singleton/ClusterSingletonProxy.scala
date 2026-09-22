@@ -23,6 +23,7 @@ import akka.cluster.ClusterSettings
 import akka.cluster.ClusterSettings.DataCenter
 import akka.dispatch.Dispatchers
 import akka.event.Logging
+import akka.pattern.RetrySupport
 import akka.util.MessageBuffer
 
 object ClusterSingletonProxySettings {
@@ -73,6 +74,8 @@ object ClusterSingletonProxySettings {
  *                      same way.
  * @param dataCenter    The data center of the cluster nodes where the singleton is running. If None then the same data center as current node.
  * @param singletonIdentificationInterval Interval at which the proxy will try to resolve the singleton instance.
+ *   The first attempts after a change of the oldest member are made with a shorter delay, that is
+ *   increased up to this interval.
  * @param bufferSize If the location of the singleton is unknown the proxy will buffer this number of messages
  *   and deliver them when the singleton is identified. When the buffer is full old messages will be dropped
  *   when new messages are sent viea the proxy. Use 0 to disable buffering, i.e. messages will be dropped
@@ -177,7 +180,7 @@ final class ClusterSingletonProxy(singletonManagerPath: String, settings: Cluste
   var identifyId = createIdentifyId(identifyCounter)
   def createIdentifyId(i: Int) = "identify-singleton-" + singletonPath.mkString("/") + i
   var identifyTimer: Option[Cancellable] = None
-  private var identifyRetryDelay = singletonIdentificationInterval
+  private var identifyAttempt = 0
 
   val cluster = Cluster(context.system)
   var singleton: Option[ActorRef] = None
@@ -222,7 +225,8 @@ final class ClusterSingletonProxy(singletonManagerPath: String, settings: Cluste
   }
 
   /**
-   * Discard old singleton ActorRef and send a periodic message to self to identify the singleton.
+   * Discard old singleton ActorRef and send a message to self to identify the singleton, repeated with
+   * a delay that starts short and is increased up to `singletonIdentificationInterval`.
    */
   def identifySingleton(): Unit = {
     log.debug("Creating singleton identification timer...")
@@ -230,7 +234,7 @@ final class ClusterSingletonProxy(singletonManagerPath: String, settings: Cluste
     identifyId = createIdentifyId(identifyCounter)
     singleton = None
     cancelTimer()
-    identifyRetryDelay = ClusterSingletonProxy.FirstIdentifyRetryDelay.min(singletonIdentificationInterval)
+    identifyAttempt = 0
     scheduleIdentify(Duration.Zero)
   }
 
@@ -304,8 +308,13 @@ final class ClusterSingletonProxy(singletonManagerPath: String, settings: Cluste
           }
           // cancel in case this was a message from a previous, already fired, timer
           cancelTimer()
-          scheduleIdentify(identifyRetryDelay)
-          identifyRetryDelay = (identifyRetryDelay * 2).min(singletonIdentificationInterval)
+          scheduleIdentify(
+            RetrySupport.calculateExponentialBackoffDelay(
+              identifyAttempt,
+              ClusterSingletonProxy.FirstIdentifyRetryDelay.min(singletonIdentificationInterval),
+              singletonIdentificationInterval,
+              randomFactor = 0.0))
+          identifyAttempt += 1
         case _ =>
         // ignore, if the timer is not present it means we have successfully identified
       }
