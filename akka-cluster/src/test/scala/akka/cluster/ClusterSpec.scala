@@ -205,6 +205,35 @@ class ClusterSpec extends AkkaSpec(ClusterSpec.config) with ImplicitSender {
       }
     }
 
+    "leave single node cluster without waiting for leader actions tick" in {
+      val sys2 = ActorSystem(
+        "ClusterSpec2",
+        ConfigFactory.parseString("""
+        akka.actor.provider = "cluster"
+        akka.remote.artery.canonical.port = 0
+        # both much longer than the expected time to leave, also with a dilated timeout
+        akka.cluster.leader-actions-interval = 60s
+        akka.coordinated-shutdown.phases.cluster-exiting.timeout = 60s
+        """))
+      try {
+        val probe = TestProbe()(sys2)
+        Cluster(sys2).subscribe(probe.ref, classOf[MemberEvent])
+        probe.expectMsgType[CurrentClusterState]
+        Cluster(sys2).join(Cluster(sys2).selfAddress)
+        probe.expectMsgType[MemberUp]
+
+        CoordinatedShutdown(sys2).run(CoordinatedShutdown.UnknownReason)
+        probe.expectMsgType[MemberLeft]
+        // MemberExited might not be published before MemberRemoved
+        probe.fishForMessage(10.seconds) {
+          case _: MemberExited  => false
+          case _: MemberRemoved => true
+        }
+      } finally {
+        shutdown(sys2)
+      }
+    }
+
     "terminate ActorSystem via CoordinatedShutdown.run when a stream involving StreamRefs is running" in {
       val sys2 = ActorSystem(
         "ClusterSpec2",
