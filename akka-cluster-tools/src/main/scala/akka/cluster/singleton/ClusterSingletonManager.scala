@@ -286,6 +286,9 @@ object ClusterSingletonManager {
     final case class ReleaseLeaseFailure(t: Throwable) extends DeadLetterSuppression
     final case class LeaseLost(reason: Option[Throwable]) extends DeadLetterSuppression
 
+    def matchingRole(member: Member, selfDc: String, role: Option[String]): Boolean =
+      member.hasRole(selfDc) && role.forall(member.hasRole)
+
     /**
      * Notifications of member events that track oldest member are tunneled
      * via this actor (child of ClusterSingletonManager) to be able to deliver
@@ -328,8 +331,7 @@ object ClusterSingletonManager {
 
       private val selfDc = ClusterSettings.DcRolePrefix + cluster.settings.SelfDataCenter
 
-      def matchingRole(member: Member): Boolean =
-        member.hasRole(selfDc) && role.forall(member.hasRole)
+      def matchingRole(member: Member): Boolean = Internal.matchingRole(member, selfDc, role)
 
       def trackChange(block: () => Unit): Unit = {
         val before = membersByAge.headOption
@@ -941,10 +943,18 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       case None =>
         // new oldest will initiate the hand-over
         if (!preparingForFullShutdown) {
-          startSingleTimer(TakeOverRetryTimer, TakeOverRetry(1), handOverRetryInterval)
+          val delay = if (selfExited && isOnlyMember) Duration.Zero else handOverRetryInterval
+          startSingleTimer(TakeOverRetryTimer, TakeOverRetry(1), delay)
         }
         goto(WasOldest).using(WasOldestData(singleton, newOldestOption = None))
     }
+  }
+
+  // No other member with matching role and data center, in any status, that could take over,
+  // so no reason to wait for hand-over. An Exiting node does not accept joins.
+  private def isOnlyMember: Boolean = {
+    val selfDc = ClusterSettings.DcRolePrefix + cluster.settings.SelfDataCenter
+    cluster.state.members.forall(m => m.uniqueAddress == cluster.selfUniqueAddress || !matchingRole(m, selfDc, role))
   }
 
   when(Oldest) {
@@ -1033,10 +1043,12 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       logInfo(ClusterLogMarker.singletonTerminated, "Singleton actor [{}] was terminated", ref.path)
       stay().using(d.copy(singleton = None))
 
-    case Event(SelfExiting, _) =>
+    case Event(SelfExiting, WasOldestData(_, newOldestOption)) =>
       selfMemberExited()
       // complete memberExitingProgress when handOverDone
       sender() ! Done // reply to ask
+      if (newOldestOption.isEmpty && !preparingForFullShutdown && isOnlyMember)
+        startSingleTimer(TakeOverRetryTimer, TakeOverRetry(1), Duration.Zero)
       stay()
 
     case Event(MemberDowned(m), WasOldestData(singleton, _)) if m.uniqueAddress == cluster.selfUniqueAddress =>
