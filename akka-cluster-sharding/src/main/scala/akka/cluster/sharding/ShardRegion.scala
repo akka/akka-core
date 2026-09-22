@@ -732,6 +732,10 @@ private[akka] class ShardRegion(
   def matchingCoordinatorRole(member: Member): Boolean =
     member.hasRole(targetDcRole) && coordinatorSingletonRole.forall(member.hasRole)
 
+  // member that can host shards for this entity type
+  private def matchingRole(member: Member): Boolean =
+    member.hasRole(targetDcRole) && role.forall(member.hasRole)
+
   /**
    * When leaving the coordinator singleton is started rather quickly on next
    * oldest node and therefore it is good to send the Register and GracefulShutdownReq to
@@ -1219,10 +1223,10 @@ private[akka] class ShardRegion(
       }
     }
 
-  // No other member, in any status, that could host the shards.
+  // No other member with matching role and data center, in any status, that could host the shards.
   // Note that membersByAge can't be used for this since it only has members with the coordinator role.
   private def isOnlyMember: Boolean =
-    cluster.state.members.forall(_.uniqueAddress == cluster.selfUniqueAddress)
+    cluster.state.members.forall(m => m.uniqueAddress == cluster.selfUniqueAddress || !matchingRole(m))
 
   def startRegistration(): Unit = {
     nextRegistrationDelay = initRegistrationDelay
