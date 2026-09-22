@@ -43,7 +43,9 @@ object ReplicatedShardingSpec {
       akka.loglevel = DEBUG
       akka.loggers = ["akka.testkit.SilenceAllTestEventListener"]
       akka.actor.provider = "cluster"
-      akka.remote.artery.canonical.port = 0""").withFallback(PersistenceTestKitPlugin.config)
+      akka.remote.artery.canonical.port = 0
+      akka.remote.artery.canonical.hostname = "127.0.0.1"
+      """).withFallback(PersistenceTestKitPlugin.config)
 
   def roleAConfig = ConfigFactory.parseString("""
             akka.cluster.roles = ["DC-A"]
