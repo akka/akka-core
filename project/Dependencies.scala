@@ -24,8 +24,10 @@ object Dependencies {
   val nettyVersion = "4.2.15.Final"
   val protobufJavaVersion = "3.25.5" // also sync with protocVersion in Protobuf.scala
   val logbackVersion = "1.6.3"
-  val jacksonCoreVersion = "2.18.9" // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
-  val jacksonDatabindVersion = jacksonCoreVersion // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
+  // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
+  val jacksonCoreVersion = "2.21.7"
+  val jacksonAnnotationsVersion = "2.21"
+  val jacksonDatabindVersion = jacksonCoreVersion
 
   // Also update URLs in link-validator.conf
   val scala213Version = "2.13.17"
@@ -75,7 +77,7 @@ object Dependencies {
     val asnOne = ("com.hierynomus" % "asn-one" % "0.6.0").exclude("org.slf4j", "slf4j-api") // ApacheV2
 
     val jacksonCore = "com.fasterxml.jackson.core" % "jackson-core" % jacksonCoreVersion // ApacheV2
-    val jacksonAnnotations = "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonCoreVersion // ApacheV2
+    val jacksonAnnotations = "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonAnnotationsVersion // ApacheV2
     val jacksonDatabind = "com.fasterxml.jackson.core" % "jackson-databind" % jacksonDatabindVersion // ApacheV2
     val jacksonJdk8 = "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonCoreVersion // ApacheV2
     val jacksonJsr310 = "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonCoreVersion // ApacheV2
