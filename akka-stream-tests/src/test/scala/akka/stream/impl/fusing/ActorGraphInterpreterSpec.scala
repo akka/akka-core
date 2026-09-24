@@ -27,6 +27,7 @@ import akka.stream.testkit.StreamSpec
 import akka.stream.testkit.TestPublisher
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.Utils._
+import akka.stream.testkit.scaladsl.StreamTestKit
 import akka.testkit.EventFilter
 import akka.testkit.TestLatch
 
@@ -375,31 +376,36 @@ class ActorGraphInterpreterSpec extends StreamSpec {
     }
 
     "be able to handle Subscriber spec violations without leaking" in {
-      val filthySubscriber = new Subscriber[Int] {
-        override def onSubscribe(s: Subscription): Unit = s.request(1)
-        override def onError(t: Throwable): Unit = ()
-        override def onComplete(): Unit = ()
-        override def onNext(t: Int): Unit = throw TE("violating your spec")
+      // spec violation aborts inside a boundary event, the stage must not be finalized twice, see #25537
+      EventFilter.error(start = "Error during postStop", occurrences = 0).intercept {
+        StreamTestKit.assertAllStagesStopped {
+          val filthySubscriber = new Subscriber[Int] {
+            override def onSubscribe(s: Subscription): Unit = s.request(1)
+            override def onError(t: Throwable): Unit = ()
+            override def onComplete(): Unit = ()
+            override def onNext(t: Int): Unit = throw TE("violating your spec")
+          }
+
+          val upstream = TestPublisher.probe[Int]()
+          val downstream = TestSubscriber.probe[Int]()
+
+          Source
+            .fromPublisher(upstream)
+            .alsoTo(Sink.fromSubscriber(downstream))
+            .runWith(Sink.fromSubscriber(filthySubscriber))
+
+          upstream.sendNext(0)
+
+          downstream.requestNext(0)
+          val ise = downstream.expectError()
+          ise shouldBe an[IllegalStateException]
+          ise.getCause shouldBe a[SpecViolation]
+          ise.getCause.getCause shouldBe a[TE]
+          ise.getCause.getCause should (have.message("violating your spec"))
+
+          upstream.expectCancellation()
+        }(SystemMaterializer(system).materializer)
       }
-
-      val upstream = TestPublisher.probe[Int]()
-      val downstream = TestSubscriber.probe[Int]()
-
-      Source
-        .fromPublisher(upstream)
-        .alsoTo(Sink.fromSubscriber(downstream))
-        .runWith(Sink.fromSubscriber(filthySubscriber))
-
-      upstream.sendNext(0)
-
-      downstream.requestNext(0)
-      val ise = downstream.expectError()
-      ise shouldBe an[IllegalStateException]
-      ise.getCause shouldBe a[SpecViolation]
-      ise.getCause.getCause shouldBe a[TE]
-      ise.getCause.getCause should (have.message("violating your spec"))
-
-      upstream.expectCancellation()
     }
 
     "trigger postStop in all stages when abruptly terminated (and no upstream boundaries)" in {
