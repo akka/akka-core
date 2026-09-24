@@ -376,7 +376,7 @@ class ActorGraphInterpreterSpec extends StreamSpec {
     }
 
     "be able to handle Subscriber spec violations without leaking" in {
-      // SimpleBoundaryEvent followed by runBatch must not run postStop twice, see #25537
+      // spec violation aborts inside a boundary event, the stage must not be finalized twice, see #25537
       EventFilter.error(start = "Error during postStop", occurrences = 0).intercept {
         StreamTestKit.assertAllStagesStopped {
           val filthySubscriber = new Subscriber[Int] {

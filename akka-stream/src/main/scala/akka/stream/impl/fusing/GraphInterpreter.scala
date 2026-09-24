@@ -345,7 +345,13 @@ import akka.stream.stage._
   private def outLogicName(connection: Connection): String = logics(connection.outOwner.stageId).toString
 
   private def shutdownCounters: String =
-    shutdownCounter.map(x => if (x >= KeepGoingFlag) s"${x & KeepGoingMask}(KeepGoing)" else x.toString).mkString(",")
+    shutdownCounter
+      .map {
+        case StageFinalized          => "finalized"
+        case x if x >= KeepGoingFlag => s"${x & KeepGoingMask}(KeepGoing)"
+        case x                       => x.toString
+      }
+      .mkString(",")
 
   /**
    * Executes pending events until the given limit is met. If there were remaining events, isSuspended will return
