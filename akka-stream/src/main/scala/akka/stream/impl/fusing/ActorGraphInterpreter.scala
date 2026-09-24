@@ -55,9 +55,8 @@ import akka.util.OptionVal
 
   trait SimpleBoundaryEvent extends BoundaryEvent {
     final override def execute(eventLimit: Int): Int = {
-      val wasNotShutdown = !shell.interpreter.isStageCompleted(logic)
       execute()
-      if (wasNotShutdown) shell.interpreter.afterStageHasRun(logic)
+      shell.interpreter.afterStageHasRun(logic)
       shell.runBatch(eventLimit)
     }
 

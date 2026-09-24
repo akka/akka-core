@@ -50,7 +50,7 @@ import akka.stream.stage._
   final val KeepGoingFlag = 0x4000000
   final val KeepGoingMask = 0x3ffffff
   // shutdownCounter value of a stage that has been finalized (postStop has run)
-  final val Finalized = -1
+  final val StageFinalized = -1
 
   /**
    * Marker object that indicates that a port holds no element since it was already grabbed. The port is still pullable,
@@ -592,9 +592,8 @@ import akka.stream.stage._
   }
 
   def afterStageHasRun(logic: GraphStageLogic): Boolean =
-    // a stage that already stopped can be reached again, for example by the runBatch that SimpleBoundaryEvent
-    // runs right after it finalized the boundary itself, and must not be counted or stopped twice
-    if (shutdownCounter(logic.stageId) == 0) {
+    // a stage can be reached again after it was finalized, only finalize once
+    if (logic != null && shutdownCounter(logic.stageId) == 0) {
       runningStages -= 1
       finalizeStage(logic)
       true
@@ -612,16 +611,16 @@ import akka.stream.stage._
     if (activeConnections > 0) shutdownCounter(stageId) = activeConnections - 1
   }
 
-  // a finalized stage must stay finalized, for example when completeStage is called from postStop
   private[stream] def setKeepGoing(logic: GraphStageLogic, enabled: Boolean): Unit =
-    if (shutdownCounter(logic.stageId) != Finalized) {
+    // a finalized stage must stay finalized, for example when completeStage is called from postStop
+    if (shutdownCounter(logic.stageId) != StageFinalized) {
       if (enabled) shutdownCounter(logic.stageId) |= KeepGoingFlag
       else shutdownCounter(logic.stageId) &= KeepGoingMask
     }
 
   @InternalStableApi
   private[stream] def finalizeStage(logic: GraphStageLogic): Unit = {
-    shutdownCounter(logic.stageId) = Finalized
+    shutdownCounter(logic.stageId) = StageFinalized
     try {
       logic.postStop()
       logic.afterPostStop()

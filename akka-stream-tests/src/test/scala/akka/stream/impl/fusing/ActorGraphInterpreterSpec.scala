@@ -376,36 +376,7 @@ class ActorGraphInterpreterSpec extends StreamSpec {
     }
 
     "be able to handle Subscriber spec violations without leaking" in {
-      val filthySubscriber = new Subscriber[Int] {
-        override def onSubscribe(s: Subscription): Unit = s.request(1)
-        override def onError(t: Throwable): Unit = ()
-        override def onComplete(): Unit = ()
-        override def onNext(t: Int): Unit = throw TE("violating your spec")
-      }
-
-      val upstream = TestPublisher.probe[Int]()
-      val downstream = TestSubscriber.probe[Int]()
-
-      Source
-        .fromPublisher(upstream)
-        .alsoTo(Sink.fromSubscriber(downstream))
-        .runWith(Sink.fromSubscriber(filthySubscriber))
-
-      upstream.sendNext(0)
-
-      downstream.requestNext(0)
-      val ise = downstream.expectError()
-      ise shouldBe an[IllegalStateException]
-      ise.getCause shouldBe a[SpecViolation]
-      ise.getCause.getCause shouldBe a[TE]
-      ise.getCause.getCause should (have.message("violating your spec"))
-
-      upstream.expectCancellation()
-    }
-
-    "not finalize a stage twice when a subscriber violates the spec" in {
-      // a boundary logic was finalized once by SimpleBoundaryEvent.execute and then again by the runBatch that
-      // follows it, so postStop ran twice and afterPostStop tripped over its own cleared state, see #25537
+      // SimpleBoundaryEvent followed by runBatch must not run postStop twice, see #25537
       EventFilter.error(start = "Error during postStop", occurrences = 0).intercept {
         StreamTestKit.assertAllStagesStopped {
           val filthySubscriber = new Subscriber[Int] {
@@ -424,8 +395,14 @@ class ActorGraphInterpreterSpec extends StreamSpec {
             .runWith(Sink.fromSubscriber(filthySubscriber))
 
           upstream.sendNext(0)
+
           downstream.requestNext(0)
-          downstream.expectError()
+          val ise = downstream.expectError()
+          ise shouldBe an[IllegalStateException]
+          ise.getCause shouldBe a[SpecViolation]
+          ise.getCause.getCause shouldBe a[TE]
+          ise.getCause.getCause should (have.message("violating your spec"))
+
           upstream.expectCancellation()
         }(SystemMaterializer(system).materializer)
       }
