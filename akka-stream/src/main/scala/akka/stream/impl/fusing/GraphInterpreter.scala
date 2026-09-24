@@ -49,6 +49,8 @@ import akka.stream.stage._
 
   final val KeepGoingFlag = 0x4000000
   final val KeepGoingMask = 0x3ffffff
+  // shutdownCounter value of a stage that has been finalized (postStop has run)
+  final val Finalized = -1
 
   /**
    * Marker object that indicates that a port holds no element since it was already grabbed. The port is still pullable,
@@ -592,7 +594,7 @@ import akka.stream.stage._
   def afterStageHasRun(logic: GraphStageLogic): Boolean =
     // a stage that already stopped can be reached again, for example by the runBatch that SimpleBoundaryEvent
     // runs right after it finalized the boundary itself, and must not be counted or stopped twice
-    if (isStageCompleted(logic) && !logic.stageFinalized) {
+    if (shutdownCounter(logic.stageId) == 0) {
       runningStages -= 1
       finalizeStage(logic)
       true
@@ -600,8 +602,8 @@ import akka.stream.stage._
       false
     }
 
-  // Returns true if the given stage is already completed
-  def isStageCompleted(stage: GraphStageLogic): Boolean = stage != null && shutdownCounter(stage.stageId) == 0
+  // Returns true if the given stage is already completed, finalized or not
+  def isStageCompleted(stage: GraphStageLogic): Boolean = stage != null && shutdownCounter(stage.stageId) <= 0
 
   // Register that a connection in which the given stage participated has been completed and therefore the stage
   // itself might stop, too.
@@ -610,22 +612,24 @@ import akka.stream.stage._
     if (activeConnections > 0) shutdownCounter(stageId) = activeConnections - 1
   }
 
+  // a finalized stage must stay finalized, for example when completeStage is called from postStop
   private[stream] def setKeepGoing(logic: GraphStageLogic, enabled: Boolean): Unit =
-    if (enabled) shutdownCounter(logic.stageId) |= KeepGoingFlag
-    else shutdownCounter(logic.stageId) &= KeepGoingMask
+    if (shutdownCounter(logic.stageId) != Finalized) {
+      if (enabled) shutdownCounter(logic.stageId) |= KeepGoingFlag
+      else shutdownCounter(logic.stageId) &= KeepGoingMask
+    }
 
   @InternalStableApi
-  private[stream] def finalizeStage(logic: GraphStageLogic): Unit =
-    if (!logic.stageFinalized) {
-      logic.stageFinalized = true
-      try {
-        logic.postStop()
-        logic.afterPostStop()
-      } catch {
-        case NonFatal(e) =>
-          log.error(e, s"Error during postStop in [{}]: {}", logic.toString, e.getMessage)
-      }
+  private[stream] def finalizeStage(logic: GraphStageLogic): Unit = {
+    shutdownCounter(logic.stageId) = Finalized
+    try {
+      logic.postStop()
+      logic.afterPostStop()
+    } catch {
+      case NonFatal(e) =>
+        log.error(e, s"Error during postStop in [{}]: {}", logic.toString, e.getMessage)
     }
+  }
 
   private[stream] def chasePush(connection: Connection): Unit = {
     if (chaseCounter > 0 && chasedPush == NoEvent) {
