@@ -14,6 +14,7 @@ import akka.pattern.CircuitBreakersRegistry
 import akka.pattern.pipe
 import akka.persistence._
 import akka.util.Helpers.toRootLowerCase
+import com.typesafe.config.ConfigValueType
 
 /**
  * Abstract journal, optimized for asynchronous, non-blocking writes.
@@ -45,8 +46,14 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
   private val replayFilterWindowSize: Int = config.getInt("replay-filter.window-size")
   private val replayFilterMaxOldWriters: Int = config.getInt("replay-filter.max-old-writers")
 
-  private val resequencer = context.actorOf(Props(new Resequencer))
-  private var resequencerCounter = 1L
+  // For bincompat reasons, we can't have numResequencers be a val at this level, but
+  // we want to be able to fail immediately on the configuration being absent or not a number
+  // (if it's less than the minimum 1, conversely, we'll treat that as the default 1)
+  if (config.getValue("write-reply-ordering-groups").valueType != ConfigValueType.NUMBER) {
+    // a ConfigException.Missing is thrown by getValue if not present (should not happen since
+    // journal defaults are merged in, but...)
+    throw new IllegalArgumentException("write-reply-ordering-groups must be a positive integer")
+  }
 
   final def receive = receiveWriteJournal.orElse[Any, Unit](receivePluginInternal)
 
@@ -55,11 +62,25 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
     val replayDebugEnabled: Boolean = config.getBoolean("replay-filter.debug")
     val eventStream = context.system.eventStream // used from Future callbacks
     implicit val ec: ExecutionContext = context.dispatcher
+    val numResequencers = config.getInt("write-reply-ordering-groups").max(1)
+    val resequencers = (1 to numResequencers).iterator
+      .map(_ => new ResequencerHandle(context.actorOf(Props(new Resequencer)), 1L))
+      .toVector
+
+    def resequencerFor(actor: ActorRef): ResequencerHandle =
+      if (numResequencers == 1) resequencers.head
+      else {
+        val unsignedHash = actor.hashCode & 0x7FFFFFFF // set sign-bit to zero
+        resequencers(unsignedHash % numResequencers)
+      }
 
     {
       case WriteMessages(messages, persistentActor, actorInstanceId, bypassCircuitBreaker) =>
-        val cctr = resequencerCounter
-        resequencerCounter += messages.foldLeft(1)((acc, m) => acc + m.size)
+        val handle = resequencerFor(persistentActor)
+        val cctr = handle.counter
+        // safe to modify this var in the receive, but not in the callback
+        // the resequencer actorref (a val) is safe to access in the callback
+        handle.counter += messages.foldLeft(1)((acc, m) => acc + m.size)
 
         val atomicWriteCount = messages.count(_.isInstanceOf[AtomicWrite])
         val prepared = Try(preparePersistentBatch(messages))
@@ -88,7 +109,7 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
 
         writeResult.onComplete {
           case Success(results) =>
-            resequencer ! Desequenced(WriteMessagesSuccessful, cctr, persistentActor, self)
+            handle.resequencer ! Desequenced(WriteMessagesSuccessful, cctr, persistentActor, self)
 
             val resultsIter =
               if (results.isEmpty) Iterator.fill(atomicWriteCount)(AsyncWriteJournal.successUnit)
@@ -99,12 +120,16 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
                 resultsIter.next() match {
                   case Success(_) =>
                     a.payload.foreach { p =>
-                      resequencer ! Desequenced(WriteMessageSuccess(p, actorInstanceId), n, persistentActor, p.sender)
+                      handle.resequencer ! Desequenced(
+                        WriteMessageSuccess(p, actorInstanceId),
+                        n,
+                        persistentActor,
+                        p.sender)
                       n += 1
                     }
                   case Failure(e) =>
                     a.payload.foreach { p =>
-                      resequencer ! Desequenced(
+                      handle.resequencer ! Desequenced(
                         WriteMessageRejected(p, e, actorInstanceId),
                         n,
                         persistentActor,
@@ -114,21 +139,33 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
                 }
 
               case r: NonPersistentRepr =>
-                resequencer ! Desequenced(LoopMessageSuccess(r.payload, actorInstanceId), n, persistentActor, r.sender)
+                handle.resequencer ! Desequenced(
+                  LoopMessageSuccess(r.payload, actorInstanceId),
+                  n,
+                  persistentActor,
+                  r.sender)
                 n += 1
             }
 
           case Failure(e) =>
-            resequencer ! Desequenced(WriteMessagesFailed(e, atomicWriteCount), cctr, persistentActor, self)
+            handle.resequencer ! Desequenced(WriteMessagesFailed(e, atomicWriteCount), cctr, persistentActor, self)
             var n = cctr + 1
             messages.foreach {
               case a: AtomicWrite =>
                 a.payload.foreach { p =>
-                  resequencer ! Desequenced(WriteMessageFailure(p, e, actorInstanceId), n, persistentActor, p.sender)
+                  handle.resequencer ! Desequenced(
+                    WriteMessageFailure(p, e, actorInstanceId),
+                    n,
+                    persistentActor,
+                    p.sender)
                   n += 1
                 }
               case r: NonPersistentRepr =>
-                resequencer ! Desequenced(LoopMessageSuccess(r.payload, actorInstanceId), n, persistentActor, r.sender)
+                handle.resequencer ! Desequenced(
+                  LoopMessageSuccess(r.payload, actorInstanceId),
+                  n,
+                  persistentActor,
+                  r.sender)
                 n += 1
             }
         }
@@ -331,4 +368,6 @@ private[persistence] object AsyncWriteJournal {
       if (ro.isDefined) resequence(ro.get)
     }
   }
+
+  final class ResequencerHandle(val resequencer: ActorRef, var counter: Long)
 }

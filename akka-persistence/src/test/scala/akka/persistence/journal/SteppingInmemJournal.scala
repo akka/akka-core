@@ -58,7 +58,7 @@ object SteppingInmemJournal {
  * to trigger those steps. Allows for tests that need to deterministically trigger the callbacks
  * intermixed with receiving messages.
  *
- * Configure your actor system using {{{SteppingInMemJournal.config}}} and then access
+ * Configure your actor system using {{{SteppingInmemJournal.config}}} and then access
  * it using {{{SteppingInmemJournal.getRef(String)}}}, send it {{{SteppingInmemJournal.Token}}}s to
  * allow one journal operation to complete.
  */
