@@ -17,7 +17,9 @@ import akka.stream._
 import akka.stream.ActorAttributes.Dispatcher
 import akka.stream.Attributes._
 import akka.stream.javadsl
+import akka.stream.impl.fusing.GraphInterpreter
 import akka.stream.snapshot.MaterializerState
+import akka.stream.snapshot.StreamSnapshot
 import akka.stream.stage._
 import akka.stream.testkit._
 import akka.testkit.TestKit
@@ -130,6 +132,14 @@ class AttributesSpec
   val settings = ActorMaterializerSettings(system).withInputBuffer(initialSize = 2, maxSize = 16)
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(settings)
+
+  // The snapshot tests below inspect the attributes of the snapshot logics, and attributes are only kept for
+  // logics that are still running, so they depend on the streams being fully alive when the snapshot is taken.
+  private def allLogicsStillRunning(snapshot: Seq[StreamSnapshot]): Unit = {
+    val labels = snapshot.flatMap(_.activeInterpreters.flatMap(_.logics)).map(_.label)
+    labels should not be empty // or the check below would pass for the wrong reason
+    labels should not contain GraphInterpreter.StoppedLogicLabel
+  }
 
   "an attributes instance" must {
 
@@ -368,6 +378,7 @@ class AttributesSpec
         val streamSnapshot = awaitAssert {
           val snapshot = MaterializerState.streamSnapshots(materializer).futureValue
           snapshot should have size (1) // just the one island in this case
+          allLogicsStillRunning(snapshot)
           snapshot.head
         }
 
@@ -446,6 +457,7 @@ class AttributesSpec
         val snapshot = awaitAssert {
           val snapshot = MaterializerState.streamSnapshots(materializer).futureValue
           snapshot should have size (2) // two stream "islands", one on blocking dispatcher and one on default
+          allLogicsStillRunning(snapshot)
           snapshot
         }
 
@@ -481,6 +493,7 @@ class AttributesSpec
         val snapshot = awaitAssert {
           val snapshot = MaterializerState.streamSnapshots(system).futureValue
           snapshot should have size (2) // two stream "islands", one on blocking dispatcher and one on default
+          allLogicsStillRunning(snapshot)
           snapshot
         }
 
@@ -515,6 +528,7 @@ class AttributesSpec
         val snapshot = awaitAssert {
           val snapshot = MaterializerState.streamSnapshots(system).futureValue
           snapshot should have size (2) // two stream "islands", one on blocking dispatcher and one on default
+          allLogicsStillRunning(snapshot)
           snapshot
         }
 
