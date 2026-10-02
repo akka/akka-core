@@ -87,6 +87,8 @@ jobs:
     name: JDK ${{ matrix.jdkVersion }} / Scala ${{ matrix.scalaVersion }}
     runs-on: Akka-Default
     if: github.event.repository.fork == false
+    # a job takes about one hour, so one that is still running after two has stalled
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -174,7 +176,8 @@ jobs:
             "+~ ${{ matrix.scalaVersion }} publishLocal publishM2"
 
       - name: Email on failure
-        if: ${{ failure() }}
+        # a job that reaches timeout-minutes ends as cancelled, not as failed
+        if: ${{ failure() || cancelled() }}
         uses: dawidd6/action-send-mail@v12
         with:
           server_address: smtp.gmail.com
