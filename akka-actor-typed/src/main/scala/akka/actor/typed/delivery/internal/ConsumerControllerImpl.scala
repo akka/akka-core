@@ -324,7 +324,7 @@ private class ConsumerControllerImpl[A] private (
           } else { // seqNr < expectedSeqNr
             ActorFlightRecorder.consumerDuplicate(pid, expectedSeqNr, seqNr)
             context.log.debug("Received duplicate SequencedMessage seqNr [{}], expected [{}].", seqNr, expectedSeqNr)
-            if (seqMsg.first)
+            if (shouldRetryRequestForDuplicateFirst(s, seqMsg))
               stashBuffer.unstash(active(retryRequest(s)), 1, scalaIdentityFunction)
             else
               stashBuffer.unstash(Behaviors.same, 1, scalaIdentityFunction)
@@ -443,7 +443,7 @@ private class ConsumerControllerImpl[A] private (
               "Received SequencedMessage seqNr [{}], discarding message because waiting for [{}].",
               seqNr,
               s.receivedSeqNr + 1)
-            if (seqMsg.first)
+            if (shouldRetryRequestForDuplicateFirst(s, seqMsg))
               retryRequest(s)
             Behaviors.same // ignore until we receive the expected
           }
@@ -703,6 +703,13 @@ private class ConsumerControllerImpl[A] private (
     context.log.warn("Received unexpected Confirmed from consumer.")
     Behaviors.unhandled
   }
+
+  // The ProducerController resends the first message until it receives the confirmation of it. A duplicate
+  // first message after the confirmation means that the Request with the confirmation may have been lost, so
+  // send it again. Before the confirmation, while the chunks of the first message are being collected, a Request
+  // only makes the ProducerController resend the first message again, without delay, until the next chunk arrives.
+  private def shouldRetryRequestForDuplicateFirst(s: State[A], seqMsg: SequencedMessage[A]): Boolean =
+    seqMsg.first && seqMsg.seqNr <= s.confirmedSeqNr
 
   // in case the Request or the SequencedMessage triggering the Request is lost
   private def retryRequest(s: State[A]): State[A] = {
