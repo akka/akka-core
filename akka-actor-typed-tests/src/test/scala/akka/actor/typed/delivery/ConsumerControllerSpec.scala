@@ -656,6 +656,89 @@ class ConsumerControllerSpec
 
       testKit.stop(consumerController)
     }
+
+    "not send Request for resent first chunk before it is confirmed" in {
+      nextId()
+      // no Retry during the test
+      val consumerSettings = settings.withResendIntervalMin(1.minute).withResendIntervalMax(1.minute)
+      val consumerController =
+        spawn(ConsumerController[TestConsumer.Job](consumerSettings), s"consumerController-${idCount}")
+          .unsafeUpcast[ConsumerControllerImpl.InternalCommand]
+      val producerControllerProbe = createTestProbe[ProducerControllerImpl.InternalCommand]()
+
+      val consumerProbe = createTestProbe[ConsumerController.Delivery[TestConsumer.Job]]()
+      consumerController ! ConsumerController.Start(consumerProbe.ref)
+
+      val chunks = ProducerControllerImpl.createChunks(TestConsumer.Job("123"), chunkSize = 1, serialization)
+      val seqMessages = chunks.zipWithIndex.map {
+        case (chunk, i) =>
+          ConsumerController.SequencedMessage.fromChunked(
+            producerId,
+            1 + i,
+            chunk,
+            first = i == 0,
+            ack = false,
+            producerControllerProbe.ref)
+      }
+
+      consumerController ! seqMessages.head
+      producerControllerProbe.expectMessage(ProducerControllerImpl.Request(0, 20, true, false))
+      // ProducerController resends the first chunk until it is confirmed. A Request(0, 20, true, true) here
+      // would make it resend the first chunk again.
+      consumerController ! seqMessages.head
+      consumerController ! seqMessages.head
+      consumerController ! seqMessages(1)
+      consumerController ! seqMessages(2)
+      consumerProbe.expectMessageType[ConsumerController.Delivery[TestConsumer.Job]].message.payload should ===("123")
+      consumerController ! ConsumerController.Confirmed
+      producerControllerProbe.expectMessage(ProducerControllerImpl.Request(3, 22, true, false))
+
+      // when confirmed, the Request is sent again in case it was lost
+      consumerController ! seqMessages.head
+      producerControllerProbe.expectMessage(ProducerControllerImpl.Request(3, 22, true, true))
+
+      testKit.stop(consumerController)
+    }
+
+    "not send Request for resent first chunk when waiting for lost chunk" in {
+      nextId()
+      // no Retry during the test
+      val consumerSettings = settings.withResendIntervalMin(1.minute).withResendIntervalMax(1.minute)
+      val consumerController =
+        spawn(ConsumerController[TestConsumer.Job](consumerSettings), s"consumerController-${idCount}")
+          .unsafeUpcast[ConsumerControllerImpl.InternalCommand]
+      val producerControllerProbe = createTestProbe[ProducerControllerImpl.InternalCommand]()
+
+      val consumerProbe = createTestProbe[ConsumerController.Delivery[TestConsumer.Job]]()
+      consumerController ! ConsumerController.Start(consumerProbe.ref)
+
+      val chunks = ProducerControllerImpl.createChunks(TestConsumer.Job("1234"), chunkSize = 1, serialization)
+      val seqMessages = chunks.zipWithIndex.map {
+        case (chunk, i) =>
+          ConsumerController.SequencedMessage.fromChunked(
+            producerId,
+            1 + i,
+            chunk,
+            first = i == 0,
+            ack = false,
+            producerControllerProbe.ref)
+      }
+
+      consumerController ! seqMessages.head
+      producerControllerProbe.expectMessage(ProducerControllerImpl.Request(0, 20, true, false))
+      // seqNr 2 is lost
+      consumerController ! seqMessages(2)
+      producerControllerProbe.expectMessage(ProducerControllerImpl.Resend(2))
+      consumerController ! seqMessages.head
+      consumerController ! seqMessages(1)
+      consumerController ! seqMessages(2)
+      consumerController ! seqMessages(3)
+      consumerProbe.expectMessageType[ConsumerController.Delivery[TestConsumer.Job]].message.payload should ===("1234")
+      consumerController ! ConsumerController.Confirmed
+      producerControllerProbe.expectMessage(ProducerControllerImpl.Request(4, 23, true, false))
+
+      testKit.stop(consumerController)
+    }
   }
 
   "ConsumerController without resending" must {
