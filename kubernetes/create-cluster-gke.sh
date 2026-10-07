@@ -70,7 +70,8 @@ for zone in $CLUSTER_ZONES; do
     --cluster-version $CLUSTER_VERSION  \
     --enable-ip-alias \
     --image-type cos_containerd \
-    --machine-type n2-standard-8 \
+    --machine-type n4-standard-8 \
+    --disk-type hyperdisk-balanced \
     --num-nodes 5 \
     --no-enable-autoupgrade
   then
