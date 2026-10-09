@@ -197,10 +197,14 @@ import akka.util.PrettyDuration.PrettyPrintableDuration
         }
       }
 
+      // Only an ack/nack that clears something from the buffer counts as progress, duplicates must
+      // not keep the give up watchdog alive.
       private def ack(n: Long): Unit = {
-        ackTimestamp = System.nanoTime()
-        if (n <= seqNo)
+        if (n <= seqNo) {
+          val sizeBefore = unacknowledged.size
           clearUnacknowledged(n)
+          if (unacknowledged.size < sizeBefore) ackTimestamp = System.nanoTime()
+        }
       }
 
       @tailrec private def clearUnacknowledged(ackedSeqNo: Long): Unit = {
