@@ -90,11 +90,7 @@ import akka.util.ByteString
               unbindPromise.future
             }, unbindPromise.future.map(_ => Done)(ExecutionContext.parasitic)))
           case f: CommandFailed =>
-            val ex = new BindFailedException {
-              // cannot modify the actual exception class for compatibility reasons
-              override def getMessage: String = s"Bind failed${f.causedByString}"
-            }
-            f.cause.foreach(ex.initCause)
+            val ex = new BindFailedException(s"Bind failed${f.causedByString}", f.cause.orNull)
             bindingPromise.failure(ex)
             unbindPromise.tryFailure(ex)
             failStage(ex)
@@ -300,7 +296,7 @@ private[stream] object ConnectionSourceStage {
       msg match {
         case Terminated(_) => fail(new StreamTcpException("The IO manager actor (TCP) has terminated. Stopping now."))
         case f @ CommandFailed(cmd) =>
-          fail(new StreamTcpException(s"Tcp command [$cmd] failed${f.causedByString}").initCause(f.cause.orNull))
+          fail(new StreamTcpException(s"Tcp command [$cmd] failed${f.causedByString}", f.cause.orNull))
         case c: Connected =>
           role.asInstanceOf[Outbound].localAddressPromise.success(c.localAddress)
           connection = sender
@@ -371,7 +367,7 @@ private[stream] object ConnectionSourceStage {
 
         case Terminated(_) => fail(new StreamTcpException("The connection actor has terminated. Stopping now."))
         case f @ CommandFailed(cmd) =>
-          fail(new StreamTcpException(s"Tcp command [$cmd] failed${f.causedByString}").initCause(f.cause.orNull))
+          fail(new StreamTcpException(s"Tcp command [$cmd] failed${f.causedByString}", f.cause.orNull))
         case ErrorClosed(cause) => fail(new StreamTcpException(s"The connection closed with error: $cause"))
         case Aborted            => fail(new StreamTcpException("The connection has been aborted"))
         case Closed             => completeStage()
