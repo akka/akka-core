@@ -440,6 +440,69 @@ class ActorGraphInterpreterSpec extends StreamSpec {
       propagatedError shouldBe an[AbruptTerminationException]
     }
 
+    "finalize a stage completing in a chased event after another stage was finalized" in {
+      val gotStop = TestLatch(1)
+
+      // emits one element, completes on the second pull
+      object OneThenComplete extends GraphStage[SourceShape[Int]] {
+        val out = Outlet[Int]("OneThenComplete.out")
+        override val shape = SourceShape(out)
+        override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+          private var emitted = false
+          setHandler(out, new OutHandler {
+            override def onPull(): Unit =
+              if (emitted) completeStage()
+              else {
+                emitted = true
+                push(out, 1)
+              }
+          })
+          override def postStop(): Unit = gotStop.countDown()
+        }
+      }
+
+      // pulls upstream and pushes downstream in the same onPush, leading to both a chased pull and a chased push
+      object PullAndPush extends SimpleLinearGraphStage[Int] {
+        override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = {
+              val elem = grab(in)
+              pull(in)
+              push(out, elem)
+            }
+          })
+          setHandler(out, new OutHandler {
+            override def onPull(): Unit = if (!hasBeenPulled(in)) pull(in)
+          })
+        }
+      }
+
+      object CompleteOnFirst extends GraphStage[SinkShape[Int]] {
+        val in = Inlet[Int]("CompleteOnFirst.in")
+        override val shape = SinkShape(in)
+        override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+          override def preStart(): Unit = pull(in)
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = {
+              grab(in)
+              completeStage()
+            }
+          })
+        }
+      }
+
+      StreamTestKit.assertAllStagesStopped {
+        Source
+          .fromGraph(OneThenComplete)
+          .via(PullAndPush)
+          .to(CompleteOnFirst)
+          // event chasing is disabled in fuzzing mode
+          .withAttributes(ActorAttributes.fuzzingMode(false))
+          .run()
+        Await.ready(gotStop, 3.seconds)
+      }
+    }
+
     // reproduces #24719
     "not allow a second subscriber" in {
       val done = Promise[Done]()

@@ -327,7 +327,7 @@ import akka.stream.stage._
     var i = 0
     while (i < logics.length) {
       val logic = logics(i)
-      if (!isStageCompleted(logic)) finalizeStage(logic)
+      if (shutdownCounter(logic.stageId) != StageFinalized) finalizeStage(logic)
       i += 1
     }
   }
@@ -412,7 +412,7 @@ import akka.stream.stage._
         catch {
           case NonFatal(e) => reportStageError(e)
         }
-        var wasFinalized = afterStageHasRun(activeStage)
+        afterStageHasRun(activeStage)
 
         /*
          * "Event chasing" optimization follows from here. This optimization works under the assumption that a Push or
@@ -445,8 +445,7 @@ import akka.stream.stage._
           catch {
             case NonFatal(e) => reportStageError(e)
           }
-          if (!wasFinalized)
-            wasFinalized = afterStageHasRun(activeStage)
+          afterStageHasRun(activeStage)
         }
 
         // Chasing PULL events
@@ -457,8 +456,7 @@ import akka.stream.stage._
           catch {
             case NonFatal(e) => reportStageError(e)
           }
-          if (!wasFinalized)
-            wasFinalized = afterStageHasRun(activeStage)
+          afterStageHasRun(activeStage)
         }
 
         if (chasedPush != NoEvent) {
