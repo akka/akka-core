@@ -27,6 +27,7 @@ import akka.stream.testkit.StreamSpec
 import akka.stream.testkit.TestPublisher
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.Utils._
+import akka.stream.testkit.scaladsl.StreamTestKit
 import akka.testkit.EventFilter
 import akka.testkit.TestLatch
 
@@ -375,31 +376,36 @@ class ActorGraphInterpreterSpec extends StreamSpec {
     }
 
     "be able to handle Subscriber spec violations without leaking" in {
-      val filthySubscriber = new Subscriber[Int] {
-        override def onSubscribe(s: Subscription): Unit = s.request(1)
-        override def onError(t: Throwable): Unit = ()
-        override def onComplete(): Unit = ()
-        override def onNext(t: Int): Unit = throw TE("violating your spec")
+      // spec violation aborts inside a boundary event, the stage must not be finalized twice, see #25537
+      EventFilter.error(start = "Error during postStop", occurrences = 0).intercept {
+        StreamTestKit.assertAllStagesStopped {
+          val filthySubscriber = new Subscriber[Int] {
+            override def onSubscribe(s: Subscription): Unit = s.request(1)
+            override def onError(t: Throwable): Unit = ()
+            override def onComplete(): Unit = ()
+            override def onNext(t: Int): Unit = throw TE("violating your spec")
+          }
+
+          val upstream = TestPublisher.probe[Int]()
+          val downstream = TestSubscriber.probe[Int]()
+
+          Source
+            .fromPublisher(upstream)
+            .alsoTo(Sink.fromSubscriber(downstream))
+            .runWith(Sink.fromSubscriber(filthySubscriber))
+
+          upstream.sendNext(0)
+
+          downstream.requestNext(0)
+          val ise = downstream.expectError()
+          ise shouldBe an[IllegalStateException]
+          ise.getCause shouldBe a[SpecViolation]
+          ise.getCause.getCause shouldBe a[TE]
+          ise.getCause.getCause should (have.message("violating your spec"))
+
+          upstream.expectCancellation()
+        }(SystemMaterializer(system).materializer)
       }
-
-      val upstream = TestPublisher.probe[Int]()
-      val downstream = TestSubscriber.probe[Int]()
-
-      Source
-        .fromPublisher(upstream)
-        .alsoTo(Sink.fromSubscriber(downstream))
-        .runWith(Sink.fromSubscriber(filthySubscriber))
-
-      upstream.sendNext(0)
-
-      downstream.requestNext(0)
-      val ise = downstream.expectError()
-      ise shouldBe an[IllegalStateException]
-      ise.getCause shouldBe a[SpecViolation]
-      ise.getCause.getCause shouldBe a[TE]
-      ise.getCause.getCause should (have.message("violating your spec"))
-
-      upstream.expectCancellation()
     }
 
     "trigger postStop in all stages when abruptly terminated (and no upstream boundaries)" in {
@@ -432,6 +438,69 @@ class ActorGraphInterpreterSpec extends StreamSpec {
 
       val propagatedError = downstream.expectError()
       propagatedError shouldBe an[AbruptTerminationException]
+    }
+
+    "finalize a stage completing in a chased event after another stage was finalized" in {
+      val gotStop = TestLatch(1)
+
+      // emits one element, completes on the second pull
+      object OneThenComplete extends GraphStage[SourceShape[Int]] {
+        val out = Outlet[Int]("OneThenComplete.out")
+        override val shape = SourceShape(out)
+        override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+          private var emitted = false
+          setHandler(out, new OutHandler {
+            override def onPull(): Unit =
+              if (emitted) completeStage()
+              else {
+                emitted = true
+                push(out, 1)
+              }
+          })
+          override def postStop(): Unit = gotStop.countDown()
+        }
+      }
+
+      // pulls upstream and pushes downstream in the same onPush, leading to both a chased pull and a chased push
+      object PullAndPush extends SimpleLinearGraphStage[Int] {
+        override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = {
+              val elem = grab(in)
+              pull(in)
+              push(out, elem)
+            }
+          })
+          setHandler(out, new OutHandler {
+            override def onPull(): Unit = if (!hasBeenPulled(in)) pull(in)
+          })
+        }
+      }
+
+      object CompleteOnFirst extends GraphStage[SinkShape[Int]] {
+        val in = Inlet[Int]("CompleteOnFirst.in")
+        override val shape = SinkShape(in)
+        override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+          override def preStart(): Unit = pull(in)
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = {
+              grab(in)
+              completeStage()
+            }
+          })
+        }
+      }
+
+      StreamTestKit.assertAllStagesStopped {
+        Source
+          .fromGraph(OneThenComplete)
+          .via(PullAndPush)
+          .to(CompleteOnFirst)
+          // event chasing is disabled in fuzzing mode
+          .withAttributes(ActorAttributes.fuzzingMode(false))
+          .run()
+        Await.ready(gotStop, 3.seconds)
+      }
     }
 
     // reproduces #24719
