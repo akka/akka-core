@@ -59,14 +59,37 @@ if [ -z "$CLUSTER_VERSION" ]
     echo "Cluster version: $CLUSTER_VERSION"
 fi
 
-# Create cluster
-gcloud container clusters create $CLUSTER_NAME \
-  --cluster-version $CLUSTER_VERSION  \
-  --enable-ip-alias \
-  --image-type cos_containerd \
-  --machine-type n2-standard-8 \
-  --num-nodes 5 \
-  --no-enable-autoupgrade
+# Create cluster, trying each zone in CLUSTER_ZONES (space separated, defaults to the configured zone)
+# in turn, since a zone can be out of capacity (GCE_STOCKOUT)
+CLUSTER_ZONES=${CLUSTER_ZONES:-$gcloudZone}
+created=false
+for zone in $CLUSTER_ZONES; do
+  echo "Creating cluster $CLUSTER_NAME in zone $zone"
+  gcloud config set compute/zone $zone
+  if gcloud container clusters create $CLUSTER_NAME \
+    --cluster-version $CLUSTER_VERSION  \
+    --enable-ip-alias \
+    --image-type cos_containerd \
+    --machine-type n4-standard-8 \
+    --disk-type hyperdisk-balanced \
+    --num-nodes 5 \
+    --no-enable-autoupgrade
+  then
+    created=true
+    break
+  else
+    echo "Failed to create cluster $CLUSTER_NAME in zone $zone"
+    # a failed create can leave the cluster behind in an error state
+    if gcloud container clusters describe $CLUSTER_NAME > /dev/null 2>&1; then
+      gcloud container clusters delete $CLUSTER_NAME --quiet || true
+    fi
+  fi
+done
+
+if [ "$created" != "true" ]; then
+  echo "Failed to create cluster $CLUSTER_NAME in any of the zones: $CLUSTER_ZONES"
+  exit 1
+fi
 
   # --workload-pool=$gcloudProject.svc.id.goog # becoming default in next version, allows mapping of GCP service accounts to k8s service accounts
 

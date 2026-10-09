@@ -55,6 +55,8 @@ jobs:
           gcloud components install gke-gcloud-auth-plugin
           gcloud config set compute/region us-central1
           gcloud config set compute/zone us-central1-c
+          # zones to try in order, if creation fails in one (for example out of capacity)
+          export CLUSTER_ZONES="us-central1-c us-central1-a us-central1-b us-central1-f"
           ./kubernetes/create-cluster-gke.sh "akka-multi-node-${GITHUB_RUN_ID}"
 
       - name: Setup Pods
