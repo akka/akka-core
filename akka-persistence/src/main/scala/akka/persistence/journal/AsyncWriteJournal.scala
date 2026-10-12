@@ -9,6 +9,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
+
 import akka.actor._
 import akka.pattern.CircuitBreakersRegistry
 import akka.pattern.pipe
@@ -45,9 +46,6 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
   private val replayFilterWindowSize: Int = config.getInt("replay-filter.window-size")
   private val replayFilterMaxOldWriters: Int = config.getInt("replay-filter.max-old-writers")
 
-  private val resequencer = context.actorOf(Props(new Resequencer))
-  private var resequencerCounter = 1L
-
   final def receive = receiveWriteJournal.orElse[Any, Unit](receivePluginInternal)
 
   final val receiveWriteJournal: Actor.Receive = {
@@ -55,11 +53,18 @@ trait AsyncWriteJournal extends Actor with WriteJournalBase with AsyncRecovery {
     val replayDebugEnabled: Boolean = config.getBoolean("replay-filter.debug")
     val eventStream = context.system.eventStream // used from Future callbacks
     implicit val ec: ExecutionContext = context.dispatcher
+    val (hasher, numResequencers) = writeReplyGroupAssignor(context.system, self)
+
+    val resequencers = Vector.fill(numResequencers)(new ResequencerHandle(context.actorOf(Props(new Resequencer)), 1L))
+
+    def resequencerFor(actor: ActorRef): ResequencerHandle = resequencers(hasher(actor))
 
     {
       case WriteMessages(messages, persistentActor, actorInstanceId, bypassCircuitBreaker) =>
-        val cctr = resequencerCounter
-        resequencerCounter += messages.foldLeft(1)((acc, m) => acc + m.size)
+        val handle = resequencerFor(persistentActor)
+        val cctr = handle.counter
+        handle.counter += messages.foldLeft(1)((acc, m) => acc + m.size)
+        val resequencer = handle.resequencer
 
         val atomicWriteCount = messages.count(_.isInstanceOf[AtomicWrite])
         val prepared = Try(preparePersistentBatch(messages))
@@ -330,5 +335,19 @@ private[persistence] object AsyncWriteJournal {
       val ro = delayed.remove(delivered + 1)
       if (ro.isDefined) resequence(ro.get)
     }
+  }
+
+  private final class ResequencerHandle(val resequencer: ActorRef, var counter: Long)
+
+  private[journal] def writeReplyGroupAssignor(system: ActorSystem, journal: ActorRef): (ActorRef => Int, Int) = {
+    val config = Persistence(system).configFor(journal)
+    val max = config.getInt("max-write-reply-ordering-groups").max(1)
+    val setting = config.getInt("write-reply-ordering-groups")
+
+    require(setting > 0, s"must have positive number of write-reply-ordering-groups, was [$setting]")
+    require(setting <= max, s"must have no more than [$max] write-reply-ordering-groups, was [$setting]")
+
+    val hasher = (actor: ActorRef) => (actor.hashCode & 0x7FFFFFFF) % setting
+    hasher -> setting
   }
 }
