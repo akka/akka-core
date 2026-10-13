@@ -171,8 +171,37 @@ class MetricsBasedResizerSpec extends AkkaSpec(ResizerSpec.config) with DefaultT
       router.close()
     }
 
-    // disabled in CI since flaky https://github.com/akka/akka-core/issues/32401
-    "update the underutilizationStreak highestUtilization if current utilization is higher" taggedAs (GHExcludeTest) in {
+    "count a busy routee that is being repointed as utilized" in {
+      val props = Props(new TestLatchingActor)
+      val ref = system.actorOf(props).asInstanceOf[RepointableActorRef]
+      val router = TestRouter(Vector(ActorRefRoutee(ref)))
+      router.mockSend(await = true, routeeIdx = 0)
+      val startedCell = ref.underlying
+
+      // Models the tail of UnstartedCell.replaceWith, where the queued message has already been handed
+      // over to the started cell (the actor is processing it) but swapCell has not happened yet. A
+      // reader blocks on the cell lock and only sees the started cell afterwards, see issue #32401.
+      val repointing = new UnstartedCell(system.asInstanceOf[ActorSystemImpl], ref, props, ref.getParent) {
+        override def numberOfMessages: Int = {
+          ref.swapCell(startedCell)
+          super.numberOfMessages
+        }
+      }
+      ref.swapCell(repointing)
+
+      val resizer = DefaultOptimalSizeExploringResizer()
+      resizer.record = ResizeRecord(
+        underutilizationStreak =
+          Some(UnderUtilizationStreak(start = LocalDateTime.now.minusHours(1), highestUtilization = 1)))
+      resizer.reportMessageCount(router.routees, router.msgs.size)
+
+      resizer.record.totalQueueLength shouldBe 1
+      resizer.record.underutilizationStreak shouldBe empty
+
+      router.close()
+    }
+
+    "update the underutilizationStreak highestUtilization if current utilization is higher" in {
       val resizer = DefaultOptimalSizeExploringResizer()
       resizer.record = ResizeRecord(
         underutilizationStreak = Some(UnderUtilizationStreak(start = LocalDateTime.now, highestUtilization = 1)))
@@ -214,8 +243,7 @@ class MetricsBasedResizerSpec extends AkkaSpec(ResizerSpec.config) with DefaultT
       router.close()
     }
 
-    // disabled in CI since flaky https://github.com/akka/akka-core/issues/32401
-    "record the performance log with the correct pool size" taggedAs (GHExcludeTest) in {
+    "record the performance log with the correct pool size" in {
       val resizer = DefaultOptimalSizeExploringResizer()
       val router = TestRouter(routees(2))
       val msgs = router.sendToAll(await = true)
