@@ -26,6 +26,7 @@ class DaemonicSpec extends AkkaSpec {
         akka.daemonic = on
         akka.actor.provider = remote
         akka.remote.artery.canonical.port = 0
+        akka.remote.artery.canonical.hostname = 127.0.0.1
         akka.log-dead-letters-during-shutdown = off
         #akka.remote.artery.advanced.aeron.idle-cpu = 5
       """))
