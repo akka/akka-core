@@ -2,7 +2,7 @@ import scala.collection.Seq
 
 name := "cluster-scala"
 version := "1.0"
-scalaVersion := "2.13.17"
+scalaVersion := "2.13.18"
 
 // Note: this default isn't really used anywhere so not important to bump
 lazy val akkaVersion = sys.props.getOrElse("akka.version", "2.10.9")
