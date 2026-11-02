@@ -4,6 +4,8 @@
 
 package akka.coordination.lease.javadsl
 
+import scala.annotation.nowarn
+
 import akka.actor.{ ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider }
 import akka.actor.ClassicActorSystemProvider
 import akka.coordination.lease.internal.LeaseAdapter
@@ -18,6 +20,7 @@ object LeaseProvider extends ExtensionId[LeaseProvider] with ExtensionIdProvider
 
   override def createExtension(system: ExtendedActorSystem): LeaseProvider = new LeaseProvider(system)
 
+  @nowarn("cat=unused-privates")
   private final case class LeaseKey(leaseName: String, configPath: String, clientName: String)
 }
 
