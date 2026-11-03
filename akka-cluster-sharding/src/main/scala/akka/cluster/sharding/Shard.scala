@@ -115,7 +115,6 @@ private[akka] object Shard {
 
   private final case class PassivationTimedOut(ref: ActorRef)
 
-  private final case class RememberedEntityIds(ids: Set[EntityId])
   private final case class RememberEntityStoreCrashed(store: ActorRef)
 
   private val RememberEntityTimeoutKey = "RememberEntityTimeout"

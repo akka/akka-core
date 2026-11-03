@@ -45,8 +45,6 @@ object CircuitBreakerDocSpec {
     private final case class HandleFailed(replyTo: ActorRef[StatusReply[Done]], failure: Throwable) extends Command
     private final case class HandleSuceeded(replyTo: ActorRef[StatusReply[Done]]) extends Command
 
-    private final case class CircuitBreakerStateChange(newState: String) extends Command
-
     def apply(id: String, service: ThirdPartyWebService): Behavior[Command] = {
       Behaviors.setup[Command] { context =>
         //#circuit-breaker-initialization
