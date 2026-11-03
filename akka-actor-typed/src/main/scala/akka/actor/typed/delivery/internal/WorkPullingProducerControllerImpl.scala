@@ -8,7 +8,6 @@ import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeoutException
 
-import scala.annotation.nowarn
 import scala.reflect.ClassTag
 import scala.util.Failure
 import scala.util.Success
@@ -58,8 +57,6 @@ import akka.util.Timeout
 
   private case class LoadStateReply[A](state: DurableProducerQueue.State[A]) extends InternalCommand
   private case class LoadStateFailed(attempt: Int) extends InternalCommand
-  @nowarn("cat=unused-privates")
-  private case class StoreMessageSentReply(ack: DurableProducerQueue.StoreMessageSentAck)
   private case class StoreMessageSentFailed[A](messageSent: DurableProducerQueue.MessageSent[A], attempt: Int)
       extends InternalCommand
   private case class StoreMessageSentCompleted[A](messageSent: DurableProducerQueue.MessageSent[A])
