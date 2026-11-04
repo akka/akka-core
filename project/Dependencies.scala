@@ -25,7 +25,7 @@ object Dependencies {
   val protobufJavaVersion = "3.25.5" // also sync with protocVersion in Protobuf.scala
   val logbackVersion = "1.6.3"
   // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
-  val jacksonCoreVersion = "2.21.7"
+  val jacksonCoreVersion = "2.21.8"
   val jacksonAnnotationsVersion = "2.21"
   val jacksonDatabindVersion = jacksonCoreVersion
 
