@@ -1,0 +1,5 @@
+# Removed unused private classes flagged by Scala 2.13.18
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.delivery.internal.ProducerControllerImpl$StoreMessageSentReply")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.delivery.internal.ProducerControllerImpl$StoreMessageSentReply$")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.delivery.internal.WorkPullingProducerControllerImpl$StoreMessageSentReply")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.delivery.internal.WorkPullingProducerControllerImpl$StoreMessageSentReply$")

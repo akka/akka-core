@@ -17,8 +17,6 @@ object LeaseProvider extends ExtensionId[LeaseProvider] with ExtensionIdProvider
   override def lookup = LeaseProvider
 
   override def createExtension(system: ExtendedActorSystem): LeaseProvider = new LeaseProvider(system)
-
-  private final case class LeaseKey(leaseName: String, configPath: String, clientName: String)
 }
 
 class LeaseProvider(system: ExtendedActorSystem) extends Extension {

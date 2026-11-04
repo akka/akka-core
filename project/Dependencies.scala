@@ -28,7 +28,7 @@ object Dependencies {
   val jacksonDatabindVersion = jacksonCoreVersion // https://github.com/FasterXML/jackson/wiki/Jackson-Releases
 
   // Also update URLs in link-validator.conf
-  val scala213Version = "2.13.17"
+  val scala213Version = "2.13.18"
   val scala3Version = "3.3.7"
 
   val allScalaVersions = Seq(scala213Version, scala3Version)
@@ -82,19 +82,19 @@ object Dependencies {
     val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonCoreVersion // ApacheV2
     val jacksonParameterNames = "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonCoreVersion // ApacheV2
     val jacksonCbor = "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonCoreVersion // ApacheV2
-    val lz4Java = "at.yawk.lz4" % "lz4-java" % "1.11.4" // ApacheV2
+    val lz4Java = "at.yawk.lz4" % "lz4-java" % "1.12.0" // ApacheV2
 
     val logback = "ch.qos.logback" % "logback-classic" % logbackVersion // EPL 1.0
   }
   object Docs {
     val sprayJson = "io.spray" %% "spray-json" % "1.3.6" % Test
-    val gson = "com.google.code.gson" % "gson" % "2.13.1" % Test
+    val gson = "com.google.code.gson" % "gson" % "2.13.2" % Test
   }
 
   object TestDependencies {
     val commonsMath = "org.apache.commons" % "commons-math" % "2.2" % Test // ApacheV2
 
-    val commonsIo = "commons-io" % "commons-io" % "2.19.0" % Test // ApacheV2
+    val commonsIo = "commons-io" % "commons-io" % "2.22.0" % Test // ApacheV2
     val commonsCodec = "commons-codec" % "commons-codec" % "1.18.0" % Test // ApacheV2
     val junit = "junit" % "junit" % junitVersion % "test" // Common Public License 1.0
     val logback = Compile.logback % Test // EPL 1.0

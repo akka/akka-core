@@ -108,7 +108,6 @@ object ProducerControllerImpl {
 
   private case class LoadStateReply[A](state: DurableProducerQueue.State[A]) extends InternalCommand
   private case class LoadStateFailed(attempt: Int) extends InternalCommand
-  private case class StoreMessageSentReply(ack: DurableProducerQueue.StoreMessageSentAck)
   private case class StoreMessageSentFailed[A](messageSent: DurableProducerQueue.MessageSent[A], attempt: Int)
       extends InternalCommand
   private case class StoreMessageSentCompleted[A](messageSent: DurableProducerQueue.MessageSent[A])

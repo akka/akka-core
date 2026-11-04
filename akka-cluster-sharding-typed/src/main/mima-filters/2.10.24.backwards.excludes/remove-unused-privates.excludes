@@ -1,0 +1,3 @@
+# Removed unused private classes flagged by Scala 2.13.18
+ProblemFilters.exclude[MissingClassProblem]("akka.cluster.sharding.typed.delivery.internal.ShardingProducerControllerImpl$StoreMessageSentReply")
+ProblemFilters.exclude[MissingClassProblem]("akka.cluster.sharding.typed.delivery.internal.ShardingProducerControllerImpl$StoreMessageSentReply$")
