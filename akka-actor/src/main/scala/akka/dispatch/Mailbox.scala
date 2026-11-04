@@ -55,10 +55,7 @@ private[akka] object Mailbox {
  *
  * INTERNAL API
  */
-private[akka] abstract class Mailbox(val messageQueue: MessageQueue)
-    extends ForkJoinTask[Unit]
-    with SystemMessageQueue
-    with Runnable {
+private[akka] abstract class Mailbox(val messageQueue: MessageQueue) extends SystemMessageQueue with Runnable {
 
   import Mailbox._
 
@@ -233,24 +230,6 @@ private[akka] abstract class Mailbox(val messageQueue: MessageQueue)
       dispatcher.registerForExecution(this, hasMessageHint = false, hasSystemMessageHint = false)
     }
   }
-
-  override final def getRawResult(): Unit = ()
-  override final def setRawResult(unit: Unit): Unit = ()
-  final override def exec(): Boolean =
-    try {
-      run(); false
-    } catch {
-      case _: InterruptedException =>
-        Thread.currentThread().interrupt()
-        false
-      case anything: Throwable =>
-        val t = Thread.currentThread()
-        t.getUncaughtExceptionHandler match {
-          case null =>
-          case some => some.uncaughtException(t, anything)
-        }
-        throw anything
-    }
 
   /**
    * Process the messages in the mailbox

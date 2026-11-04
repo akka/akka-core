@@ -52,7 +52,10 @@ object ForkJoinExecutorConfigurator {
    * INTERNAL AKKA USAGE ONLY
    */
   @SerialVersionUID(1L)
-  final class AkkaForkJoinTask(runnable: Runnable) extends ForkJoinTask[Unit] {
+  final class AkkaForkJoinTask(runnable: Runnable) extends ForkJoinTask[Unit] with Runnable {
+    override def run(): Unit = runnable.run()
+    // the affinity pool picks a queue from the hash, keep it stable per wrapped mailbox
+    override def hashCode(): Int = runnable.hashCode()
     override def getRawResult(): Unit = ()
     override def setRawResult(unit: Unit): Unit = ()
     override def exec(): Boolean =

@@ -124,13 +124,15 @@ class Dispatcher(
       hasSystemMessageHint: Boolean): Boolean = {
     if (mbox.canBeScheduledForExecution(hasMessageHint, hasSystemMessageHint)) { //This needs to be here to ensure thread safety and no races
       if (mbox.setAsScheduled()) {
+        // a fresh task for each scheduling, re-submitting the same ForkJoinTask can corrupt a ForkJoinPool (issue #33019)
+        val task = new ForkJoinExecutorConfigurator.AkkaForkJoinTask(mbox)
         try {
-          executorService.execute(mbox)
+          executorService.execute(task)
           true
         } catch {
           case _: RejectedExecutionException =>
             try {
-              executorService.execute(mbox)
+              executorService.execute(task)
               true
             } catch { //Retry once
               case e: RejectedExecutionException =>
