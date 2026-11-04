@@ -49,6 +49,8 @@ jobs:
         uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ secrets.GKE_PROJECT }}
+          # gcloud 591.0.0 crashes in config-helper used by gke-gcloud-auth-plugin
+          version: "568.0.0"
 
       - name: Create the cluster
         run: |-
