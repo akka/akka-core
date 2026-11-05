@@ -8,7 +8,7 @@ import scala.annotation.unchecked.uncheckedVariance
 
 [2..#class FanOutShape1[-I, [#+O0#]](_init: FanOutShape.Init[I @uncheckedVariance]) extends FanOutShape[I](_init) {
   def this(name: String) = this(FanOutShape.Name[I](name))
-  def this(in: Inlet[I], [#out0: Outlet[O0]#]) = this(FanOutShape.Ports(in, [#out0# :: ] :: Nil))
+  def this(in: Inlet[I], [#out0: Outlet[O0]#]) = this(FanOutShape.Ports(in, List[Outlet[_]]([#out0#])))
   override protected def construct(init: FanOutShape.Init[I @uncheckedVariance]): FanOutShape[I] = new FanOutShape1(init)
   override def deepCopy(): FanOutShape1[I, [#O0#]] = super.deepCopy().asInstanceOf[FanOutShape1[I, [#O0#]]]
   
