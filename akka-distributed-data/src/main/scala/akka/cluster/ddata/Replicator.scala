@@ -528,6 +528,8 @@ final class ReplicatorSettings(
 object Replicator {
   private type Timestamp = Long
 
+  private val DurableStoreName = "durableStore"
+
   /**
    * Factory method for the [[akka.actor.Props]] of the [[Replicator]] actor.
    */
@@ -1038,6 +1040,10 @@ object Replicator {
     // for testing purposes
     final case class TestFullStateGossip(enabled: Boolean)
 
+    // sent to read/write aggregators proactively on certain cluster gossip changes to potentially trigger early fan-out to
+    // secondary replicas
+    private[ddata] final case class MemberLessLikelyToAck(m: Member)
+
     // Gossip Status message contains SHA-1 digests of the data to determine when
     // to send the full data
     type Digest = ByteString
@@ -1499,7 +1505,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
           val clazz = context.system.asInstanceOf[ExtendedActorSystem].dynamicAccess.getClassFor[Actor](s).get
           Props(clazz, c).withDispatcher(c.getString("use-dispatcher"))
       }
-      context.watch(context.actorOf(props.withDeploy(Deploy.local), "durableStore"))
+      context.watch(context.actorOf(props.withDeploy(Deploy.local), DurableStoreName))
     } else
       context.system.deadLetters // not used
 
@@ -1770,6 +1776,8 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     case MemberExited(m)               => receiveMemberExiting(m)
     case MemberRemoved(m, _)           => receiveMemberRemoved(m)
     case ClusterShuttingDown           => receiveMemberRemoved(cluster.selfMember)
+    case MemberLeft(m)                 => receiveMemberLeft(m)
+    case MemberDowned(m)               => receiveMemberDowned(m)
     case evt: MemberEvent              => receiveOtherMemberEvent(evt.member)
     case UnreachableMember(m)          => receiveUnreachable(m)
     case ReachableMember(m)            => receiveReachable(m)
@@ -2617,9 +2625,19 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       }
     }
 
+  def lessLikelyToAck(m: Member): Unit = {
+    val aggs = aggregators().iterator
+    if (aggs.hasNext) {
+      val mllta = MemberLessLikelyToAck(m)
+      aggs.foreach(_ ! mllta)
+    }
+  }
+
   def receiveMemberExiting(m: Member): Unit =
-    if (matchingRole(m) && m.address != selfAddress)
+    if (matchingRole(m) && m.address != selfAddress) {
       exitingNodes += m.uniqueAddress
+      lessLikelyToAck(m)
+    }
 
   def receiveMemberRemoved(m: Member): Unit = {
     if (m.address == selfAddress)
@@ -2640,8 +2658,21 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         log.debug("MemberRemoved [{}], membersByAge size [{}]", m.uniqueAddress, membersByAge.size)
       }
       deltaPropagationSelector.cleanupRemovedNode(m.uniqueAddress)
+      lessLikelyToAck(m)
     }
   }
+
+  def receiveMemberLeft(m: Member): Unit =
+    if (matchingRole(m)) {
+      lessLikelyToAck(m)
+      receiveOtherMemberEvent(m)
+    }
+
+  def receiveMemberDowned(m: Member): Unit =
+    if (matchingRole(m)) {
+      lessLikelyToAck(m)
+      receiveOtherMemberEvent(m)
+    }
 
   def receiveOtherMemberEvent(m: Member): Unit =
     if (matchingRole(m)) {
@@ -2768,6 +2799,9 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     // selfAddress is not included in the set
     replyTo ! ReplicaCount(nodes.size + 1)
   }
+
+  def aggregators(): IterableOnce[ActorRef] =
+    context.children.iterator.filterNot(_.path.name == DurableStoreName)
 
 }
 
@@ -2918,6 +2952,8 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
 
   private val (primaryNodes, secondaryNodes) = primaryAndSecondaryNodes()
 
+  var alreadySentToSecondaries: Boolean = false
+
   override def preStart(): Unit = {
     val msg = deltaMsg match {
       case Some(d) => d
@@ -2959,12 +2995,26 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
             replica(to) ! writeMsg
         }
       }
-      secondaryNodes.foreach { replica(_) ! writeMsg }
+      sendToSecondaries()
+
+    case MemberLessLikelyToAck(m) =>
+      if (!alreadySentToSecondaries && primaryNodes.contains(m.uniqueAddress) && remaining(m.uniqueAddress.address)) {
+        // node in question is less likely to ack, so proactively send to secondaries rather than
+        // wait the customary duration
+        sendToSecondaries()
+      }
+
     case ReceiveTimeout =>
       reply(isTimeout = true)
   }
 
   def senderAddress(): Address = sender().path.address
+
+  def sendToSecondaries(): Unit =
+    if (!alreadySentToSecondaries) {
+      secondaryNodes.foreach { replica(_) ! writeMsg }
+      alreadySentToSecondaries = true
+    }
 
   def isDone: Boolean =
     gotLocalStoreReply &&
@@ -3057,6 +3107,8 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
 
   private val (primaryNodes, secondaryNodes) = primaryAndSecondaryNodes()
 
+  var alreadySentToSecondaries: Boolean = false
+
   override def preStart(): Unit = {
     primaryNodes.foreach { replica(_) ! readMsg }
 
@@ -3074,13 +3126,27 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         case (None, r @ Some(_)) => r
         case (None, None)        => None
       }
-      remaining -= sender().path.address
+      remaining -= senderAddress()
       if (remaining.size == doneWhenRemainingSize)
         reply(ok = true)
-    case SendToSecondary =>
-      secondaryNodes.foreach { replica(_) ! readMsg }
+
+    case SendToSecondary => sendToSecondaries()
+
+    case MemberLessLikelyToAck(m) =>
+      if (!alreadySentToSecondaries && primaryNodes.contains(m.uniqueAddress) && remaining(m.uniqueAddress.address)) {
+        sendToSecondaries()
+      }
+
     case ReceiveTimeout => reply(ok = false)
   }
+
+  def senderAddress(): Address = sender().path.address
+
+  def sendToSecondaries(): Unit =
+    if (!alreadySentToSecondaries) {
+      secondaryNodes.foreach { replica(_) ! readMsg }
+      alreadySentToSecondaries = true
+    }
 
   def reply(ok: Boolean): Unit =
     (ok, result) match {
@@ -3105,7 +3171,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       context.stop(self)
     case _: ReadResult =>
       //collect late replies
-      remaining -= sender().path.address
+      remaining -= senderAddress()
     case SendToSecondary =>
     case ReceiveTimeout  =>
   }
