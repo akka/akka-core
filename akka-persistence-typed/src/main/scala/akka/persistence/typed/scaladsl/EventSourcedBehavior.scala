@@ -21,7 +21,6 @@ import akka.persistence.typed.EventAdapter
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.ReplicaId
 import akka.persistence.typed.SnapshotAdapter
-import akka.persistence.typed.SnapshotSelectionCriteria
 import akka.persistence.typed.internal._
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -217,17 +216,6 @@ object EventSourcedBehavior {
    * Change the snapshot store plugin id that this actor should use.
    */
   def withSnapshotPluginId(id: String): EventSourcedBehavior[Command, Event, State]
-
-  /**
-   * Changes the snapshot selection criteria used by this behavior.
-   * By default the most recent snapshot is used, and the remaining state updates are recovered by replaying events
-   * from the sequence number up until which the snapshot reached.
-   *
-   * You may configure the behavior to skip replaying snapshots completely, in which case the recovery will be
-   * performed by replaying all events -- which may take a long time.
-   */
-  @deprecated("use withRecovery(Recovery.withSnapshotSelectionCriteria(...))", "2.6.5")
-  def withSnapshotSelectionCriteria(selection: SnapshotSelectionCriteria): EventSourcedBehavior[Command, Event, State]
 
   /**
    * Initiates a snapshot if the given `predicate` evaluates to true.
