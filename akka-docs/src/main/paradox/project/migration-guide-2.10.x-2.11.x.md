@@ -9,7 +9,7 @@ project.description: Migrating to Akka 2.11.
 
 ## Removed deprecated APIs
 
-APIs deprecated in Akka 2.9 or earlier, or in Akka 2.10.0, have been removed. The sections below list the removed APIs and their replacements.
+APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below list the removed APIs and their replacements.
 
 ### akka-multi-node-testkit
 
