@@ -7,7 +7,6 @@ package akka.actor.typed
 import scala.annotation.switch
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
-
 import akka.actor.InvalidMessageException
 import akka.actor.typed.internal.BehaviorImpl
 import akka.actor.typed.internal.BehaviorImpl.DeferredBehavior
@@ -15,6 +14,7 @@ import akka.actor.typed.internal.BehaviorImpl.StoppedBehavior
 import akka.actor.typed.internal.BehaviorTags
 import akka.actor.typed.internal.CachedProps
 import akka.actor.typed.internal.InterceptorImpl
+import akka.actor.typed.scaladsl.Behaviors
 import akka.annotation.DoNotInherit
 import akka.annotation.InternalApi
 import akka.util.OptionVal
@@ -145,6 +145,10 @@ object Behavior {
      */
     def transformMessages[Outer: ClassTag](matcher: PartialFunction[Outer, Inner]): Behavior[Outer] =
       BehaviorImpl.transformMessages(behavior, matcher)
+
+    /** Specify the [[SupervisorStrategy]] to be invoked when the wrapped behavior throws. */
+    def onFailure[Thr <: Throwable](strategy: SupervisorStrategy)(implicit tag: ClassTag[Thr]): Behavior[Inner] =
+      Behaviors.supervise(behavior).onFailure(strategy)(tag)
 
   }
 
