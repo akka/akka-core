@@ -8,7 +8,7 @@ import scala.annotation.unchecked.uncheckedVariance
 
 [2..#class FanInShape1[[#-T0#], +O](_init: FanInShape.Init[O]) extends FanInShape[O](_init) {
   def this(name: String) = this(FanInShape.Name[O](name))
-  def this([#in0: Inlet[T0]#], out: Outlet[O]) = this(FanInShape.Ports(out, [#in0# :: ] :: Nil))
+  def this([#in0: Inlet[T0]#], out: Outlet[O]) = this(FanInShape.Ports(out, List[Inlet[_]]([#in0#])))
   override protected def construct(init: FanInShape.Init[O @uncheckedVariance]): FanInShape[O] = new FanInShape1(init)
   override def deepCopy(): FanInShape1[[#T0#], O] = super.deepCopy().asInstanceOf[FanInShape1[[#T0#], O]]
 
