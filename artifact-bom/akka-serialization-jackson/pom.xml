@@ -59,7 +59,7 @@
             <dependency>
                 <groupId>com.typesafe</groupId>
                 <artifactId>config</artifactId>
-                <version>1.4.8</version>
+                <version>1.4.10</version>
             </dependency>
             <dependency>
                 <groupId>org.scala-lang</groupId>
@@ -122,7 +122,7 @@
         <dependency>
             <groupId>com.typesafe</groupId>
             <artifactId>config</artifactId>
-            <version>1.4.8</version>
+            <version>1.4.10</version>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
