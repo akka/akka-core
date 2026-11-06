@@ -49,6 +49,11 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 
 * `TestConductor.throttle`: throttle was not implemented, use `blackhole` and `passThrough` instead.
 
+### akka-persistence
+
+* The LevelDB journal (`akka.persistence.journal.leveldb`, `LeveldbJournal`) and the shared LevelDB journal (`akka.persistence.journal.leveldb-shared`, `SharedLeveldbJournal`, `SharedLeveldbStore`): use another journal implementation, such as [Akka Persistence R2DBC](https://doc.akka.io/libraries/akka-persistence-r2dbc/current/). For tests, use the `akka.persistence.journal.inmem` journal, in combination with the @ref:[journal proxy](../persistence-plugins.md#persistence-plugin-proxy) when several actor systems share one journal. The `akka.persistence.journal.leveldb` and `akka.persistence.journal.leveldb-shared` configuration sections no longer exist.
+* `DurableStateUpdateStore.deleteObject(persistenceId)` in `akka.persistence.state.scaladsl` and `akka.persistence.state.javadsl`: use the `deleteObject` overload with `revision` instead. Durable state store plugins must remove their implementation of the overload without `revision`.
+
 ### akka-persistence-query
 
 * The LevelDB read journal (`akka.persistence.query.journal.leveldb`, `LeveldbReadJournal` in scaladsl and javadsl, `LeveldbReadJournalProvider`): use another journal and query implementation, such as [Akka Persistence R2DBC](https://doc.akka.io/libraries/akka-persistence-r2dbc/current/). The `akka.persistence.query.journal.leveldb` configuration section no longer exists.
