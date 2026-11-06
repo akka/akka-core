@@ -6,7 +6,6 @@ package akka.cluster.sharding
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
 import scala.jdk.DurationConverters._
 
@@ -38,12 +37,7 @@ private[akka] object ClusterShardingHealthCheckSettings {
 final class ClusterShardingHealthCheckSettings(
     val names: Set[String],
     val timeout: FiniteDuration,
-    val disableAfter: FiniteDuration) {
-
-  // for binary backwards compatibility
-  @deprecated("Use full constructor", "2.8.0")
-  def this(names: Set[String], timeout: FiniteDuration) = this(names, timeout, 10.seconds)
-}
+    val disableAfter: FiniteDuration)
 
 private object ClusterShardingHealthCheck {
   val Success = Future.successful(true)
