@@ -1,4 +1,4 @@
-# Dropping APIs deprecated before 2.10 in 2.11
+# Removed APIs deprecated in 2.10.0 or earlier
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.ActorMaterializerSettings.apply")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.ActorMaterializerSettings.create")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.ActorMaterializerSettings.withBlockingIoDispatcher")
