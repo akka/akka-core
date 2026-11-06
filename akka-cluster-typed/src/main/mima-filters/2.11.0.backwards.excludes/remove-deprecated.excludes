@@ -1,0 +1,3 @@
+# Removal of APIs deprecated before 2.10
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.typed.ClusterSingletonSettings.this")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.typed.ClusterSingletonManagerSettings.this")
