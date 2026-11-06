@@ -1,5 +1,5 @@
 ---
-project.description: Migrating to Akka 2.9.
+project.description: Migrating to Akka 2.10.
 ---
 # Migration Guide 2.9.x to 2.10.x
 
@@ -24,4 +24,3 @@ All helper methods like `LoggerOps.info2` can be replaced by using the underlyin
 ## Deprecation of Multi-DC Cluster
 
 Use @extref[Akka Distributed Cluster](akka-distributed-cluster:) and @extref[Akka Edge](akka-edge:) instead.
-
