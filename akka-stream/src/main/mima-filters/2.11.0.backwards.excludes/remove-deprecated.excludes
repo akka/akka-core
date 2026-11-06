@@ -107,3 +107,7 @@ ProblemFilters.exclude[MissingClassProblem]("akka.stream.BindFailedException$")
 ProblemFilters.exclude[MissingClassProblem]("akka.stream.StreamRefSettings$")
 ProblemFilters.exclude[MissingClassProblem]("akka.stream.impl.io.ByteStringParser$ParsingException")
 ProblemFilters.exclude[MissingTypesProblem]("akka.stream.Attributes")
+
+# Scala 3 only: synthetic members of removed BindFailedException object and IOResult status field
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.BindFailedException.fromProduct")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.IOResult._2")
