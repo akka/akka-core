@@ -1,0 +1,3 @@
+# Removed deprecated FSM.setTimer, inherited by the internal RemotingTerminator FSM
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.RemoteActorRefProvider#RemotingTerminator.setTimer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.RemoteActorRefProvider#RemotingTerminator.setTimer$default$4")

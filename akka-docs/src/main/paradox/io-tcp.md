@@ -166,15 +166,15 @@ Tcp.Write
 A `ByteString` (as explained in @ref:[this section](io.md#bytestring)) models one or more chunks of immutable
 in-memory data with a maximum (total) size of 2 GB (2^31 bytes).
 
-Tcp.WriteFile
-: If you want to send "raw" data from a file you can do so efficiently with the @apidoc[Tcp.WriteFile](akka.io.Tcp.WriteFile) command.
+Tcp.WritePath
+: If you want to send "raw" data from a file you can do so efficiently with the @apidoc[Tcp.WritePath](akka.io.Tcp.WritePath) command.
 This allows you do designate a (contiguous) chunk of on-disk bytes for sending across the connection without
-the need to first load them into the JVM memory. As such `Tcp.WriteFile` can "hold" more than 2GB of data and
+the need to first load them into the JVM memory. As such `Tcp.WritePath` can "hold" more than 2GB of data and
 an "ack" event if required.
 
 Tcp.CompoundWrite
 : 
-Sometimes you might want to group (or interleave) several @apidoc[Tcp.Write](akka.io.Tcp.Write) and/or @apidoc[Tcp.WriteFile](akka.io.Tcp.WriteFile) commands into
+Sometimes you might want to group (or interleave) several @apidoc[Tcp.Write](akka.io.Tcp.Write) and/or @apidoc[Tcp.WritePath](akka.io.Tcp.WritePath) commands into
 one atomic write command which gets written to the connection in one go. The @apidoc[Tcp.CompoundWrite](akka.io.Tcp.CompoundWrite) allows you
 to do just that and offers three benefits:
  1. As explained in the following section the TCP connection actor can only handle one single write command at a time.
@@ -184,9 +184,9 @@ protocol.
  2. Because a @apidoc[akka.io.Tcp.WriteCommand] is atomic you can be sure that no other actor can "inject" other writes into your
 series of writes if you combine them into one single `CompoundWrite`. In scenarios where several actors write
 to the same connection this can be an important feature which can be somewhat hard to achieve otherwise.
- 3. The "sub writes" of a `CompoundWrite` are regular @scala[@scaladoc[Write](akka.io.Tcp$$Write) or @scaladoc[WriteFile](akka.io.Tcp$$WriteFile) commands]@java[messages by @javadoc[TcpMessage.write](akka.io.TcpMessage#write(akka.util.ByteString,akka.io.Tcp.Event)) or @javadoc[TcpMessage.writeFile](akka.io.TcpMessage#writeFile(java.lang.String,long,long,akka.io.Tcp.Event)) methods] that themselves can request
+ 3. The "sub writes" of a `CompoundWrite` are regular @scala[@scaladoc[Write](akka.io.Tcp$$Write) or @scaladoc[WritePath](akka.io.Tcp$$WritePath) commands]@java[messages by @javadoc[TcpMessage.write](akka.io.TcpMessage#write(akka.util.ByteString,akka.io.Tcp.Event)) or @javadoc[TcpMessage.writePath](akka.io.TcpMessage#writePath(java.nio.file.Path,long,long,akka.io.Tcp.Event)) methods] that themselves can request
 "ack" events. These ACKs are sent out as soon as the respective "sub write" has been completed. This allows you to
-attach more than one ACK to a @scala[`Write` or `WriteFile`]@java[message by `TcpMessage.write` or `TcpMessage.writeFile`] (by combining it with an empty write that itself requests
+attach more than one ACK to a @scala[`Write` or `WritePath`]@java[message by `TcpMessage.write` or `TcpMessage.writePath`] (by combining it with an empty write that itself requests
 an ACK) or to have the connection actor acknowledge the progress of transmitting the `CompoundWrite` by sending
 out intermediate ACKs at arbitrary points.
 

@@ -6,19 +6,17 @@ package akka.io
 
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.immutable
 
 import akka.actor.NoSerializationVerificationNeeded
 import akka.annotation.InternalApi
-import akka.io.dns.{ AAAARecord, ARecord }
 import akka.io.dns.CachePolicy.CachePolicy
 import akka.io.dns.CachePolicy.Forever
 import akka.io.dns.CachePolicy.Never
 import akka.io.dns.CachePolicy.Ttl
 import akka.io.dns.DnsProtocol
-import akka.io.dns.DnsProtocol.{ Ip, RequestType, Resolved }
+import akka.io.dns.DnsProtocol.{ RequestType, Resolved }
 
 private[io] trait PeriodicCacheCleanup {
   def cleanup(): Unit
@@ -33,27 +31,6 @@ class SimpleDnsCache extends Dns with PeriodicCacheCleanup with NoSerializationV
       () => clock()))
 
   private val nanoBase = System.nanoTime()
-
-  /**
-   * Gets any IPv4 and IPv6 cached entries.
-   * To get Srv or just one type use DnsProtocol
-   *
-   * This method is deprecated and involves a copy from the new protocol to
-   * remain compatible
-   */
-  @nowarn("msg=deprecated")
-  override def cached(name: String): Option[Dns.Resolved] = {
-    // adapt response to the old protocol
-    val ipv4 = cacheRef.get().get((name, Ip(ipv6 = false))).toList.flatMap(_.records)
-    val ipv6 = cacheRef.get().get((name, Ip(ipv4 = false))).toList.flatMap(_.records)
-    val both = cacheRef.get().get((name, Ip())).toList.flatMap(_.records)
-    val all = (ipv4 ++ ipv6 ++ both).collect {
-      case r: ARecord    => r.ip
-      case r: AAAARecord => r.ip
-    }
-    if (all.isEmpty) None
-    else Some(Dns.Resolved(name, all))
-  }
 
   override def cached(request: DnsProtocol.Resolve): Option[DnsProtocol.Resolved] =
     cacheRef.get().get((request.name, request.requestType))

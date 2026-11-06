@@ -58,11 +58,6 @@ class PropsCreationSpec extends AkkaSpec("""
   }
 
   "Props Java API" must {
-    "work with create(creator)" in {
-      @nowarn
-      val p = Props.create(OneParamActorCreator)
-      system.actorOf(p)
-    }
     "work with create(class, creator)" in {
       val p = Props.create(classOf[Actor], OneParamActorCreator)
       system.actorOf(p)

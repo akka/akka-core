@@ -38,24 +38,6 @@ public abstract class AbstractScheduler extends AbstractSchedulerBase {
       ExecutionContext executor);
 
   /**
-   * Schedules a function to be run repeatedly with an initial delay and a frequency. E.g. if you
-   * would like the function to be run after 2 seconds and thereafter every 100ms you would set
-   * delay = Duration(2, TimeUnit.SECONDS) and interval = Duration.ofMillis(100)
-   */
-  @Deprecated
-  public Cancellable schedule(
-      final java.time.Duration initialDelay,
-      final java.time.Duration interval,
-      final Runnable runnable,
-      final ExecutionContext executor) {
-    return schedule(
-        DurationConverters.toScala(initialDelay),
-        DurationConverters.toScala(interval),
-        runnable,
-        executor);
-  }
-
-  /**
    * Schedules a Runnable to be run once with a delay, i.e. a time period that has to pass before
    * the runnable is executed.
    */

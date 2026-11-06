@@ -15,7 +15,6 @@ import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-@nowarn("msg=deprecated")
 @nowarn("msg=never used") // sample snippets
 object DnsCompileOnlyDocSpec {
 
@@ -24,16 +23,10 @@ object DnsCompileOnlyDocSpec {
 
   val actorRef: ActorRef = ???
   //#resolve
-  val initial: Option[Dns.Resolved] = Dns(system).cache.resolve("google.com")(system, actorRef)
-  val cached: Option[Dns.Resolved] = Dns(system).cache.cached("google.com")
+  val initial: Option[DnsProtocol.Resolved] =
+    Dns(system).cache.resolve(DnsProtocol.Resolve("google.com"), system, actorRef)
+  val cached: Option[DnsProtocol.Resolved] = Dns(system).cache.cached(DnsProtocol.Resolve("google.com"))
   //#resolve
-
-  {
-    //#actor-api-inet-address
-    val resolved: Future[Dns.Resolved] = (IO(Dns) ? Dns.Resolve("google.com")).mapTo[Dns.Resolved]
-    //#actor-api-inet-address
-
-  }
 
   {
     //#actor-api-async

@@ -8,8 +8,10 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 
-import scala.annotation.nowarn
-
+import akka.io.dns.AAAARecord
+import akka.io.dns.ARecord
+import akka.io.dns.CachePolicy.Ttl
+import akka.io.dns.DnsProtocol
 import akka.remote.RemotingMultiNodeSpec
 import akka.remote.testkit.MultiNodeConfig
 
@@ -20,7 +22,6 @@ object DnsSpec extends MultiNodeConfig {
 class DnsSpecMultiJvmNode1 extends DnsSpec
 
 // This is a multi-jvm tests because it is modifying global System.properties
-@nowarn("msg=deprecated")
 class DnsSpec extends RemotingMultiNodeSpec(DnsSpec) {
 
   def initialParticipants = roles.size
@@ -34,6 +35,9 @@ class DnsSpec extends RemotingMultiNodeSpec(DnsSpec) {
       case address: Inet6Address => address
       case _                     => fail()
     }
+
+  private def records =
+    List(ARecord("test", Ttl.effectivelyForever, ip4Address), AAAARecord("test", Ttl.effectivelyForever, ipv6Address))
 
   var temporaryValue: Option[String] = None
 
@@ -52,11 +56,13 @@ class DnsSpec extends RemotingMultiNodeSpec(DnsSpec) {
 
     "resolve to a IPv6 address if it is the preferred network stack" in {
       sys.props.put("java.net.preferIPv6Addresses", true.toString)
-      Dns.Resolved("test", List(ip4Address), List(ipv6Address)).addr should ===(ipv6Address)
+      val resolved = DnsProtocol.Resolved("test", records)
+      resolved.address() should ===(ipv6Address)
     }
     "resolve to a IPv4 address if IPv6 is not the preferred network stack" in {
       sys.props.remove("java.net.preferIPv6Addresses")
-      Dns.Resolved("test", List(ip4Address), List(ipv6Address)).addr should ===(ip4Address)
+      val resolved = DnsProtocol.Resolved("test", records)
+      resolved.address() should ===(ip4Address)
     }
 
   }

@@ -7,12 +7,19 @@ package akka.io
 import java.security.Security
 import java.util.concurrent.TimeUnit
 
-import scala.annotation.nowarn
-
 import akka.actor.Props
+import akka.io.InetAddressDnsResolverSpec.ttlMillis
+import akka.io.dns.CachePolicy._
 import akka.testkit.{ AkkaSpec, TestActorRef }
 
-@nowarn
+object InetAddressDnsResolverSpec {
+  def ttlMillis(cp: CachePolicy): Long = cp match {
+    case Forever  => Long.MaxValue
+    case Never    => 0
+    case ttl: Ttl => ttl.value.toMillis
+  }
+}
+
 class InetAddressDnsResolverSpec extends AkkaSpec("""
     akka.io.dns.inet-address.positive-ttl = default
     akka.io.dns.inet-address.negative-ttl = default
@@ -22,7 +29,7 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
     "use the default value for positive caching if it is not overridden" in {
       withNewSecurityProperty("networkaddress.cache.ttl", "") {
         withNewSystemProperty("sun.net.inetaddr.ttl", "") {
-          dnsResolver.positiveTtl shouldBe secondsToMillis(30)
+          ttlMillis(dnsResolver.positiveCachePolicy) shouldBe secondsToMillis(30)
         }
       }
     }
@@ -30,7 +37,7 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
     "use the default value for negative caching if it is not overridden" in {
       withNewSecurityProperty("networkaddress.cache.negative.ttl", "") {
         withNewSystemProperty("sun.net.inetaddr.negative.ttl", "") {
-          dnsResolver.negativeTtl shouldBe secondsToMillis(0)
+          ttlMillis(dnsResolver.negativeCachePolicy) shouldBe secondsToMillis(0)
         }
       }
     }
@@ -39,7 +46,7 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
       val expectedTtlValue = "42"
       withNewSecurityProperty("networkaddress.cache.ttl", expectedTtlValue) {
         withNewSystemProperty("sun.net.inetaddr.ttl", "2000") {
-          dnsResolver.positiveTtl shouldBe secondsToMillis(expectedTtlValue.toInt)
+          ttlMillis(dnsResolver.positiveCachePolicy) shouldBe secondsToMillis(expectedTtlValue.toInt)
         }
       }
     }
@@ -48,7 +55,7 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
       val expectedTtlValue = "43"
       withNewSecurityProperty("networkaddress.cache.negative.ttl", expectedTtlValue) {
         withNewSystemProperty("sun.net.inetaddr.negative.ttl", "2000") {
-          dnsResolver.negativeTtl shouldBe secondsToMillis(expectedTtlValue.toInt)
+          ttlMillis(dnsResolver.negativeCachePolicy) shouldBe secondsToMillis(expectedTtlValue.toInt)
         }
       }
     }
@@ -57,7 +64,7 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
       val expectedTtlValue = "42"
       withNewSecurityProperty("networkaddress.cache.ttl", "") {
         withNewSystemProperty("sun.net.inetaddr.ttl", expectedTtlValue) {
-          dnsResolver.positiveTtl shouldBe secondsToMillis(expectedTtlValue.toInt)
+          ttlMillis(dnsResolver.positiveCachePolicy) shouldBe secondsToMillis(expectedTtlValue.toInt)
         }
       }
     }
@@ -66,7 +73,7 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
       val expectedTtlValue = "43"
       withNewSecurityProperty("networkaddress.cache.negative.ttl", "") {
         withNewSystemProperty("sun.net.inetaddr.negative.ttl", expectedTtlValue) {
-          dnsResolver.negativeTtl shouldBe secondsToMillis(expectedTtlValue.toInt)
+          ttlMillis(dnsResolver.negativeCachePolicy) shouldBe secondsToMillis(expectedTtlValue.toInt)
         }
       }
     }
@@ -74,14 +81,14 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
     "use Forever when system Property (or the security property) value is lower than zero" in {
       withNewSecurityProperty("networkaddress.cache.negative.ttl", "-1") {
         withNewSystemProperty("sun.net.inetaddr.negative.ttl", "") {
-          dnsResolver.negativeTtl shouldBe Long.MaxValue
+          ttlMillis(dnsResolver.negativeCachePolicy) shouldBe Long.MaxValue
         }
       }
     }
     "use Never when system Property (or the security property) value is zero" in {
       withNewSecurityProperty("networkaddress.cache.negative.ttl", "0") {
         withNewSystemProperty("sun.net.inetaddr.negative.ttl", "") {
-          dnsResolver.negativeTtl shouldBe 0
+          ttlMillis(dnsResolver.negativeCachePolicy) shouldBe 0
         }
       }
     }
@@ -120,7 +127,6 @@ class InetAddressDnsResolverSpec extends AkkaSpec("""
 
 }
 
-@nowarn
 class InetAddressDnsResolverConfigSpec extends AkkaSpec("""
     akka.io.dns.inet-address.positive-ttl = forever
     akka.io.dns.inet-address.negative-ttl = never
@@ -129,11 +135,11 @@ class InetAddressDnsResolverConfigSpec extends AkkaSpec("""
 
   "The DNS resolver parsed ttl's" must {
     "use ttl=Long.MaxValue if user provides 'forever' " in {
-      dnsResolver.positiveTtl shouldBe Long.MaxValue
+      ttlMillis(dnsResolver.positiveCachePolicy) shouldBe Long.MaxValue
     }
 
     "use ttl=0 if user provides 'never' " in {
-      dnsResolver.negativeTtl shouldBe 0
+      ttlMillis(dnsResolver.negativeCachePolicy) shouldBe 0
     }
 
   }
