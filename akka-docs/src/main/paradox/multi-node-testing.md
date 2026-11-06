@@ -194,7 +194,7 @@ There are a couple of things to keep in mind when writing multi node tests or el
 surprising ways.
 
  * Don't issue a shutdown of the first node. The first node is the controller and if it shuts down your test will break.
- * To be able to use `blackhole`, `passThrough`, and `throttle` you must activate the failure injector and
+ * To be able to use `blackhole` and `passThrough` you must activate the failure injector and
 throttler transport adapters by specifying @scala[@scaladoc[testTransport(on = true)](akka.remote.testkit.MultiNodeConfig#testTransport(on:Boolean):Unit)]@java[@javadoc[testTransport(true)](akka.remote.testkit.MultiNodeConfig#testTransport(boolean))] in your `MultiNodeConfig`.
  * Throttling, shutdown and other failure injections can only be done from the first node, which again is the controller.
  * Don't ask for the address of a node using `node(address)` after the node has been shut down. Grab the address before
