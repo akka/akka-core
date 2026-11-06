@@ -174,7 +174,7 @@ class SourceSpec extends StreamSpec with DefaultTimeout {
 
     "combine many sources into one" in {
       val sources = Vector.tabulate(5)(_ => Source.maybe[Int])
-      val (promises, sub) = Source.combine(sources)(Concat(_)).toMat(TestSink.probe[Int])(Keep.both).run()
+      val (promises, sub) = Source.combine(sources)(Concat(_)).toMat(TestSink[Int]())(Keep.both).run()
       for ((promise, idx) <- promises.zipWithIndex)
         promise.success(Some(idx))
       sub.request(5).expectNextN(0 to 4).expectComplete()

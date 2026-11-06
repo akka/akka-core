@@ -43,8 +43,8 @@ public class RecipeManualTrigger extends RecipeTest {
     new TestKit(system) {
       {
         final Source<Trigger, TestPublisher.Probe<Trigger>> triggerSource =
-            TestSource.probe(system);
-        final Sink<Message, TestSubscriber.Probe<Message>> messageSink = TestSink.probe(system);
+            TestSource.create(system);
+        final Sink<Message, TestSubscriber.Probe<Message>> messageSink = TestSink.create(system);
 
         // #manually-triggered-stream
         final RunnableGraph<Pair<TestPublisher.Probe<Trigger>, TestSubscriber.Probe<Message>>> g =
@@ -101,8 +101,8 @@ public class RecipeManualTrigger extends RecipeTest {
     new TestKit(system) {
       {
         final Source<Trigger, TestPublisher.Probe<Trigger>> triggerSource =
-            TestSource.probe(system);
-        final Sink<Message, TestSubscriber.Probe<Message>> messageSink = TestSink.probe(system);
+            TestSource.create(system);
+        final Sink<Message, TestSubscriber.Probe<Message>> messageSink = TestSink.create(system);
 
         // #manually-triggered-stream-zipwith
         final RunnableGraph<Pair<TestPublisher.Probe<Trigger>, TestSubscriber.Probe<Message>>> g =
