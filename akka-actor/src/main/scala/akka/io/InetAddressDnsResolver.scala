@@ -10,7 +10,6 @@ import java.net.Inet6Address
 import java.security.Security
 import java.util.concurrent.TimeUnit
 
-import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
@@ -34,7 +33,6 @@ import akka.util.Helpers.Requiring
  *
  * Respects the settings that can be set on the Java runtime via parameters.
  */
-@nowarn("msg=deprecated")
 @InternalApi
 class InetAddressDnsResolver(cache: SimpleDnsCache, config: Config) extends Actor with ActorLogging {
 
@@ -99,18 +97,6 @@ class InetAddressDnsResolver(cache: SimpleDnsCache, config: Config) extends Acto
 
   val positiveCachePolicy: CachePolicy = getTtl("positive-ttl", positive = true)
   val negativeCachePolicy: CachePolicy = getTtl("negative-ttl", positive = false)
-  @deprecated("Use positiveCacheDuration instead", "2.5.17")
-  val positiveTtl: Long = toLongTtl(positiveCachePolicy)
-  @deprecated("Use negativeCacheDuration instead", "2.5.17")
-  val negativeTtl: Long = toLongTtl(negativeCachePolicy)
-
-  private def toLongTtl(cp: CachePolicy): Long = {
-    cp match {
-      case Forever  => Long.MaxValue
-      case Never    => 0
-      case ttl: Ttl => ttl.value.toMillis
-    }
-  }
 
   override def receive: Receive = {
     case DnsProtocol.Resolve(_, Srv) =>
@@ -135,29 +121,6 @@ class InetAddressDnsResolver(cache: SimpleDnsCache, config: Config) extends Acto
               val answer = DnsProtocol.Resolved(name, immutable.Seq.empty)
               if (negativeCachePolicy != Never)
                 cache.put((name, ip), answer, negativeCachePolicy)
-              answer
-          }
-      }
-      sender() ! answer
-    case Dns.Resolve(name) =>
-      // no where in akka now sends this message, but supported until Dns.Resolve/Resolved have been removed
-      val answer: Dns.Resolved = cache.cached(name) match {
-        case Some(a) => a
-        case None =>
-          try {
-            val addresses = InetAddress.getAllByName(name)
-            // respond with the old protocol as the request was the new protocol
-            val answer = Dns.Resolved(name, addresses)
-            if (positiveCachePolicy != Never) {
-              val records = addressToRecords(name, addresses.toList, ipv4 = true, ipv6 = true)
-              cache.put((name, Ip()), DnsProtocol.Resolved(name, records), positiveCachePolicy)
-            }
-            answer
-          } catch {
-            case _: UnknownHostException =>
-              val answer = Dns.Resolved(name, immutable.Seq.empty, immutable.Seq.empty)
-              if (negativeCachePolicy != Never)
-                cache.put((name, Ip()), DnsProtocol.Resolved(name, immutable.Seq.empty), negativeCachePolicy)
               answer
           }
       }

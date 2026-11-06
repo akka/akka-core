@@ -6,12 +6,11 @@ package akka.actor
 
 import akka.annotation.InternalApi
 
-import java.lang.reflect.{ Modifier, ParameterizedType, TypeVariable }
+import java.lang.reflect.Modifier
 import java.lang.reflect.Constructor
 import scala.annotation.tailrec
 import scala.annotation.varargs
 import akka.japi.Creator
-import akka.util.Reflect
 
 /**
  * Java API: Factory for Props instances.
@@ -40,38 +39,6 @@ private[akka] trait AbstractProps {
   @varargs
   def create(clazz: Class[_], args: AnyRef*): Props =
     new Props(deploy = Props.defaultDeploy, clazz = clazz, args = args.toList)
-
-  /**
-   * Create new Props from the given [[akka.japi.Creator]].
-   *
-   * You can not use a Java 8 lambda with this method since the generated classes
-   * don't carry enough type information.
-   *
-   * Use the Props.create(actorClass, creator) instead.
-   */
-  @deprecated("Use Props.create(actorClass, creator) instead, since this can't be used with Java 8 lambda.", "2.5.18")
-  def create[T <: Actor](creator: Creator[T]): Props = {
-    val cc = creator.getClass
-    checkCreatorClosingOver(cc)
-
-    val ac = classOf[Actor]
-    val coc = classOf[Creator[_]]
-    val actorClass = Reflect.findMarker(cc, coc) match {
-      case t: ParameterizedType =>
-        t.getActualTypeArguments.head match {
-          case c: Class[_] => c // since T <: Actor
-          case v: TypeVariable[_] =>
-            v.getBounds.collectFirst { case c: Class[_] if ac.isAssignableFrom(c) && c != ac => c }.getOrElse(ac)
-          case x => throw new IllegalArgumentException(s"unsupported type found in Creator argument [$x]")
-        }
-      case c: Class[_] if c == coc =>
-        throw new IllegalArgumentException(
-          "erased Creator types (e.g. lambdas) are unsupported, use Props.create(actorClass, creator) instead")
-      case unexpected =>
-        throw new IllegalArgumentException(s"unexpected type: $unexpected")
-    }
-    create(classOf[CreatorConsumer], actorClass, creator)
-  }
 
   /**
    * Create new Props from the given [[akka.japi.Creator]] with the type set to the given actorClass.

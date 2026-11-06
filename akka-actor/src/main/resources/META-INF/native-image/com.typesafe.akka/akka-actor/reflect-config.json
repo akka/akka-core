@@ -553,10 +553,4 @@
     "name" : "<init>",
     "parameterTypes" : [ "akka.actor.ActorSystem$Settings", "akka.event.EventStream" ]
   } ]
-}, {
-  "name" : "akka.event.jul.JavaLoggingFilter",
-  "methods" : [ {
-    "name" : "<init>",
-    "parameterTypes" : [ "akka.actor.ActorSystem$Settings", "akka.event.EventStream" ]
-  } ]
 } ]

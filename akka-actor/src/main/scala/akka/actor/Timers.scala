@@ -279,25 +279,6 @@ abstract class AbstractActorWithTimers extends AbstractActor with Timers {
     startTimerAtFixedRate(key, msg, initialDelay.toScala, interval.toScala)
 
   /**
-   * Deprecated API: See [[TimerScheduler#startTimerWithFixedDelay]] or [[TimerScheduler#startTimerAtFixedRate]].
-   */
-  @deprecated(
-    "Use startTimerWithFixedDelay or startTimerAtFixedRate instead. This has the same semantics as " +
-    "startTimerAtFixedRate, but startTimerWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  def startPeriodicTimer(key: Any, msg: Any, interval: FiniteDuration): Unit
-
-  /**
-   * Deprecated API: See [[TimerScheduler#startTimerWithFixedDelay]] or [[TimerScheduler#startTimerAtFixedRate]].
-   */
-  @deprecated(
-    "Use startTimerWithFixedDelay or startTimerAtFixedRate instead. This has the same semantics as " +
-    "startTimerAtFixedRate, but startTimerWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  final def startPeriodicTimer(key: Any, msg: Any, interval: java.time.Duration): Unit =
-    startPeriodicTimer(key, msg, interval.toScala)
-
-  /**
    * Start a timer that will send `msg` once to the `self` actor after
    * the given `timeout`.
    *

@@ -1,0 +1,46 @@
+# remove APIs deprecated before 2.10 in akka-actor
+# FSM.setTimer / AbstractFSM.setTimer
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractFSM.setTimer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractFSM.setTimer$default$4")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.FSM.setTimer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.FSM.setTimer$default$4")
+# Scheduler.schedule overloads with receiver/message, Function0 and java.time.Duration
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractScheduler.schedule")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractSchedulerBase.schedule")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractSchedulerBase.schedule$default$6")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.LightArrayRevolverScheduler.schedule")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.LightArrayRevolverScheduler.schedule$default$6")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.Scheduler.schedule")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.Scheduler.schedule$default$6")
+# TimerScheduler.startPeriodicTimer
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.TimerScheduler.startPeriodicTimer")
+# Props.create(Creator)
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.Props.create")
+# ScalaActorRef and implicit conversions in the akka.actor package object
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.ScalaActorRef")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.package")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.package$")
+ProblemFilters.exclude[MissingTypesProblem]("akka.event.Logging$StandardOutLogger")
+# akka.event.jul loggers
+ProblemFilters.exclude[MissingClassProblem]("akka.event.jul.JavaLogger")
+ProblemFilters.exclude[MissingClassProblem]("akka.event.jul.JavaLogging")
+ProblemFilters.exclude[MissingClassProblem]("akka.event.jul.JavaLoggingFilter")
+ProblemFilters.exclude[MissingClassProblem]("akka.event.jul.Logger")
+ProblemFilters.exclude[MissingClassProblem]("akka.event.jul.Logger$")
+# old Dns API
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.io.Dns.cached")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.io.Dns.resolve")
+ProblemFilters.exclude[MissingClassProblem]("akka.io.Dns$Command")
+ProblemFilters.exclude[MissingClassProblem]("akka.io.Dns$Resolve")
+ProblemFilters.exclude[MissingClassProblem]("akka.io.Dns$Resolve$")
+ProblemFilters.exclude[MissingClassProblem]("akka.io.Dns$Resolved")
+ProblemFilters.exclude[MissingClassProblem]("akka.io.Dns$Resolved$")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.io.InetAddressDnsResolver.positiveTtl")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.io.InetAddressDnsResolver.negativeTtl")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.io.SimpleDnsCache.cached")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.io.SimpleDnsManager.oldApis")
+# Tcp.WriteFile
+ProblemFilters.exclude[MissingClassProblem]("akka.io.Tcp$WriteFile")
+ProblemFilters.exclude[MissingClassProblem]("akka.io.Tcp$WriteFile$")
+# Serialization.deserialize with Option[Class]
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.serialization.Serialization.deserialize")

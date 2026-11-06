@@ -262,7 +262,7 @@ object Tcp extends ExtensionId[TcpExt] with ExtensionIdProvider {
   sealed abstract class WriteCommand extends Command {
 
     /**
-     * Prepends this command with another `Write` or `WriteFile` to form
+     * Prepends this command with another `Write` or `WritePath` to form
      * a `CompoundWrite`.
      */
     def +:(other: SimpleWriteCommand): CompoundWrite = CompoundWrite(other, this)
@@ -279,7 +279,7 @@ object Tcp extends ExtensionId[TcpExt] with ExtensionIdProvider {
       }
 
     /**
-     * Java API: prepends this command with another `Write` or `WriteFile` to form
+     * Java API: prepends this command with another `Write` or `WritePath` to form
      * a `CompoundWrite`.
      */
     def prepend(that: SimpleWriteCommand): CompoundWrite = that +: this
@@ -306,7 +306,7 @@ object Tcp extends ExtensionId[TcpExt] with ExtensionIdProvider {
   }
 
   /**
-   * Common supertype of [[Write]] and [[WriteFile]].
+   * Common supertype of [[Write]] and [[WritePath]].
    */
   sealed abstract class SimpleWriteCommand extends WriteCommand {
     require(ack != null, "ack must be non-null. Use NoAck if you don't want acks.")
@@ -357,15 +357,6 @@ object Tcp extends ExtensionId[TcpExt] with ExtensionIdProvider {
   }
 
   /**
-   * @see [[WritePath]]
-   */
-  @deprecated("Use WritePath instead", "2.5.10")
-  final case class WriteFile(filePath: String, position: Long, count: Long, ack: Event) extends SimpleWriteCommand {
-    require(position >= 0, "WriteFile.position must be >= 0")
-    require(count > 0, "WriteFile.count must be > 0")
-  }
-
-  /**
    * Write `count` bytes starting at `position` from file at `filePath` to the connection.
    * The count must be &gt; 0. The connection actor will reply with a [[CommandFailed]]
    * message if the write could not be enqueued. If [[SimpleWriteCommand#wantsAck]]
@@ -376,13 +367,13 @@ object Tcp extends ExtensionId[TcpExt] with ExtensionIdProvider {
    * a particular write has been sent by the O/S.
    */
   final case class WritePath(path: Path, position: Long, count: Long, ack: Event) extends SimpleWriteCommand {
-    require(position >= 0, "WriteFile.position must be >= 0")
-    require(count > 0, "WriteFile.count must be > 0")
+    require(position >= 0, "WritePath.position must be >= 0")
+    require(count > 0, "WritePath.count must be > 0")
   }
 
   /**
    * A write command which aggregates two other write commands. Using this construct
-   * you can chain a number of [[Write]] and/or [[WriteFile]] commands together in a way
+   * you can chain a number of [[Write]] and/or [[WritePath]] commands together in a way
    * that allows them to be handled as a single write which gets written out to the
    * network as quickly as possible.
    * If the sub commands contain `ack` requests they will be honored as soon as the

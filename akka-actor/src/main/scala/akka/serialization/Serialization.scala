@@ -171,27 +171,6 @@ class Serialization(val system: ExtendedActorSystem) extends Extension {
    * using the optional type hint to the Serializer.
    * Returns either the resulting object or an Exception if one was thrown.
    */
-  @deprecated("Use deserialize that accepts the `manifest` as a class name.", since = "2.6.0")
-  def deserialize[T](bytes: Array[Byte], serializerId: Int, clazz: Option[Class[_ <: T]]): Try[T] =
-    Try {
-      val serializer = try getSerializerById(serializerId)
-      catch {
-        case _: NoSuchElementException =>
-          throw new NotSerializableException(
-            s"Cannot find serializer with id [$serializerId]${clazz.map(c => " (class [" + c.getName + "])").getOrElse("")}. " +
-            "The most probable reason is that the configuration entry " +
-            "akka.actor.serializers is not in sync between the two systems.")
-      }
-      withTransportInformation { () =>
-        serializer.fromBinary(bytes, clazz).asInstanceOf[T]
-      }
-    }
-
-  /**
-   * Deserializes the given array of bytes using the specified serializer id,
-   * using the optional type hint to the Serializer.
-   * Returns either the resulting object or an Exception if one was thrown.
-   */
   def deserialize(bytes: Array[Byte], serializerId: Int, manifest: String): Try[AnyRef] =
     Try {
       val serializer = try getSerializerById(serializerId)

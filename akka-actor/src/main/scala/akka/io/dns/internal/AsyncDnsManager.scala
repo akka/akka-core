@@ -8,7 +8,6 @@ import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 
 import scala.annotation.nowarn
-import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.Duration
 
 import com.typesafe.config.Config
@@ -18,10 +17,9 @@ import akka.annotation.InternalApi
 import akka.dispatch.{ RequiresMessageQueue, UnboundedMessageQueueSemantics }
 import akka.io.{ Dns, DnsExt, DnsProvider }
 import akka.io.PeriodicCacheCleanup
-import akka.io.dns.{ AAAARecord, ARecord, DnsProtocol, DnsSettings }
+import akka.io.dns.{ DnsProtocol, DnsSettings }
 import akka.io.dns.internal.AsyncDnsManager.CacheCleanup
 import akka.routing.FromConfig
-import akka.util.Timeout
 
 /**
  * INTERNAL API
@@ -49,8 +47,6 @@ private[io] final class AsyncDnsManager(
     with RequiresMessageQueue[UnboundedMessageQueueSemantics]
     with ActorLogging
     with Timers {
-  import akka.pattern.ask
-  import akka.pattern.pipe
 
   /**
    * Ctr expected by the DnsExt for all DnsMangers
@@ -64,10 +60,7 @@ private[io] final class AsyncDnsManager(
       ext.Settings.Dispatcher,
       ext.provider)
 
-  implicit val ec: ExecutionContextExecutor = context.dispatcher
-
   val settings = new DnsSettings(system, resolverConfig)
-  implicit val timeout: Timeout = Timeout(settings.ResolveTimeout)
 
   private val resolver = {
     val props: Props = FromConfig.props(
@@ -90,26 +83,10 @@ private[io] final class AsyncDnsManager(
     }
   }
 
-  // still support deprecated DNS API
-  @nowarn("msg=deprecated")
   override def receive: Receive = {
     case r: DnsProtocol.Resolve =>
       log.debug("Resolution request for {} {} from {}", r.name, r.requestType, sender())
       resolver.forward(r)
-
-    case Dns.Resolve(name) =>
-      // adapt legacy protocol to new protocol and back again, no where in akka
-      // sends this message but supported until the old messages are removed
-      log.debug("(deprecated) Resolution request for {} from {}", name, sender())
-      val adapted = DnsProtocol.Resolve(name)
-      val reply = (resolver ? adapted).mapTo[DnsProtocol.Resolved].map { asyncResolved =>
-        val ips = asyncResolved.records.collect {
-          case a: ARecord    => a.ip
-          case a: AAAARecord => a.ip
-        }
-        Dns.Resolved(asyncResolved.name, ips)
-      }
-      reply.pipeTo(sender())
 
     case CacheCleanup =>
       cacheCleanup.foreach(_.cleanup())
