@@ -1,0 +1,3 @@
+# Remove APIs deprecated before 2.10
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.testkit.typed.scaladsl.LoggingTestKit.intercept")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.testkit.typed.internal.LoggingTestKitImpl.intercept")

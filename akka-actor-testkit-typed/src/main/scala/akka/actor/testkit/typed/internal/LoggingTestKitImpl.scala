@@ -113,10 +113,6 @@ import akka.testkit.TestKit
   override def expect[T](system: ActorSystem[_], code: Supplier[T]): T =
     expect(code.get())(system)
 
-  // deprecated (renamed to expect)
-  override def intercept[T](code: => T)(implicit system: ActorSystem[_]): T =
-    expect(code)(system)
-
   private def checkLogback(system: ActorSystem[_]): Unit = {
     if (!system.dynamicAccess.classIsOnClasspath("ch.qos.logback.classic.spi.ILoggingEvent")) {
       throw new IllegalStateException("LoggingEventFilter requires logback-classic dependency in classpath.")
