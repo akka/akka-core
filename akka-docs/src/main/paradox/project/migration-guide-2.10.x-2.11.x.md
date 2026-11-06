@@ -70,6 +70,11 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 * `snapshotSelectionCriteria` in the javadsl `EventSourcedBehavior`, `EventSourcedOnCommandBehavior` and `EventSourcedOnCommandWithReplyBehavior`: override `recovery` instead and return `Recovery.withSnapshotSelectionCriteria(...)`. Overriding `snapshotSelectionCriteria` had no effect since Akka 2.6.5.
 * `EventSourcedBehavior.withSnapshotSelectionCriteria` in scaladsl: use `withRecovery(Recovery.withSnapshotSelectionCriteria(...))`.
 
+### akka-remote
+
+* `AddressUidExtension`: use `ExtendedActorSystem.uid` instead. In general `akka.cluster.UniqueAddress` is a better source for getting the uid. With typed Cluster that is accessible via `selfMember` and with classic Cluster via `selfUniqueAddress`.
+* `akka.remote.serialization.LongSerializer`, `IntSerializer`, `StringSerializer` and `ByteStringSerializer`: moved to `akka.serialization` in akka-actor. The serializer ids 18 to 21 are unchanged and used by the akka-actor serializers, so persisted data still deserializes.
+
 ### akka-stream-testkit
 
 * `TestSink.probe` and `TestSource.probe` (scaladsl): use `TestSink()` and `TestSource()` with an implicit `ClassicActorSystemProvider` instead.
