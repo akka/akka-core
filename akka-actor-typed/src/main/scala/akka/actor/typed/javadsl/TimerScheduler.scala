@@ -211,15 +211,6 @@ trait TimerScheduler[T] {
     startTimerAtFixedRate(msg, msg, initialDelay, interval)
 
   /**
-   * Deprecated API: See [[TimerScheduler#startTimerWithFixedDelay]] or [[TimerScheduler#startTimerAtFixedRate]].
-   */
-  @deprecated(
-    "Use startTimerWithFixedDelay or startTimerAtFixedRate instead. This has the same semantics as " +
-    "startTimerAtFixedRate, but startTimerWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  def startPeriodicTimer(key: Any, msg: T, interval: Duration): Unit
-
-  /**
    * Start a timer that will send `msg` once to the `self` actor after
    * the given `delay`.
    *

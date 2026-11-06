@@ -205,7 +205,7 @@ class ActorLoggingSpec extends ScalaTestWithActorTestKit("""
             context =>
               context.log.debug("message")
               context.log.debug("{}", "arg1")
-              // using `: Any` to avoid "ambiguous reference to overloaded definition", see also LoggerOpsSpec
+              // using `: Any` to avoid "ambiguous reference to overloaded definition"
               context.log.debug("{} {}", "arg1", "arg2": Any)
               context.log.debug("{} {} {}", "arg1", "arg2", "arg3")
               context.log.debug(marker, "message")
@@ -236,7 +236,7 @@ class ActorLoggingSpec extends ScalaTestWithActorTestKit("""
               context.log.error("{}", "arg1")
               context.log.error("{} {}", "arg1", "arg2": Any)
               context.log.error("{} {} {}", "arg1", "arg2", "arg3")
-              // using to avoid vararg problem for primitive type, see also LoggerOpsSpec
+              // using to avoid vararg problem for primitive type
               context.log.error("{} {} {}", "arg1", "arg2", 3.asInstanceOf[AnyRef])
               context.log.error(marker, "message")
               context.log.error(marker, "{}", "arg1")
