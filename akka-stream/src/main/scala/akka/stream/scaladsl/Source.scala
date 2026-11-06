@@ -334,16 +334,6 @@ object Source {
     Source.fromGraph(new SetupSourceStage(factory))
 
   /**
-   * Defers the creation of a [[Source]] until materialization. The `factory` function
-   * exposes [[ActorMaterializer]] which is going to be used during materialization and
-   * [[Attributes]] of the [[Source]] returned by this method.
-   */
-  @deprecated("Use 'fromMaterializer' instead", "2.6.0")
-  def setup[T, M](factory: (ActorMaterializer, Attributes) => Source[T, M]): Source[T, Future[M]] =
-    Source.fromGraph(new SetupSourceStage((materializer, attributes) =>
-      factory(ActorMaterializerHelper.downcast(materializer), attributes)))
-
-  /**
    * Helper to create [[Source]] from `Iterable`.
    * Example usage: `Source(Seq(1,2,3))`
    *
@@ -364,46 +354,6 @@ object Source {
         }
       case _ => fromGraph(new IterableSource[T](iterable))
     }
-
-  /**
-   * Starts a new `Source` from the given `Future`. The stream will consist of
-   * one element when the `Future` is completed with a successful value, which
-   * may happen before or after materializing the `Flow`.
-   * The stream terminates with a failure if the `Future` is completed with a failure.
-   */
-  @deprecated("Use 'Source.future' instead", "2.6.0")
-  def fromFuture[T](future: Future[T]): Source[T, NotUsed] =
-    fromGraph(new FutureSource(future))
-
-  /**
-   * Starts a new `Source` from the given `Future`. The stream will consist of
-   * one element when the `Future` is completed with a successful value, which
-   * may happen before or after materializing the `Flow`.
-   * The stream terminates with a failure if the `Future` is completed with a failure.
-   */
-  @deprecated("Use 'Source.completionStage' instead", "2.6.0")
-  def fromCompletionStage[T](future: CompletionStage[T]): Source[T, NotUsed] =
-    fromGraph(new FutureSource(future.asScala))
-
-  /**
-   * Streams the elements of the given future source once it successfully completes.
-   * If the [[Future]] fails the stream is failed with the exception from the future. If downstream cancels before the
-   * stream completes the materialized `Future` will be failed with a [[StreamDetachedException]]
-   */
-  @deprecated("Use 'Source.futureSource' (potentially together with `Source.fromGraph`) instead", "2.6.0")
-  def fromFutureSource[T, M](future: Future[Graph[SourceShape[T], M]]): Source[T, Future[M]] =
-    fromGraph(new FutureFlattenSource(future))
-
-  /**
-   * Streams the elements of an asynchronous source once its given `completion` operator completes.
-   * If the [[CompletionStage]] fails the stream is failed with the exception from the future.
-   * If downstream cancels before the stream completes the materialized `Future` will be failed
-   * with a [[StreamDetachedException]]
-   */
-  @deprecated("Use scala-compat CompletionStage to future converter and 'Source.futureSource' instead", "2.6.0")
-  def fromSourceCompletionStage[T, M](
-      completion: CompletionStage[_ <: Graph[SourceShape[T], M]]): Source[T, CompletionStage[M]] =
-    fromFutureSource(completion.asScala).mapMaterializedValue(_.asJava)
 
   /**
    * Elements are emitted periodically with the specified interval.
@@ -489,26 +439,6 @@ object Source {
    */
   def failed[T](cause: Throwable): Source[T, NotUsed] =
     Source.fromGraph(new FailedSource[T](cause))
-
-  /**
-   * Creates a `Source` that is not materialized until there is downstream demand, when the source gets materialized
-   * the materialized future is completed with its value, if downstream cancels or fails without any demand the
-   * create factory is never called and the materialized `Future` is failed.
-   */
-  @deprecated("Use 'Source.lazySource' instead", "2.6.0")
-  def lazily[T, M](create: () => Source[T, M]): Source[T, Future[M]] =
-    Source.fromGraph(new LazySource[T, M](create))
-
-  /**
-   * Creates a `Source` from supplied future factory that is not called until downstream demand. When source gets
-   * materialized the materialized future is completed with the value from the factory. If downstream cancels or fails
-   * without any demand the create factory is never called and the materialized `Future` is failed.
-   *
-   * @see [[Source.lazily]]
-   */
-  @deprecated("Use 'Source.lazyFuture' instead", "2.6.0")
-  def lazilyAsync[T](create: () => Future[T]): Source[T, Future[NotUsed]] =
-    lazily(() => fromFuture(create()))
 
   /**
    * Emits a single value when the given `Future` is successfully completed and then completes the stream.
@@ -669,48 +599,6 @@ object Source {
   }
 
   /**
-   * Creates a `Source` that is materialized as an [[akka.actor.ActorRef]].
-   * Messages sent to this actor will be emitted to the stream if there is demand from downstream,
-   * otherwise they will be buffered until request for demand is received.
-   *
-   * Depending on the defined [[akka.stream.OverflowStrategy]] it might drop elements if
-   * there is no space available in the buffer.
-   *
-   * The strategy [[akka.stream.OverflowStrategy.backpressure]] is not supported, and an
-   * IllegalArgument("Backpressure overflowStrategy not supported") will be thrown if it is passed as argument.
-   *
-   * The buffer can be disabled by using `bufferSize` of 0 and then received messages are dropped if there is no demand
-   * from downstream. When `bufferSize` is 0 the `overflowStrategy` does not matter.
-   *
-   * The stream can be completed successfully by sending the actor reference a [[akka.actor.Status.Success]].
-   * If the content is [[akka.stream.CompletionStrategy.immediately]] the completion will be signaled immediately.
-   * Otherwise, if the content is [[akka.stream.CompletionStrategy.draining]] (or anything else)
-   * already buffered elements will be sent out before signaling completion.
-   * Using [[akka.actor.PoisonPill]] or [[akka.actor.ActorSystem.stop]] to stop the actor and complete the stream is *not supported*.
-   *
-   * The stream can be completed with failure by sending a [[akka.actor.Status.Failure]] to the
-   * actor reference. In case the Actor is still draining its internal buffer (after having received
-   * a [[akka.actor.Status.Success]]) before signaling completion and it receives a [[akka.actor.Status.Failure]],
-   * the failure will be signaled downstream immediately (instead of the completion signal).
-   *
-   * The actor will be stopped when the stream is canceled from downstream,
-   * i.e. you can watch it to get notified when that happens.
-   *
-   * See also [[akka.stream.scaladsl.Source.queue]].
-   *
-   *
-   * @param bufferSize The size of the buffer in element count
-   * @param overflowStrategy Strategy that is used when incoming elements cannot fit inside the buffer
-   */
-  @deprecated("Use variant accepting completion and failure matchers instead", "2.6.0")
-  def actorRef[T](bufferSize: Int, overflowStrategy: OverflowStrategy): Source[T, ActorRef] =
-    actorRef({
-      case akka.actor.Status.Success(s: CompletionStrategy) => s
-      case akka.actor.Status.Success(_)                     => CompletionStrategy.Draining
-      case akka.actor.Status.Success                        => CompletionStrategy.Draining
-    }, { case akka.actor.Status.Failure(cause)              => cause }, bufferSize, overflowStrategy)
-
-  /**
    * INTERNAL API
    */
   @InternalApi private[akka] def actorRefWithAck[T](
@@ -741,33 +629,6 @@ object Source {
       failureMatcher: PartialFunction[Any, Throwable]): Source[T, ActorRef] = {
     Source.fromGraph(new ActorRefBackpressureSource(None, ackMessage, completionMatcher, failureMatcher))
   }
-
-  /**
-   * Creates a `Source` that is materialized as an [[akka.actor.ActorRef]].
-   * Messages sent to this actor will be emitted to the stream if there is demand from downstream,
-   * and a new message will only be accepted after the previous messages has been consumed and acknowledged back.
-   * The stream will complete with failure if a message is sent before the acknowledgement has been replied back.
-   *
-   * The stream can be completed successfully by sending the actor reference a [[akka.actor.Status.Success]].
-   * If the content is [[akka.stream.CompletionStrategy.immediately]] the completion will be signaled immediately,
-   * otherwise if the content is [[akka.stream.CompletionStrategy.draining]] (or anything else)
-   * already buffered element will be signaled before signaling completion.
-   *
-   * The stream can be completed with failure by sending a [[akka.actor.Status.Failure]] to the
-   * actor reference. In case the Actor is still draining its internal buffer (after having received
-   * a [[akka.actor.Status.Success]]) before signaling completion and it receives a [[akka.actor.Status.Failure]],
-   * the failure will be signaled downstream immediately (instead of the completion signal).
-   *
-   * The actor will be stopped when the stream is completed, failed or canceled from downstream,
-   * i.e. you can watch it to get notified when that happens.
-   */
-  @deprecated("Use actorRefWithBackpressure accepting completion and failure matchers instead", "2.6.0")
-  def actorRefWithAck[T](ackMessage: Any): Source[T, ActorRef] =
-    actorRefWithAck(None, ackMessage, {
-      case akka.actor.Status.Success(s: CompletionStrategy) => s
-      case akka.actor.Status.Success(_)                     => CompletionStrategy.Draining
-      case akka.actor.Status.Success                        => CompletionStrategy.Draining
-    }, { case akka.actor.Status.Failure(cause)              => cause })
 
   /**
    * Combines several sources with fan-in strategy like [[Merge]] or [[Concat]] into a single [[Source]].

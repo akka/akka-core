@@ -8,7 +8,6 @@ import java.net.URLEncoder
 import java.time.Duration
 import java.util.Optional
 
-import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.jdk.DurationConverters._
 import scala.jdk.OptionConverters._
@@ -43,28 +42,10 @@ import akka.util.LineNumbers
 final class Attributes private[akka] (
     val attributeList: List[Attributes.Attribute],
     private val mandatoryAttributes: Map[Class[AnyRef], Attributes.MandatoryAttribute])
-    extends scala.Product
-    with scala.Serializable
+    extends scala.Serializable
     with scala.Equals {
 
   import Attributes._
-
-  // for binary compatibility
-  @deprecated("Use factories on companion object instead", since = "2.8.0")
-  def this(attributeList: List[Attributes.Attribute] = Nil) =
-    this(
-      attributeList,
-      (attributeList.reverseIterator
-        .foldLeft(Map.newBuilder[Class[AnyRef], Attributes.MandatoryAttribute]) {
-          case (builder, attribute) =>
-            attribute match {
-              case m: Attributes.MandatoryAttribute =>
-                builder += (m.getClass.asInstanceOf[Class[AnyRef]] -> m)
-                builder
-              case _ => builder
-            }
-        })
-        .result())
 
   /**
    * Note that this must only be used during traversal building and not during materialization
@@ -300,21 +281,6 @@ final class Attributes private[akka] (
     attributeList.reverseIterator.collectFirst { case attr if c.isInstance(attr) => c.cast(attr) }
   }
 
-  // for binary compatibility (used to be a case class)
-
-  @deprecated("Use explicit methods on Attributes to interact, not the ones provided by Product", "2.8.0")
-  override def productArity: Int = 1
-
-  @deprecated("Use explicit methods on Attributes to interact, not the ones provided by Product", "2.8.0")
-  override def productElement(n: Int): Any = n match {
-    case 0 => attributeList
-    case _ => throw new IllegalArgumentException()
-  }
-
-  @deprecated("Don't use copy on Attributes", "2.8.0")
-  def copy(attributeList: List[Attribute] = attributeList): Attributes =
-    new Attributes(attributeList)
-
   override def canEqual(that: Any): Boolean = that.isInstanceOf[Attributes]
 
   override def equals(other: Any): Boolean = other match {
@@ -347,14 +313,20 @@ object Attributes {
 
   def apply(): Attributes = new Attributes(Nil, Map.empty)
 
-  @nowarn("msg=deprecated")
-  def apply(attributeList: List[Attribute] = Nil) = new Attributes(attributeList)
-
-  // for binary compatibility
-
-  @deprecated("Use explicit methods on Attributes to interact, not the synthetic case class ones", "2.8.0")
-  def unapply(attrs: Attributes): Option[(List[Attribute])] =
-    Some(attrs.attributeList)
+  def apply(attributeList: List[Attribute] = Nil): Attributes =
+    new Attributes(
+      attributeList,
+      attributeList.reverseIterator
+        .foldLeft(Map.newBuilder[Class[AnyRef], Attributes.MandatoryAttribute]) {
+          case (builder, attribute) =>
+            attribute match {
+              case m: Attributes.MandatoryAttribute =>
+                builder += (m.getClass.asInstanceOf[Class[AnyRef]] -> m)
+                builder
+              case _ => builder
+            }
+        }
+        .result())
 
   final case class Name(n: String) extends Attribute
 

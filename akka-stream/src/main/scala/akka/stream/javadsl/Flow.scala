@@ -80,16 +80,6 @@ object Flow {
     scaladsl.Flow.fromMaterializer((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.asJava).asJava
 
   /**
-   * Defers the creation of a [[Flow]] until materialization. The `factory` function
-   * exposes [[ActorMaterializer]] which is going to be used during materialization and
-   * [[Attributes]] of the [[Flow]] returned by this method.
-   */
-  @deprecated("Use 'fromMaterializer' instead", "2.6.0")
-  def setup[I, O, M](
-      factory: BiFunction[ActorMaterializer, Attributes, Flow[I, O, M]]): Flow[I, O, CompletionStage[M]] =
-    scaladsl.Flow.setup((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.asJava).asJava
-
-  /**
    * Creates a `Flow` from a `Sink` and a `Source` where the Flow's input
    * will be sent to the Sink and the Flow's output will come from the Source.
    *
@@ -241,60 +231,6 @@ object Flow {
       source: Graph[SourceShape[O], M2],
       combine: function.Function2[M1, M2, M]): Flow[I, O, M] =
     new Flow(scaladsl.Flow.fromSinkAndSourceCoupledMat(sink, source)(combinerToScala(combine)))
-
-  /**
-   * Creates a real `Flow` upon receiving the first element. Internal `Flow` will not be created
-   * if there are no elements, because of completion, cancellation, or error.
-   *
-   * The materialized value of the `Flow` is the value that is created by the `fallback` function.
-   *
-   * '''Emits when''' the internal flow is successfully created and it emits
-   *
-   * '''Backpressures when''' the internal flow is successfully created and it backpressures
-   *
-   * '''Completes when''' upstream completes and all elements have been emitted from the internal flow
-   *
-   * '''Cancels when''' downstream cancels
-   */
-  @deprecated(
-    "Use 'Flow.completionStageFlow' in combination with prefixAndTail(1) instead, see `completionStageFlow` operator docs for details",
-    "2.6.0")
-  def lazyInit[I, O, M](
-      flowFactory: function.Function[I, CompletionStage[Flow[I, O, M]]],
-      fallback: function.Creator[M]): Flow[I, O, M] = {
-    import scala.jdk.FutureConverters._
-    val sflow = scaladsl.Flow
-      .lazyInit((flowFactory.apply(_)).andThen(_.asScala.map(_.asScala)(ExecutionContext.parasitic)), fallback.create _)
-    new Flow(sflow)
-  }
-
-  /**
-   * Creates a real `Flow` upon receiving the first element. Internal `Flow` will not be created
-   * if there are no elements, because of completion, cancellation, or error.
-   *
-   * The materialized value of the `Flow` is a `Future[Option[M]]` that is completed with `Some(mat)` when the internal
-   * flow gets materialized or with `None` when there where no elements. If the flow materialization (including
-   * the call of the `flowFactory`) fails then the future is completed with a failure.
-   *
-   * '''Emits when''' the internal flow is successfully created and it emits
-   *
-   * '''Backpressures when''' the internal flow is successfully created and it backpressures
-   *
-   * '''Completes when''' upstream completes and all elements have been emitted from the internal flow
-   *
-   * '''Cancels when''' downstream cancels
-   */
-  @deprecated("Use 'Flow.lazyCompletionStageFlow' instead", "2.6.0")
-  def lazyInitAsync[I, O, M](
-      flowFactory: function.Creator[CompletionStage[Flow[I, O, M]]]): Flow[I, O, CompletionStage[Optional[M]]] = {
-    import scala.jdk.FutureConverters._
-
-    val sflow = scaladsl.Flow
-      .lazyInitAsync(() => flowFactory.create().asScala.map(_.asScala)(ExecutionContext.parasitic))
-      .mapMaterializedValue(fut =>
-        fut.map(_.fold[Optional[M]](Optional.empty())(m => Optional.ofNullable(m)))(ExecutionContext.parasitic).asJava)
-    new Flow(sflow)
-  }
 
   /**
    * Turn a `CompletionStage<Flow>` into a flow that will consume the values of the source when the future completes successfully.

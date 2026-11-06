@@ -1793,66 +1793,6 @@ abstract class TimerGraphStageLogic(_shape: Shape) extends GraphStageLogic(_shap
   }
 
   /**
-   * Schedule timer to call [[#onTimer]] periodically with the given interval after the specified
-   * initial delay.
-   * Any existing timer with the same key will automatically be canceled before
-   * adding the new timer.
-   */
-  @deprecated(
-    "Use scheduleWithFixedDelay or scheduleAtFixedRate instead. This has the same semantics as " +
-    "scheduleAtFixedRate, but scheduleWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  final protected def schedulePeriodicallyWithInitialDelay(
-      timerKey: Any,
-      initialDelay: FiniteDuration,
-      interval: FiniteDuration): Unit =
-    scheduleAtFixedRate(timerKey, initialDelay, interval)
-
-  /**
-   * Schedule timer to call [[#onTimer]] periodically with the given interval after the specified
-   * initial delay.
-   * Any existing timer with the same key will automatically be canceled before
-   * adding the new timer.
-   */
-  @deprecated(
-    "Use scheduleWithFixedDelay or scheduleAtFixedRate instead. This has the same semantics as " +
-    "scheduleAtFixedRate, but scheduleWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  final protected def schedulePeriodicallyWithInitialDelay(
-      timerKey: Any,
-      initialDelay: java.time.Duration,
-      interval: java.time.Duration): Unit = {
-    import scala.jdk.DurationConverters._
-    schedulePeriodicallyWithInitialDelay(timerKey, initialDelay.toScala, interval.toScala)
-  }
-
-  /**
-   * Schedule timer to call [[#onTimer]] periodically with the given interval.
-   * Any existing timer with the same key will automatically be canceled before
-   * adding the new timer.
-   */
-  @deprecated(
-    "Use scheduleWithFixedDelay or scheduleAtFixedRate instead. This has the same semantics as " +
-    "scheduleAtFixedRate, but scheduleWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  final protected def schedulePeriodically(timerKey: Any, interval: FiniteDuration): Unit =
-    schedulePeriodicallyWithInitialDelay(timerKey, interval, interval)
-
-  /**
-   * Schedule timer to call [[#onTimer]] periodically with the given interval.
-   * Any existing timer with the same key will automatically be canceled before
-   * adding the new timer.
-   */
-  @deprecated(
-    "Use scheduleWithFixedDelay or scheduleAtFixedRate instead. This has the same semantics as " +
-    "scheduleAtFixedRate, but scheduleWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  final protected def schedulePeriodically(timerKey: Any, interval: java.time.Duration): Unit = {
-    import scala.jdk.DurationConverters._
-    schedulePeriodically(timerKey, interval.toScala)
-  }
-
-  /**
    * Cancel timer, ensuring that the [[#onTimer]] is not subsequently called.
    *
    * @param timerKey key of the timer to cancel
