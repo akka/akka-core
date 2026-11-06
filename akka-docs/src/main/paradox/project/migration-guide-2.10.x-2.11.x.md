@@ -15,6 +15,11 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 
 * `LoggingTestKit.intercept` (scaladsl): use `expect` instead.
 
+### akka-actor-typed
+
+* `akka.actor.typed.scaladsl.LoggerOps`: not needed in Scala 2.13 and later, use the `org.slf4j.Logger` methods directly.
+* `TimerScheduler.startPeriodicTimer` (scaladsl and javadsl): use `startTimerWithFixedDelay` or `startTimerAtFixedRate` instead. `startPeriodicTimer` had the same semantics as `startTimerAtFixedRate`, but `startTimerWithFixedDelay` is often preferred.
+
 ### akka-cluster-sharding-typed
 
 * The deprecated `ClusterShardingSettings` constructors: use `ClusterShardingSettings(system)` or `ClusterShardingSettings.create(system)` with the `with*` methods, or the full constructor.
