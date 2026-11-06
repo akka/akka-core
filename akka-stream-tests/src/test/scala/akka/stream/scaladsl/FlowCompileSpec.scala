@@ -20,7 +20,7 @@ class FlowCompileSpec extends StreamSpec {
   val strSeq = Source(Seq("a", "b", "c"))
 
   import scala.concurrent.ExecutionContext.Implicits.global
-  val intFut = Source.fromFuture(Future { 3 })
+  val intFut = Source.future(Future { 3 })
 
   "Flow" should {
     "not run" in {
