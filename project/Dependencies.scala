@@ -148,10 +148,6 @@ object Dependencies {
 
     val activation = "com.sun.activation" % "javax.activation" % "1.2.0" % "provided;test"
 
-    val levelDB = "org.iq80.leveldb" % "leveldb" % "0.12" % "optional;provided" // ApacheV2
-    val levelDBmultiJVM = "org.iq80.leveldb" % "leveldb" % "0.12" % "optional;provided;multi-jvm;test" // ApacheV2
-    val levelDBNative = "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8" % "optional;provided" // New BSD
-
     val junit = Compile.junit % "optional;provided;test"
 
     val scalatest = "org.scalatest" %% "scalatest" % scalaTestVersion % "optional;provided;test" // ApacheV2
@@ -227,8 +223,6 @@ object Dependencies {
   val clusterTools = l ++= Seq(TestDependencies.junit, TestDependencies.scalatest)
 
   val clusterSharding = l ++= Seq(
-        Provided.levelDBmultiJVM,
-        Provided.levelDBNative,
         TestDependencies.junit,
         TestDependencies.scalatest,
         TestDependencies.commonsIo,
@@ -246,32 +240,23 @@ object Dependencies {
   val slf4j = l ++= Seq(slf4jApi, TestDependencies.logback)
 
   val persistence = l ++= Seq(
-        Provided.levelDB,
-        Provided.levelDBNative,
         TestDependencies.scalatest,
         TestDependencies.scalatestJUnit,
         TestDependencies.junit,
         TestDependencies.commonsIo,
         TestDependencies.commonsCodec)
 
-  val persistenceQuery = l ++= Seq(
-        TestDependencies.scalatest,
-        TestDependencies.junit,
-        TestDependencies.commonsIo,
-        Provided.levelDB,
-        Provided.levelDBNative)
+  val persistenceQuery = l ++= Seq(TestDependencies.scalatest, TestDependencies.junit, TestDependencies.commonsIo)
 
   val persistenceTck = l ++= Seq(
         TestDependencies.scalatest.withConfigurations(Some("compile")),
-        TestDependencies.junit.withConfigurations(Some("compile")),
-        Provided.levelDB,
-        Provided.levelDBNative)
+        TestDependencies.junit.withConfigurations(Some("compile")))
 
   val persistenceTestKit = l ++= Seq(TestDependencies.scalatest, TestDependencies.logback)
 
   val persistenceTypedTests = l ++= Seq(TestDependencies.scalatest, TestDependencies.logback)
 
-  val persistenceShared = l ++= Seq(Provided.levelDB, Provided.levelDBNative, TestDependencies.logback)
+  val persistenceShared = l ++= Seq(TestDependencies.logback)
 
   val jackson = l ++= Seq(
         jacksonCore,
@@ -287,9 +272,9 @@ object Dependencies {
         TestDependencies.junit,
         TestDependencies.scalatest)
 
-  val docs = l ++= Seq(TestDependencies.scalatest, TestDependencies.junit, Docs.sprayJson, Docs.gson, Provided.levelDB)
+  val docs = l ++= Seq(TestDependencies.scalatest, TestDependencies.junit, Docs.sprayJson, Docs.gson)
 
-  val benchJmh = l ++= Seq(logback, Provided.levelDB, Provided.levelDBNative, Compile.jctools)
+  val benchJmh = l ++= Seq(logback, Compile.jctools)
 
   // akka stream
 

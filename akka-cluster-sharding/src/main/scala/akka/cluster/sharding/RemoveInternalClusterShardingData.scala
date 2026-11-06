@@ -4,7 +4,6 @@
 
 package akka.cluster.sharding
 
-import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Failure
@@ -19,8 +18,6 @@ import akka.actor.Deploy
 import akka.actor.Props
 import akka.actor.Terminated
 import akka.persistence._
-import akka.persistence.journal.leveldb.SharedLeveldbJournal
-import akka.persistence.journal.leveldb.SharedLeveldbStore
 
 /**
  * Utility program that removes the internal data stored with Akka Persistence
@@ -87,15 +84,6 @@ object RemoveInternalClusterShardingData {
       journalPluginId: String,
       typeNames: Set[String],
       remove2dot3Data: Boolean): Future[Unit] = {
-
-    val resolvedJournalPluginId =
-      if (journalPluginId == "") system.settings.config.getString("akka.persistence.journal.plugin")
-      else journalPluginId
-    if (resolvedJournalPluginId == "akka.persistence.journal.leveldb-shared") {
-      @nowarn("msg=deprecated")
-      val store = system.actorOf(Props(new SharedLeveldbStore), "store")
-      SharedLeveldbJournal.setStore(store, system)
-    }
 
     val completion = Promise[Unit]()
     system.actorOf(

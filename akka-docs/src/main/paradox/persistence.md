@@ -830,33 +830,10 @@ to the application configuration. If not specified, an exception will be throw w
 
 For more advanced schema evolution techniques refer to the @ref:[Persistence - Schema Evolution](persistence-schema-evolution.md) documentation.
 
-## Testing with LevelDB journal
+## Testing
 
-The LevelDB journal is deprecated and will be removed from a future Akka version, it is not advised to build new applications 
-with it. For testing the built in "inmem" journal or the actual journal that will be used in production of the application 
+For testing the built in "inmem" journal or the actual journal that will be used in production of the application 
 is recommended. See @ref[Persistence Plugins](persistence-plugins.md) for some journal implementation choices.
-
-When running tests with LevelDB default settings in `sbt`, make sure to set `fork := true` in your sbt project. Otherwise, you'll see an @javadoc[UnsatisfiedLinkError](java.lang.UnsatisfiedLinkError). Alternatively, you can switch to a LevelDB Java port by setting
-
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #native-config }
-
-or
-
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #shared-store-native-config }
-
-in your Akka configuration. Also note that for the LevelDB Java port, you will need the following dependencies:
-
-@@dependency[sbt,Maven,Gradle] {
-  group="org.iq80.leveldb"
-  artifact="leveldb"
-  version="0.9"
-}
-
-@@@ note { title="Java 17" }
-
-When using LevelDB with Java 17 you have to add JVM flag `--add-opens=java.base/java.nio=ALL-UNNAMED`. 
-
-@@@
 
 @@@ warning
 

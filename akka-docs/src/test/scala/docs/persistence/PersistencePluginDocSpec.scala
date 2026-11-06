@@ -10,7 +10,6 @@ import akka.testkit.TestKit
 import com.typesafe.config._
 import org.scalatest.wordspec.AnyWordSpec
 
-import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.util.Try
 import scala.concurrent.duration._
@@ -25,40 +24,17 @@ import akka.persistence.snapshot._
 object PersistencePluginDocSpec {
   val config =
     """
-      //#leveldb-plugin-config
       # Path to the journal plugin to be used
-      akka.persistence.journal.plugin = "akka.persistence.journal.leveldb"
-      //#leveldb-plugin-config
+      akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
 
-      //#leveldb-snapshot-plugin-config
+      //#local-snapshot-plugin-config
       # Path to the snapshot store plugin to be used
       akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
-      //#leveldb-snapshot-plugin-config
+      //#local-snapshot-plugin-config
 
-      //#max-message-batch-size
-      akka.persistence.journal.leveldb.max-message-batch-size = 200
-      //#max-message-batch-size
-      //#journal-config
-      akka.persistence.journal.leveldb.dir = "target/journal"
-      //#journal-config
       //#snapshot-config
       akka.persistence.snapshot-store.local.dir = "target/snapshots"
       //#snapshot-config
-      //#native-config
-      akka.persistence.journal.leveldb.native = off
-      //#native-config
-
-      //#compaction-intervals-config
-      # Number of deleted messages per persistence id that will trigger journal compaction
-      akka.persistence.journal.leveldb.compaction-intervals {
-        persistence-id-1 = 100
-        persistence-id-2 = 200
-        # ...
-        persistence-id-N = 1000
-        # use wildcards to match unspecified persistence ids, if any
-        "*" = 250
-      }
-      //#compaction-intervals-config
     """
 }
 
@@ -103,55 +79,6 @@ class PersistencePluginDocSpec extends AnyWordSpec {
     } finally {
       TestKit.shutdownActorSystem(system, 10.seconds, false)
     }
-  }
-}
-
-object SharedLeveldbPluginDocSpec {
-  import akka.actor._
-  import akka.persistence.journal.leveldb.SharedLeveldbJournal
-
-  val config =
-    """
-      //#shared-journal-config
-      akka.persistence.journal.plugin = "akka.persistence.journal.leveldb-shared"
-      //#shared-journal-config
-      //#shared-store-native-config
-      akka.persistence.journal.leveldb-shared.store.native = off
-      //#shared-store-native-config
-      //#shared-store-config
-      akka.persistence.journal.leveldb-shared.store.dir = "target/shared"
-      //#shared-store-config
-      //#event-adapter-config
-      akka.persistence.journal.leveldb-shared.adapter = "com.example.MyAdapter"
-      //#event-adapter-config
-    """
-
-  //#shared-store-usage
-  trait SharedStoreUsage extends Actor {
-    override def preStart(): Unit = {
-      context.actorSelection("akka://example@127.0.0.1:2552/user/store") ! Identify(1)
-    }
-
-    def receive = {
-      case ActorIdentity(1, Some(store)) =>
-        SharedLeveldbJournal.setStore(store, context.system)
-    }
-  }
-  //#shared-store-usage
-}
-
-@nowarn("msg=deprecated")
-@nowarn("msg=never used") // sample snippets
-trait SharedLeveldbPluginDocSpec {
-  val system: ActorSystem
-
-  {
-    import akka.actor._
-    //#shared-store-creation
-    import akka.persistence.journal.leveldb.SharedLeveldbStore
-
-    val store = system.actorOf(Props[SharedLeveldbStore](), "store")
-    //#shared-store-creation
   }
 }
 
@@ -219,7 +146,7 @@ object PersistenceTCKDoc {
     import java.io.File
 
     import akka.persistence.journal.JournalSpec
-    import org.iq80.leveldb.util.FileUtils
+    import org.apache.commons.io.FileUtils
 
     //#journal-tck-before-after-scala
     class MyJournalSpec
@@ -231,16 +158,16 @@ object PersistenceTCKDoc {
         true // or CapabilityFlag.on
 
       val storageLocations = List(
-        new File(system.settings.config.getString("akka.persistence.journal.leveldb.dir")),
+        new File(system.settings.config.getString("my.journal.plugin.dir")),
         new File(config.getString("akka.persistence.snapshot-store.local.dir")))
 
       override def beforeAll(): Unit = {
         super.beforeAll()
-        storageLocations.foreach(FileUtils.deleteRecursively)
+        storageLocations.foreach(FileUtils.deleteDirectory)
       }
 
       override def afterAll(): Unit = {
-        storageLocations.foreach(FileUtils.deleteRecursively)
+        storageLocations.foreach(FileUtils.deleteDirectory)
         super.afterAll()
       }
 

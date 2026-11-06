@@ -6,8 +6,6 @@ package akka.persistence
 
 import akka.persistence.journal.PersistencePluginProxy
 import akka.persistence.journal.inmem.InmemJournal
-import akka.persistence.journal.leveldb.LeveldbStore
-import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import akka.persistence.snapshot.NoSnapshotStore
 import akka.persistence.snapshot.local.LocalSnapshotStore
 import akka.testkit.internal.NativeImageUtils
@@ -33,14 +31,6 @@ object NativeImageMetadataSpec {
     // akka.persistence.snapshot-store.local.class
     ReflectConfigEntry(
       classOf[LocalSnapshotStore].getName,
-      methods = Seq(ReflectMethod(Constructor, parameterTypes = Seq(classOf[Config].getName)))),
-    // akka.persistence.journal.leveldb.class
-    ReflectConfigEntry(
-      classOf[LeveldbStore].getName,
-      methods = Seq(ReflectMethod(Constructor, parameterTypes = Seq(classOf[Config].getName)))),
-    // akka.persistence.journal.leveldb-shared.class
-    ReflectConfigEntry(
-      classOf[SharedLeveldbJournal].getName,
       methods = Seq(ReflectMethod(Constructor, parameterTypes = Seq(classOf[Config].getName)))),
     // akka.persistence.journal.proxy.class and akka.persistence.snapshot-store.proxy.class
     ReflectConfigEntry(

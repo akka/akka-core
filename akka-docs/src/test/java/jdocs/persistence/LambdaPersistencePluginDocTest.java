@@ -11,10 +11,6 @@ import akka.persistence.journal.japi.*;
 import akka.persistence.snapshot.japi.*;
 // #plugin-imports
 
-import akka.actor.*;
-import akka.persistence.journal.leveldb.SharedLeveldbJournal;
-import akka.persistence.journal.leveldb.SharedLeveldbStore;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.io.File;
@@ -25,50 +21,13 @@ import org.junit.runner.RunWith;
 import org.scalatestplus.junit.JUnitRunner;
 import scala.concurrent.Future;
 import java.util.function.Consumer;
-import org.iq80.leveldb.util.FileUtils;
+import org.apache.commons.io.FileUtils;
 import java.util.Optional;
 
 import akka.persistence.japi.journal.JavaJournalSpec;
 import akka.persistence.japi.snapshot.JavaSnapshotStoreSpec;
 
 public class LambdaPersistencePluginDocTest {
-
-  static Object o1 =
-      new Object() {
-        final ActorSystem system = null;
-        // #shared-store-creation
-        final ActorRef store = system.actorOf(Props.create(SharedLeveldbStore.class), "store");
-        // #shared-store-creation
-
-        // #shared-store-usage
-        class SharedStorageUsage extends AbstractActor {
-          @Override
-          public void preStart() throws Exception {
-            String path = "akka://example@127.0.0.1:2552/user/store";
-            ActorSelection selection = getContext().actorSelection(path);
-            selection.tell(new Identify(1), getSelf());
-          }
-
-          @Override
-          public Receive createReceive() {
-            return receiveBuilder()
-                .match(
-                    ActorIdentity.class,
-                    ai -> {
-                      if (ai.correlationId().equals(1)) {
-                        Optional<ActorRef> store = ai.getActorRef();
-                        if (store.isPresent()) {
-                          SharedLeveldbJournal.setStore(store.get(), getContext().getSystem());
-                        } else {
-                          throw new RuntimeException("Couldn't identify store");
-                        }
-                      }
-                    })
-                .build();
-          }
-        }
-        // #shared-store-usage
-      };
 
   class MySnapshotStore extends SnapshotStore {
     @Override
@@ -137,10 +96,7 @@ public class LambdaPersistencePluginDocTest {
         class MyJournalSpecTest extends JavaJournalSpec {
 
           public MyJournalSpecTest() {
-            super(
-                ConfigFactory.parseString(
-                    "akka.persistence.journal.plugin = "
-                        + "\"akka.persistence.journal.leveldb-shared\""));
+            super(ConfigFactory.parseString("akka.persistence.journal.plugin = \"my.journal.plugin\""));
           }
 
           @Override
@@ -177,14 +133,10 @@ public class LambdaPersistencePluginDocTest {
           List<File> storageLocations = new ArrayList<File>();
 
           public MyJournalSpecTest() {
-            super(
-                ConfigFactory.parseString(
-                    "persistence.journal.plugin = "
-                        + "\"akka.persistence.journal.leveldb-shared\""));
+            super(ConfigFactory.parseString("akka.persistence.journal.plugin = \"my.journal.plugin\""));
 
             Config config = system().settings().config();
-            storageLocations.add(
-                new File(config.getString("akka.persistence.journal.leveldb.dir")));
+            storageLocations.add(new File(config.getString("my.journal.plugin.dir")));
             storageLocations.add(
                 new File(config.getString("akka.persistence.snapshot-store.local.dir")));
           }
@@ -197,7 +149,7 @@ public class LambdaPersistencePluginDocTest {
           @Override
           public void beforeAll() {
             for (File storageLocation : storageLocations) {
-              FileUtils.deleteRecursively(storageLocation);
+              FileUtils.deleteQuietly(storageLocation);
             }
             super.beforeAll();
           }
@@ -206,7 +158,7 @@ public class LambdaPersistencePluginDocTest {
           public void afterAll() {
             super.afterAll();
             for (File storageLocation : storageLocations) {
-              FileUtils.deleteRecursively(storageLocation);
+              FileUtils.deleteQuietly(storageLocation);
             }
           }
         }

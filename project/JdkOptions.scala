@@ -32,7 +32,7 @@ object JdkOptions extends AutoPlugin {
     if (isJdk17orHigher) {
       // for aeron
       "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED" ::
-      // for LevelDB
+      // for LMDB
       "--add-opens=java.base/java.nio=ALL-UNNAMED" :: Nil
     } else Nil
 

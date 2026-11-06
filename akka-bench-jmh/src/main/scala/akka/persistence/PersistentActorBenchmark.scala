@@ -20,13 +20,10 @@ import akka.testkit.TestProbe
 @BenchmarkMode(Array(Mode.Throughput))
 class PersistentActorThroughputBenchmark {
 
-  val config = PersistenceSpec.config("leveldb", "benchmark")
+  val config = PersistenceSpec.config("inmem", "benchmark")
 
   lazy val storageLocations =
-    List(
-      "akka.persistence.journal.leveldb.dir",
-      "akka.persistence.journal.leveldb-shared.store.dir",
-      "akka.persistence.snapshot-store.local.dir").map(s => new File(system.settings.config.getString(s)))
+    List("akka.persistence.snapshot-store.local.dir").map(s => new File(system.settings.config.getString(s)))
 
   var system: ActorSystem = _
 

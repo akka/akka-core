@@ -19,7 +19,7 @@ The following features and aspects are not currently supported out of the box:
 * Lightbend Telemetry
 * Aeron UDP remoting
 * Testkits
-* LevelDB and InMem Akka Persistence plugins
+* InMem Akka Persistence plugin
 * @ref[Durable storage](../typed/distributed-data.md#durable-storage) for Akka Distributed Data
 * Scala 3
 
