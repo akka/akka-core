@@ -1,4 +1,4 @@
-# Remove APIs deprecated before 2.10
+# Removed APIs deprecated in 2.10.0 or earlier
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.testkit.scaladsl.TestSink.probe")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.testkit.scaladsl.TestSource.probe")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.testkit.javadsl.TestSink.probe")
