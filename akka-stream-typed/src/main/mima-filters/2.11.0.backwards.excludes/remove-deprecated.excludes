@@ -1,0 +1,3 @@
+# Remove APIs deprecated before 2.10
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.typed.scaladsl.ActorSource.actorRefWithAck")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.typed.javadsl.ActorSource.actorRefWithAck")
