@@ -23,11 +23,6 @@
     "parameterTypes" : [ "java.lang.String", "akka.actor.ActorSystem$Settings", "akka.event.EventStream", "akka.actor.DynamicAccess" ]
   } ]
 }, {
-  "name" : "akka.remote.AddressUidExtension$",
-  "fields" : [ {
-    "name" : "MODULE$"
-  } ]
-}, {
   "name" : "akka.remote.BoundAddressesExtension$",
   "fields" : [ {
     "name" : "MODULE$"
@@ -49,25 +44,7 @@
     "parameterTypes" : [ "akka.actor.ExtendedActorSystem" ]
   } ]
 }, {
-  "name" : "akka.remote.serialization.ByteStringSerializer",
-  "methods" : [ {
-    "name" : "<init>",
-    "parameterTypes" : [ "akka.actor.ExtendedActorSystem" ]
-  } ]
-}, {
   "name" : "akka.remote.serialization.DaemonMsgCreateSerializer",
-  "methods" : [ {
-    "name" : "<init>",
-    "parameterTypes" : [ "akka.actor.ExtendedActorSystem" ]
-  } ]
-}, {
-  "name" : "akka.remote.serialization.IntSerializer",
-  "methods" : [ {
-    "name" : "<init>",
-    "parameterTypes" : [ "akka.actor.ExtendedActorSystem" ]
-  } ]
-}, {
-  "name" : "akka.remote.serialization.LongSerializer",
   "methods" : [ {
     "name" : "<init>",
     "parameterTypes" : [ "akka.actor.ExtendedActorSystem" ]
@@ -86,12 +63,6 @@
   } ]
 }, {
   "name" : "akka.remote.serialization.ProtobufSerializer",
-  "methods" : [ {
-    "name" : "<init>",
-    "parameterTypes" : [ "akka.actor.ExtendedActorSystem" ]
-  } ]
-}, {
-  "name" : "akka.remote.serialization.StringSerializer",
   "methods" : [ {
     "name" : "<init>",
     "parameterTypes" : [ "akka.actor.ExtendedActorSystem" ]

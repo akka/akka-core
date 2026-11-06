@@ -27,7 +27,7 @@ object SystemMessageSerializationSpec {
   }
 }
 
-class SystemMessageSerializationSpec extends AkkaSpec(PrimitivesSerializationSpec.testConfig) {
+class SystemMessageSerializationSpec extends AkkaSpec(AkkaSpec.testConf) {
   import SystemMessageSerializationSpec._
 
   val testRef = TestProbe().ref.asInstanceOf[InternalActorRef]

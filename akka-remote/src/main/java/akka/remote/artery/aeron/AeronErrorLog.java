@@ -17,7 +17,6 @@
 package akka.remote.artery.aeron;
 
 import akka.event.LoggingAdapter;
-import akka.event.NoLogging;
 import akka.util.Helpers;
 import io.aeron.CncFileDescriptor;
 import java.io.File;
@@ -38,11 +37,6 @@ import org.agrona.concurrent.errors.ErrorLogReader;
 public class AeronErrorLog {
   final MappedByteBuffer cncByteBuffer;
   final AtomicBuffer buffer;
-
-  @Deprecated
-  public AeronErrorLog(File cncFile) {
-    this(cncFile, NoLogging.getInstance());
-  }
 
   public AeronErrorLog(File cncFile, LoggingAdapter log) {
     cncByteBuffer = IoUtil.mapExistingFile(cncFile, "cnc");
