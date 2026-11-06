@@ -1,0 +1,8 @@
+# Remove APIs deprecated before 2.10
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.AddressUidExtension")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.AddressUidExtension$")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.serialization.ByteStringSerializer")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.serialization.IntSerializer")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.serialization.LongSerializer")
+ProblemFilters.exclude[MissingClassProblem]("akka.remote.serialization.StringSerializer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.artery.aeron.AeronErrorLog.this")
