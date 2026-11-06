@@ -1,0 +1,9 @@
+# Remove APIs deprecated before 2.10
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.scaladsl.package")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.scaladsl.package$")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.scaladsl.package$LoggerOps")
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.typed.scaladsl.package$LoggerOps$")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.scaladsl.TimerScheduler.startPeriodicTimer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.javadsl.TimerScheduler.startPeriodicTimer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.internal.TimerSchedulerCrossDslSupport.startPeriodicTimer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.typed.internal.TimerSchedulerImpl.startPeriodicTimer")
