@@ -6,3 +6,13 @@ project.description: Migrating to Akka 2.11.
 ## Jackson 2.21
 
 @ref:[Akka Serialization Jackson](../serialization-jackson.md) now depends on the Jackson 2.21 long-term-support line. Akka 2.10 used Jackson 2.18 which will not get further updates past January 2027.
+
+## Removed deprecated APIs
+
+APIs deprecated in Akka 2.9 or earlier, or in Akka 2.10.0, have been removed. The sections below list the removed APIs and their replacements.
+
+### akka-distributed-data
+
+* `ReplicatorSettings` constructors with fewer parameters than the full constructor: use the full constructor, `ReplicatorSettings(config)` or the `with*` methods.
+* `ORMap.updated(Cluster, key, initial, modify)` (Java API): use `ORMap.update(SelfUniqueAddress, key, initial, modify)`.
+* `GSet.copy$default$1`, a binary compatibility stub in the Scala 2 sources only.
