@@ -341,7 +341,7 @@ private[persistence] object AsyncWriteJournal {
 
   private[journal] def writeReplyGroupAssignor(system: ActorSystem, journal: ActorRef): (ActorRef => Int, Int) = {
     val config = Persistence(system).configFor(journal)
-    val max = config.getInt("max-write-reply-ordering-groups").max(1)
+    val max = config.getInt("max-write-reply-ordering-groups")
     val setting = config.getInt("write-reply-ordering-groups")
 
     require(setting > 0, s"must have positive number of write-reply-ordering-groups, was [$setting]")
