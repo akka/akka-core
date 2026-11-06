@@ -1,0 +1,4 @@
+# Removal of APIs deprecated before 2.10
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.ddata.ReplicatorSettings.this")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.ddata.ORMap.updated")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.ddata.GSet.copy$default$1")
