@@ -1,0 +1,6 @@
+# Removed APIs deprecated in 2.10.0 or earlier
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.typed.ClusterShardingSettings.passivateIdleEntityAfter")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.typed.ClusterShardingSettings.withPassivateIdleEntityAfter")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.typed.ClusterShardingSettings.this")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.typed.delivery.ShardingProducerController#Settings.resendFirsUnconfirmedIdleTimeout")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.typed.delivery.ShardingProducerController#Settings.withResendFirsUnconfirmedIdleTimeout")
