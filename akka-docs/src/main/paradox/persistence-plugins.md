@@ -58,7 +58,6 @@ akka.persistence.state.plugin = ""
 
 However, these entries are provided as empty "", and require explicit user configuration via override in the user `application.conf`.
 
-* For an example of a journal plugin which writes messages to LevelDB see @ref:[Local LevelDB journal](#local-leveldb-journal).
 * For an example of a snapshot store plugin which writes snapshots as individual files to the local filesystem see @ref:[Local snapshot store](#local-snapshot-store).
 * The state store is relatively new, one available implementation is the [akka-persistence-jdbc-plugin](https://doc.akka.io/libraries/akka-persistence-jdbc/current/).
 
@@ -69,7 +68,7 @@ to start a certain plugin eagerly. In order to do that, you should first add `ak
 under the `akka.extensions` key. Then, specify the IDs of plugins you wish to start automatically under
 `akka.persistence.journal.auto-start-journals` and `akka.persistence.snapshot-store.auto-start-snapshot-stores`.
 
-For example, if you want eager initialization for the leveldb journal plugin and the local snapshot store plugin, your configuration should look like this:  
+For example, if you want eager initialization for the inmem journal plugin and the local snapshot store plugin, your configuration should look like this:  
 
 ```
 akka {
@@ -79,8 +78,8 @@ akka {
   persistence {
 
     journal {
-      plugin = "akka.persistence.journal.leveldb"
-      auto-start-journals = ["akka.persistence.journal.leveldb"]
+      plugin = "akka.persistence.journal.inmem"
+      auto-start-journals = ["akka.persistence.journal.inmem"]
     }
 
     snapshot-store {
@@ -98,83 +97,6 @@ akka {
 The Akka Persistence module comes with few built-in persistence plugins, but none of these are suitable
 for production usage in an Akka Cluster. 
 
-### Local LevelDB journal
-
-This plugin writes events to a local LevelDB instance.
-
-@@@ warning
-The LevelDB plugin cannot be used in an Akka Cluster since the storage is in a local file system.
-@@@
-
-The LevelDB journal is deprecated and it is not advised to build new applications with it.
-As a replacement we recommend using [Akka Persistence JDBC](https://doc.akka.io/libraries/akka-persistence-jdbc/current/index.html).
-
-The LevelDB journal plugin config entry is `akka.persistence.journal.leveldb`. Enable this plugin by
-defining config property:
-
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #leveldb-plugin-config }
-
-LevelDB based plugins will also require the following additional dependency declaration:
-
-@@dependency[sbt,Maven,Gradle] {
-  group="org.fusesource.leveldbjni"
-  artifact="leveldbjni-all"
-  version="1.8"
-}
-
-The default location of LevelDB files is a directory named `journal` in the current working
-directory. This location can be changed by configuration where the specified path can be relative or absolute:
-
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #journal-config }
-
-With this plugin, each actor system runs its own private LevelDB instance.
-
-One peculiarity of LevelDB is that the deletion operation does not remove messages from the journal, but adds
-a "tombstone" for each deleted message instead. In the case of heavy journal usage, especially one including frequent
-deletes, this may be an issue as users may find themselves dealing with continuously increasing journal sizes. To
-this end, LevelDB offers a special journal compaction function that is exposed via the following configuration:
-
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #compaction-intervals-config }
-
-### Shared LevelDB journal
-
-The LevelDB journal is deprecated and will be removed from a future Akka version, it is not advised to build new 
-applications with it. For testing in a multi node environment the "inmem" journal together with the @ref[proxy plugin](#persistence-plugin-proxy) can be used, but the actual journal used in production of applications is also a good choice.
-
-@@@ note
-This plugin has been supplanted by @ref:[Persistence Plugin Proxy](#persistence-plugin-proxy).
-@@@
-
-A shared LevelDB instance is started by instantiating the `SharedLeveldbStore` actor.
-
-Scala
-:  @@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #shared-store-creation }
-
-Java
-:  @@snip [LambdaPersistencePluginDocTest.java](/akka-docs/src/test/java/jdocs/persistence/LambdaPersistencePluginDocTest.java) { #shared-store-creation }
-
-By default, the shared instance writes journaled messages to a local directory named `journal` in the current
-working directory. The storage location can be changed by configuration:
-
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #shared-store-config }
-
-Actor systems that use a shared LevelDB store must activate the `akka.persistence.journal.leveldb-shared`
-plugin.
-
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #shared-journal-config }
-
-This plugin must be initialized by injecting the (remote) `SharedLeveldbStore` actor reference. Injection is
-done by calling the `SharedLeveldbJournal.setStore` method with the actor reference as argument.
-
-Scala
-:  @@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #shared-store-usage }
-
-Java
-:  @@snip [LambdaPersistencePluginDocTest.java](/akka-docs/src/test/java/jdocs/persistence/LambdaPersistencePluginDocTest.java) { #shared-store-usage }
-
-Internal journal commands (sent by persistent actors) are buffered until injection completes. Injection is idempotent
-i.e. only the first injection is used.
-
 ### Local snapshot store
 
 This plugin writes snapshot files to the local filesystem.
@@ -186,7 +108,7 @@ The local snapshot store plugin cannot be used in an Akka Cluster since the stor
 The local snapshot store plugin config entry is `akka.persistence.snapshot-store.local`. 
 Enable this plugin by defining config property:
 
-@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #leveldb-snapshot-plugin-config }
+@@snip [PersistencePluginDocSpec.scala](/akka-docs/src/test/scala/docs/persistence/PersistencePluginDocSpec.scala) { #local-snapshot-plugin-config }
 
 The default storage location is a directory named `snapshots` in the current working
 directory. This can be changed by configuration where the specified path can be relative or absolute:

@@ -530,12 +530,12 @@ you can select the replay filter `mode` from one of the following values:
  * warn
  * off
 
-For example, if you configure the replay filter for leveldb plugin, it looks like this:
+For example, if you configure the replay filter for the inmem plugin, it looks like this:
 
 ```
 # The replay filter can detect a corrupt event stream by inspecting
 # sequence numbers and writerUuid when replaying events.
-akka.persistence.journal.leveldb.replay-filter {
+akka.persistence.journal.inmem.replay-filter {
   # What the filter should do when detecting invalid events.
   # Supported values:
   # `repair-by-discard-old` : discard events from old writers,

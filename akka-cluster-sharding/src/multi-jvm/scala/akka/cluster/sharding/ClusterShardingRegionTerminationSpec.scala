@@ -18,7 +18,6 @@ abstract class ClusterShardingRegionTerminationSpecConfig(mode: String)
       additionalConfig = """
       akka.cluster.downing-provider-class = ""
       akka.cluster.failure-detector.acceptable-heartbeat-pause = 1s
-      akka.persistence.journal.leveldb-shared.store.native = off
       # we have 5 nodes, and one becomes unreachable
       akka.cluster.sharding.coordinator-state {
         write-majority-plus = 0

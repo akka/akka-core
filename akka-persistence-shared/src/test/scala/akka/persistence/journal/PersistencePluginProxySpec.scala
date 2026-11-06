@@ -2,13 +2,12 @@
  * Copyright (C) 2009-2025 Lightbend Inc. <https://www.lightbend.com>
  */
 
-package akka.persistence.journal.leveldb
+package akka.persistence.journal
 
 import com.typesafe.config.ConfigFactory
 
 import akka.actor._
 import akka.persistence._
-import akka.persistence.journal.PersistencePluginProxy
 import akka.testkit.{ AkkaSpec, TestProbe }
 
 object PersistencePluginProxySpec {
@@ -17,6 +16,10 @@ object PersistencePluginProxySpec {
       akka {
         actor {
           provider = remote
+          serialization-bindings {
+            "akka.persistence.JournalProtocol$Message" = java-test
+            "akka.persistence.SnapshotProtocol$Message" = java-test
+          }
         }
         persistence {
           journal {
@@ -40,7 +43,7 @@ object PersistencePluginProxySpec {
         log-dead-letters-during-shutdown = off
         test.single-expect-default = 10s
       }
-    """).withFallback(SharedLeveldbJournal.configToEnableJavaSerializationForTest)
+    """)
 
   lazy val startTargetConfig =
     ConfigFactory.parseString("""

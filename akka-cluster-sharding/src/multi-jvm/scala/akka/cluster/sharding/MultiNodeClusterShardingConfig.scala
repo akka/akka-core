@@ -9,7 +9,6 @@ import java.lang.reflect.Modifier
 import com.typesafe.config.{ Config, ConfigFactory }
 
 import akka.cluster.MultiNodeClusterSpec
-import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import akka.remote.testkit.MultiNodeConfig
 
 object MultiNodeClusterShardingConfig {
@@ -56,18 +55,26 @@ object MultiNodeClusterShardingConfig {
       .replaceAll("[^a-zA-Z_0-9]", "_")
   }
 
+  /**
+   * The journal is proxied to the inmem journal on one node, see `MultiNodeClusterShardingSpec.startPersistence`.
+   */
   def persistenceConfig(targetDir: String): Config =
     ConfigFactory.parseString(s"""
-      akka.persistence.journal.plugin = "akka.persistence.journal.leveldb-shared"
-      akka.persistence.journal.leveldb-shared {
-        timeout = 5s
-        store {
-          native = off
-          dir = "$targetDir/journal"
-        }
-      }
+      akka.persistence.journal.plugin = "akka.persistence.journal.proxy"
+      akka.persistence.journal.proxy.target-journal-plugin = "akka.persistence.journal.inmem"
       akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
       akka.persistence.snapshot-store.local.dir = "$targetDir/snapshots"
+      """)
+
+  /**
+   * Enables `TestJavaSerializer` for the journal messages that the journal proxy sends to the target journal.
+   */
+  val configToEnableJavaSerializationForTest: Config =
+    ConfigFactory.parseString("""
+      akka.actor.serialization-bindings {
+        "akka.persistence.JournalProtocol$Message" = java-test
+        "akka.persistence.SnapshotProtocol$Message" = java-test
+      }
       """)
 
 }
@@ -102,8 +109,7 @@ abstract class MultiNodeClusterShardingConfig(
     else MultiNodeClusterShardingConfig.persistenceConfig(targetDir)
 
   val common: Config =
-    ConfigFactory
-      .parseString(s"""
+    ConfigFactory.parseString(s"""
         akka.actor.provider = "cluster"
         akka.cluster.downing-provider-class = akka.cluster.testkit.AutoDowning
         akka.cluster.testkit.auto-down-unreachable-after = 0s
@@ -116,9 +122,7 @@ abstract class MultiNodeClusterShardingConfig(
         }
         akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
         akka.loglevel = $loglevel
-        """)
-      .withFallback(SharedLeveldbJournal.configToEnableJavaSerializationForTest)
-      .withFallback(MultiNodeClusterSpec.clusterConfig)
+        """).withFallback(configToEnableJavaSerializationForTest).withFallback(MultiNodeClusterSpec.clusterConfig)
 
   commonConfig(ConfigFactory.parseString(additionalConfig).withFallback(persistenceConfig).withFallback(common))
 

@@ -102,7 +102,8 @@ abstract class ClusterShardingLeavingSpec(multiNodeConfig: ClusterShardingLeavin
   s"Cluster sharding (${multiNodeConfig.mode}) with leaving member" must {
 
     "join cluster" in within(20.seconds) {
-      startPersistenceIfNeeded(startOn = first, setStoreOn = roles)
+      // the journal must run on a node that stays in the cluster, the first nodes are leaving
+      startPersistenceIfNeeded(startOn = roles.last, setStoreOn = roles)
 
       join(first, first, onJoinedRunOnFrom = startSharding())
       join(second, first, onJoinedRunOnFrom = startSharding(), assertNodeUp = false)

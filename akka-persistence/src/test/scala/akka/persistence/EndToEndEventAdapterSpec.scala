@@ -4,20 +4,17 @@
 
 package akka.persistence
 
-import java.io.File
-
 import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import com.typesafe.config.{ Config, ConfigFactory }
-import org.apache.commons.io.FileUtils
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import akka.actor._
 import akka.persistence.journal.{ EventAdapter, EventSeq }
+import akka.persistence.journal.inmem.SharedInmemJournal
 import akka.testkit.TestProbe
 
 object EndToEndEventAdapterSpec {
@@ -112,23 +109,13 @@ object EndToEndEventAdapterSpec {
 
 }
 
-// needs persistence between actor systems, thus not running with the inmem journal
-// FIXME move to inmem + proxy
-class EndToEndEventAdapterSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
+// needs persistence between actor systems, thus using the shared inmem journal
+class EndToEndEventAdapterSpec extends AnyWordSpecLike with Matchers {
   import EndToEndEventAdapterSpec._
 
-  val journalName = "leveldb"
-  val journalConfig = PersistenceSpec.config("leveldb", "LeveldbEndToEndEventAdapterSpec")
-
-  val storageLocations = List("akka.persistence.journal.leveldb.dir").map(s => new File(journalConfig.getString(s)))
-
-  override protected def beforeAll(): Unit = {
-    storageLocations.foreach(FileUtils.deleteDirectory)
-  }
-
-  override protected def afterAll(): Unit = {
-    storageLocations.foreach(FileUtils.deleteDirectory)
-  }
+  val journalName = "shared-inmem"
+  val journalConfig =
+    PersistenceSpec.config(journalName, "EndToEndEventAdapterSpec").withFallback(SharedInmemJournal.config)
 
   val noAdaptersConfig = ConfigFactory.parseString("")
 

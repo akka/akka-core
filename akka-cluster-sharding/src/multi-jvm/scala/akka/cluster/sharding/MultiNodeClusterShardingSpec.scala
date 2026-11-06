@@ -6,19 +6,18 @@ package akka.cluster.sharding
 
 import java.io.File
 
-import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import org.apache.commons.io.FileUtils
 
-import akka.actor.{ Actor, ActorIdentity, ActorLogging, ActorRef, ActorSystem, Identify, PoisonPill, Props }
+import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props }
 import akka.cluster.MultiNodeClusterSpec
 import akka.cluster.sharding.ShardCoordinator.ShardAllocationStrategy
 import akka.persistence.Persistence
-import akka.persistence.journal.leveldb.{ SharedLeveldbJournal, SharedLeveldbStore }
+import akka.persistence.journal.PersistencePluginProxy
 import akka.remote.testconductor.RoleName
 import akka.serialization.jackson.CborSerializable
-import akka.testkit.{ TestActors, TestProbe }
+import akka.testkit.TestActors
 
 object MultiNodeClusterShardingSpec {
 
@@ -178,20 +177,16 @@ abstract class MultiNodeClusterShardingSpec(val config: MultiNodeClusterSharding
   protected def setStoreIfNeeded(sys: ActorSystem, storeOn: RoleName): Unit =
     if (persistenceIsNeeded) setStore(sys, storeOn)
 
-  protected def setStore(sys: ActorSystem, storeOn: RoleName): Unit = {
-    val probe = TestProbe()(sys)
-    sys.actorSelection(node(storeOn) / "user" / "store").tell(Identify(None), probe.ref)
-    val sharedStore = probe.expectMsgType[ActorIdentity](20.seconds).ref.get
-    SharedLeveldbJournal.setStore(sharedStore, sys)
-  }
+  protected def setStore(sys: ActorSystem, storeOn: RoleName): Unit =
+    PersistencePluginProxy.setTargetLocation(sys, node(storeOn).address)
 
   /**
    * {{{
    *    startPersistenceIfNeeded(startOn = first, setStoreOn = Seq(first, second, third))
    * }}}
    *
-   * @param startOn the node to start the `SharedLeveldbStore` store on
-   * @param setStoreOn the nodes to `SharedLeveldbJournal.setStore` on
+   * @param startOn the node to start the target inmem journal on
+   * @param setStoreOn the nodes to `PersistencePluginProxy.setTargetLocation` on
    */
   protected def startPersistenceIfNeeded(startOn: RoleName, setStoreOn: Seq[RoleName]): Unit =
     if (persistenceIsNeeded) startPersistence(startOn, setStoreOn)
@@ -201,16 +196,16 @@ abstract class MultiNodeClusterShardingSpec(val config: MultiNodeClusterSharding
    *    startPersistence(startOn = first, setStoreOn = Seq(first, second, third))
    * }}}
    *
-   * @param startOn the node to start the `SharedLeveldbStore` store on
-   * @param setStoreOn the nodes to `SharedLeveldbJournal.setStore` on
+   * @param startOn the node to start the target inmem journal on, it must not leave the cluster during the test
+   *                since the journal proxy stops when the target journal is terminated
+   * @param setStoreOn the nodes to `PersistencePluginProxy.setTargetLocation` on
    */
-  @nowarn("msg=deprecated")
   protected def startPersistence(startOn: RoleName, setStoreOn: Seq[RoleName]): Unit = {
     info("Setting up setup shared journal.")
 
     Persistence(system)
     runOn(startOn) {
-      system.actorOf(Props[SharedLeveldbStore](), "store")
+      Persistence(system).journalFor("akka.persistence.journal.inmem")
     }
     enterBarrier("persistence-started")
 
