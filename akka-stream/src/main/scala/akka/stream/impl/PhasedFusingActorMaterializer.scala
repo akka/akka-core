@@ -438,12 +438,6 @@ private final case class SavedIslandData(
       task: Runnable): Cancellable =
     system.scheduler.scheduleAtFixedRate(initialDelay, interval)(task)(executionContext)
 
-  override def schedulePeriodically(
-      initialDelay: FiniteDuration,
-      interval: FiniteDuration,
-      task: Runnable): Cancellable =
-    system.scheduler.scheduleAtFixedRate(initialDelay, interval)(task)(executionContext)
-
   override def scheduleOnce(delay: FiniteDuration, task: Runnable): Cancellable =
     system.scheduler.scheduleOnce(delay, task)(executionContext)
 

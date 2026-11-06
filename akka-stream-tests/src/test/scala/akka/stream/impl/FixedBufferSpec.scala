@@ -4,14 +4,11 @@
 
 package akka.stream.impl
 
-import scala.annotation.nowarn
-
 import akka.stream.ActorAttributes
 import akka.stream.ActorAttributes.MaxFixedBufferSize
 import akka.stream.ActorMaterializerSettings
 import akka.stream.testkit.StreamSpec
 
-@nowarn("msg=deprecated")
 class FixedBufferSpec extends StreamSpec {
 
   for (size <- List(1, 3, 4)) {

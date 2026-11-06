@@ -72,7 +72,7 @@ class MaterializerWithAttributesSpec
 
   val props = Props(new StreamActor).withMailbox("unbounded")
 
-  "ActorMaterializer with attributes" should {
+  "Materializer with attributes" should {
     "apply its attributes to streams it materializes" in {
       val streamActor = system.actorOf(props)
 

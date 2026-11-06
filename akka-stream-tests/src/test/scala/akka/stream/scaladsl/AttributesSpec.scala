@@ -131,7 +131,8 @@ class AttributesSpec
 
   val settings = ActorMaterializerSettings(system).withInputBuffer(initialSize = 2, maxSize = 16)
 
-  implicit val materializer: ActorMaterializer = ActorMaterializer(settings)
+  implicit val materializer: Materializer =
+    SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
   // The snapshot tests below inspect the attributes of the snapshot logics, and attributes are only kept for
   // logics that are still running, so they depend on the streams being fully alive when the snapshot is taken.
@@ -674,7 +675,8 @@ class AttributesSpec
     "be defaults and not used when more specific attributes are found" in {
 
       // dispatcher set on the materializer
-      val myDispatcherMaterializer = ActorMaterializer(settings.withDispatcher("my-dispatcher"))
+      val myDispatcherMaterializer = SystemMaterializer(system)
+        .createAdditionalLegacySystemMaterializer("flow", settings.withDispatcher("my-dispatcher"))
 
       try {
         val dispatcher =
@@ -720,7 +722,7 @@ class AttributesSpec
       val system = ActorSystem("AttributesSpec-default-dispatcher-override", config)
       try {
 
-        val mat = ActorMaterializer()(system)
+        val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
         val threadName =
           Source.fromGraph(new ThreadNameSnitchingStage(None)).runWith(Sink.head)(mat)
 
@@ -746,7 +748,7 @@ class AttributesSpec
       val system = ActorSystem("AttributesSpec-io-dispatcher-override", config)
       try {
 
-        val mat = ActorMaterializer()(system)
+        val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
         val threadName =
           Source
             .fromGraph(new ThreadNameSnitchingStage(None).addAttributes(Attributes(IODispatcher)))

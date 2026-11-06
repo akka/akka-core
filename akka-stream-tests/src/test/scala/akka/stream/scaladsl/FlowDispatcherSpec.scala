@@ -4,14 +4,12 @@
 
 package akka.stream.scaladsl
 
-import scala.annotation.nowarn
-
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
+import akka.stream.SystemMaterializer
 import akka.stream.ActorMaterializerSettings
 import akka.stream.testkit.StreamSpec
 import akka.testkit.TestProbe
 
-@nowarn("msg=deprecated")
 class FlowDispatcherSpec extends StreamSpec(s"my-dispatcher = $${akka.test.stream-dispatcher}") {
 
   val defaultSettings = ActorMaterializerSettings(system)
@@ -20,7 +18,8 @@ class FlowDispatcherSpec extends StreamSpec(s"my-dispatcher = $${akka.test.strea
       settings: ActorMaterializerSettings = defaultSettings,
       dispatcher: String = "akka.test.stream-dispatcher") = {
 
-    implicit val materializer: ActorMaterializer = ActorMaterializer(settings)
+    implicit val materializer: Materializer =
+      SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
     val probe = TestProbe()
     Source(List(1, 2, 3)).map(i => { probe.ref ! Thread.currentThread().getName(); i }).to(Sink.ignore).run()

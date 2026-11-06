@@ -9,7 +9,8 @@ import scala.annotation.nowarn
 import org.reactivestreams.Subscriber
 
 import akka.stream._
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
+import akka.stream.SystemMaterializer
 import akka.stream.ActorMaterializerSettings
 import akka.stream.testkit._
 
@@ -46,7 +47,8 @@ class GraphFlowSpec extends StreamSpec {
 
   val settings = ActorMaterializerSettings(system).withInputBuffer(initialSize = 2, maxSize = 16)
 
-  implicit val materializer: ActorMaterializer = ActorMaterializer(settings)
+  implicit val materializer: Materializer =
+    SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
   def validateProbe(probe: TestSubscriber.ManualProbe[Int], requests: Int, result: Set[Int]): Unit = {
     val subscription = probe.expectSubscription()

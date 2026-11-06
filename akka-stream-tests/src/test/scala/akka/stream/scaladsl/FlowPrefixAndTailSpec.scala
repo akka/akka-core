@@ -4,7 +4,6 @@
 
 package akka.stream.scaladsl
 
-import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -114,9 +113,9 @@ class FlowPrefixAndTailSpec extends StreamSpec("""
     "signal error if substream has been not subscribed in time" in {
       val ms = 300
 
-      @nowarn("msg=deprecated")
       val tightTimeoutMaterializer =
-        ActorMaterializer(
+        SystemMaterializer(system).createAdditionalLegacySystemMaterializer(
+          "flow",
           ActorMaterializerSettings(system).withSubscriptionTimeoutSettings(
             StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.cancel, ms.millisecond)))
 
@@ -133,9 +132,9 @@ class FlowPrefixAndTailSpec extends StreamSpec("""
         s"Substream Source(TailSource) has not been materialized in ${ms} milliseconds")
     }
     "not fail the stream if substream has not been subscribed in time and configured subscription timeout is noop" in {
-      @nowarn("msg=deprecated")
       val tightTimeoutMaterializer =
-        ActorMaterializer(
+        SystemMaterializer(system).createAdditionalLegacySystemMaterializer(
+          "flow",
           ActorMaterializerSettings(system).withSubscriptionTimeoutSettings(
             StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.noop, 1.millisecond)))
 

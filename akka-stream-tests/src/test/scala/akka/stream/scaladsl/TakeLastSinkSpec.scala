@@ -4,19 +4,17 @@
 
 package akka.stream.scaladsl
 
-import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.{ Await, Future }
 
-import akka.stream.{ AbruptTerminationException, ActorMaterializer, ActorMaterializerSettings }
+import akka.stream.{ AbruptTerminationException, ActorMaterializerSettings, Materializer, SystemMaterializer }
 import akka.stream.testkit.{ StreamSpec, TestPublisher }
 
-@nowarn
 class TakeLastSinkSpec extends StreamSpec {
 
   val settings = ActorMaterializerSettings(system).withInputBuffer(initialSize = 2, maxSize = 16)
 
-  implicit val mat: ActorMaterializer = ActorMaterializer(settings)
+  implicit val mat: Materializer = SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
   "Sink.takeLast" must {
     "return the last 3 elements" in {
@@ -69,7 +67,7 @@ class TakeLastSinkSpec extends StreamSpec {
     }
 
     "fail future when stream abruptly terminated" in {
-      val mat = ActorMaterializer()
+      val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
       val probe = TestPublisher.probe()
       val future: Future[immutable.Seq[Int]] =
         Source.fromPublisher(probe).runWith(Sink.takeLast(2))(mat)

@@ -15,13 +15,9 @@ import akka.stream.{ AbruptStageTerminationException, Attributes, Materializer, 
 import akka.stream.Attributes.Attribute
 import akka.stream.scaladsl.AttributesSpec.AttributesFlow
 import akka.stream.testkit.StreamSpec
-import akka.stream.testkit.TestPublisher
 import akka.stream.testkit.Utils._
-import akka.stream.testkit.scaladsl.TestSink
-import akka.stream.testkit.scaladsl.TestSource
 import akka.testkit.TestProbe
 
-@nowarn("msg=deprecated") // tests deprecated API as well
 class LazyFlowSpec extends StreamSpec("""
     akka.stream.materializer.initial-input-buffer-size = 1
     akka.stream.materializer.max-input-buffer-size = 1
@@ -268,128 +264,6 @@ class LazyFlowSpec extends StreamSpec("""
 
       val attribute = attributes.futureValue.get[MyAttribute]
       attribute shouldBe Some(MyAttribute())
-    }
-  }
-
-  "The deprecated LazyFlow ops" must {
-    def mapF(e: Int): () => Future[Flow[Int, String, NotUsed]] =
-      () => Future.successful(Flow.fromFunction[Int, String](i => (i * e).toString))
-    val flowF = Future.successful(Flow[Int])
-    "work in happy case" in {
-      val probe = Source(2 to 10).via(Flow.lazyInitAsync[Int, String, NotUsed](mapF(2))).runWith(TestSink[String]())
-      probe.request(100)
-      (2 to 10).map(i => (i * 2).toString).foreach(probe.expectNext)
-    }
-
-    "work with slow flow init" in {
-      val p = Promise[Flow[Int, Int, NotUsed]]()
-      val sourceProbe = TestPublisher.manualProbe[Int]()
-      val flowProbe = Source
-        .fromPublisher(sourceProbe)
-        .via(Flow.lazyInitAsync[Int, Int, NotUsed](() => p.future))
-        .runWith(TestSink[Int]())
-
-      val sourceSub = sourceProbe.expectSubscription()
-      flowProbe.request(1)
-      sourceSub.expectRequest(1)
-      sourceSub.sendNext(0)
-      sourceSub.expectRequest(1)
-      sourceProbe.expectNoMessage(200.millis)
-
-      p.success(Flow[Int])
-      flowProbe.request(99)
-      flowProbe.expectNext(0)
-      (1 to 10).foreach(i => {
-        sourceSub.sendNext(i)
-        flowProbe.expectNext(i)
-      })
-      sourceSub.sendComplete()
-    }
-
-    "complete when there was no elements in the stream" in {
-      def flowMaker() = flowF
-      val probe = Source.empty.via(Flow.lazyInitAsync(() => flowMaker())).runWith(TestSink[Int]())
-      probe.request(1).expectComplete()
-    }
-
-    "complete normally when upstream completes BEFORE the stage has switched to the inner flow" in {
-      val promise = Promise[Flow[Int, Int, NotUsed]]()
-      val (pub, sub) =
-        TestSource[Int]().viaMat(Flow.lazyInitAsync(() => promise.future))(Keep.left).toMat(TestSink())(Keep.both).run()
-      sub.request(1)
-      pub.sendNext(1).sendComplete()
-      promise.success(Flow[Int])
-      sub.expectNext(1).expectComplete()
-    }
-
-    "complete normally when upstream completes AFTER the stage has switched to the inner flow" in {
-      val (pub, sub) = TestSource[Int]()
-        .viaMat(Flow.lazyInitAsync(() => Future.successful(Flow[Int])))(Keep.left)
-        .toMat(TestSink())(Keep.both)
-        .run()
-      sub.request(1)
-      pub.sendNext(1)
-      sub.expectNext(1)
-      pub.sendComplete()
-      sub.expectComplete()
-    }
-
-    "fail gracefully when flow factory function failed" in {
-      val sourceProbe = TestPublisher.manualProbe[Int]()
-      val probe = Source
-        .fromPublisher(sourceProbe)
-        .via(Flow.lazyInitAsync[Int, Int, NotUsed](() => throw ex))
-        .runWith(TestSink[Int]())
-
-      val sourceSub = sourceProbe.expectSubscription()
-      probe.request(1)
-      sourceSub.expectRequest(1)
-      sourceSub.sendNext(0)
-      sourceSub.expectCancellation()
-      probe.expectError(ex)
-    }
-
-    "fail gracefully when upstream failed" in {
-      val sourceProbe = TestPublisher.manualProbe[Int]()
-      val probe = Source.fromPublisher(sourceProbe).via(Flow.lazyInitAsync(() => flowF)).runWith(TestSink())
-
-      val sourceSub = sourceProbe.expectSubscription()
-      sourceSub.expectRequest(1)
-      sourceSub.sendNext(0)
-      probe.request(1).expectNext(0)
-      sourceSub.sendError(ex)
-      probe.expectError(ex)
-    }
-
-    "fail gracefully when factory future failed" in {
-      val sourceProbe = TestPublisher.manualProbe[Int]()
-      val flowProbe = Source
-        .fromPublisher(sourceProbe)
-        .via(Flow.lazyInitAsync[Int, Int, NotUsed](() => Future.failed(ex)))
-        .runWith(TestSink())
-
-      val sourceSub = sourceProbe.expectSubscription()
-      sourceSub.expectRequest(1)
-      sourceSub.sendNext(0)
-      flowProbe.request(1).expectError(ex)
-    }
-
-    "cancel upstream when the downstream is cancelled" in {
-      val sourceProbe = TestPublisher.manualProbe[Int]()
-      val probe =
-        Source
-          .fromPublisher(sourceProbe)
-          .via(Flow.lazyInitAsync[Int, Int, NotUsed](() => flowF))
-          .runWith(TestSink[Int]())
-
-      val sourceSub = sourceProbe.expectSubscription()
-      probe.request(1)
-      sourceSub.expectRequest(1)
-      sourceSub.sendNext(0)
-      sourceSub.expectRequest(1)
-      probe.expectNext(0)
-      probe.cancel()
-      sourceSub.expectCancellation()
     }
   }
 

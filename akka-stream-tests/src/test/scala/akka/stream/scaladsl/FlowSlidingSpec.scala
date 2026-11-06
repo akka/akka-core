@@ -4,21 +4,19 @@
 
 package akka.stream.scaladsl
 
-import scala.annotation.nowarn
-
 import org.scalacheck.Gen
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import akka.pattern.pipe
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings }
+import akka.stream.{ ActorMaterializerSettings, Materializer, SystemMaterializer }
 import akka.stream.testkit._
 
-@nowarn
 class FlowSlidingSpec extends StreamSpec with ScalaCheckPropertyChecks {
   import system.dispatcher
   val settings = ActorMaterializerSettings(system).withInputBuffer(initialSize = 2, maxSize = 16)
 
-  implicit val materializer: ActorMaterializer = ActorMaterializer(settings)
+  implicit val materializer: Materializer =
+    SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
   "Sliding" must {
     import org.scalacheck.Shrink.shrinkAny

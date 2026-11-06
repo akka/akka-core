@@ -14,7 +14,4 @@ class BindFailedException(msg: String, cause: Throwable) extends StreamTcpExcept
   def this() = this("bind failed", null)
 }
 
-@deprecated("BindFailedException object will never be thrown. Match on the class instead.", "2.4.19")
-case object BindFailedException extends BindFailedException
-
 class ConnectionException(msg: String) extends StreamTcpException(msg)

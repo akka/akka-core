@@ -6,7 +6,6 @@ package akka.remote.artery
 
 import java.net.InetAddress
 
-import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import com.typesafe.config.Config
@@ -103,10 +102,8 @@ private[akka] final class ArterySettings private (config: Config) {
     val TestMode: Boolean = getBoolean("test-mode")
     val Dispatcher: String = getString("use-dispatcher")
     val ControlStreamDispatcher: String = getString("use-control-stream-dispatcher")
-    @nowarn("msg=deprecated")
     val MaterializerSettings: ActorMaterializerSettings =
       ActorMaterializerSettings(config.getConfig("materializer")).withDispatcher(Dispatcher)
-    @nowarn("msg=deprecated")
     val ControlStreamMaterializerSettings: ActorMaterializerSettings =
       ActorMaterializerSettings(config.getConfig("materializer")).withDispatcher(ControlStreamDispatcher)
 

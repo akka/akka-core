@@ -287,33 +287,6 @@ object Sink {
       scaladsl.Sink.actorRefWithBackpressure[In](ref, onInitMessage, onCompleteMessage, t => onFailureMessage(t)))
 
   /**
-   * Sends the elements of the stream to the given `ActorRef` that sends back back-pressure signal.
-   * First element is always `onInitMessage`, then stream is waiting for acknowledgement message
-   * `ackMessage` from the given actor which means that it is ready to process
-   * elements. It also requires `ackMessage` message after each stream element
-   * to make backpressure work.
-   *
-   * If the target actor terminates the stream will be canceled.
-   * When the stream is completed successfully the given `onCompleteMessage`
-   * will be sent to the destination actor.
-   * When the stream is completed with failure - result of `onFailureMessage(throwable)`
-   * message will be sent to the destination actor.
-   *
-   * @deprecated Use actorRefWithBackpressure instead
-   */
-  @Deprecated
-  @deprecated("Use actorRefWithBackpressure instead", "2.6.0")
-  def actorRefWithAck[In](
-      ref: ActorRef,
-      onInitMessage: Any,
-      ackMessage: Any,
-      onCompleteMessage: Any,
-      onFailureMessage: function.Function[Throwable, Any]): Sink[In, NotUsed] =
-    new Sink(
-      scaladsl.Sink
-        .actorRefWithBackpressure[In](ref, onInitMessage, ackMessage, onCompleteMessage, t => onFailureMessage(t)))
-
-  /**
    * A graph with the shape of a sink logically is a sink, this method makes
    * it so also in type.
    */
@@ -330,15 +303,6 @@ object Sink {
    */
   def fromMaterializer[T, M](factory: BiFunction[Materializer, Attributes, Sink[T, M]]): Sink[T, CompletionStage[M]] =
     scaladsl.Sink.fromMaterializer((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.asJava).asJava
-
-  /**
-   * Defers the creation of a [[Sink]] until materialization. The `factory` function
-   * exposes [[ActorMaterializer]] which is going to be used during materialization and
-   * [[Attributes]] of the [[Sink]] returned by this method.
-   */
-  @deprecated("Use 'fromMaterializer' instead", "2.6.0")
-  def setup[T, M](factory: BiFunction[ActorMaterializer, Attributes, Sink[T, M]]): Sink[T, CompletionStage[M]] =
-    scaladsl.Sink.setup((mat, attr) => factory(mat, attr).asScala).mapMaterializedValue(_.asJava).asJava
 
   /**
    * Combine several sinks with fan-out strategy like `Broadcast` or `Balance` and returns `Sink`.
@@ -424,45 +388,6 @@ object Sink {
    * @see [[akka.stream.javadsl.SinkQueueWithCancel]]
    */
   def queue[T](): Sink[T, SinkQueueWithCancel[T]] = queue(1)
-
-  /**
-   * Creates a real `Sink` upon receiving the first element. Internal `Sink` will not be created if there are no elements,
-   * because of completion or error.
-   *
-   * If upstream completes before an element was received then the `Future` is completed with the value created by fallback.
-   * If upstream fails before an element was received, `sinkFactory` throws an exception, or materialization of the internal
-   * sink fails then the `Future` is completed with the exception.
-   * Otherwise the `Future` is completed with the materialized value of the internal sink.
-   */
-  @deprecated("Use 'Sink.lazyCompletionStageSink' in combination with 'Flow.prefixAndTail(1)' instead", "2.6.0")
-  def lazyInit[T, M](
-      sinkFactory: function.Function[T, CompletionStage[Sink[T, M]]],
-      fallback: function.Creator[M]): Sink[T, CompletionStage[M]] =
-    new Sink(
-      scaladsl.Sink
-        .lazyInit[T, M](
-          t => sinkFactory.apply(t).asScala.map(_.asScala)(ExecutionContext.parasitic),
-          () => fallback.create())
-        .mapMaterializedValue(_.asJava))
-
-  /**
-   * Creates a real `Sink` upon receiving the first element. Internal `Sink` will not be created if there are no elements,
-   * because of completion or error.
-   *
-   * If upstream completes before an element was received then the `Future` is completed with `None`.
-   * If upstream fails before an element was received, `sinkFactory` throws an exception, or materialization of the internal
-   * sink fails then the `Future` is completed with the exception.
-   * Otherwise the `Future` is completed with the materialized value of the internal sink.
-   */
-  @deprecated("Use 'Sink.lazyCompletionStageSink' instead", "2.6.0")
-  def lazyInitAsync[T, M](
-      sinkFactory: function.Creator[CompletionStage[Sink[T, M]]]): Sink[T, CompletionStage[Optional[M]]] = {
-    val sSink = scaladsl.Sink
-      .lazyInitAsync[T, M](() => sinkFactory.create().asScala.map(_.asScala)(ExecutionContext.parasitic))
-      .mapMaterializedValue(fut =>
-        fut.map(_.fold(Optional.empty[M]())(m => Optional.ofNullable(m)))(ExecutionContext.parasitic).asJava)
-    new Sink(sSink)
-  }
 
   /**
    * Turn a `Future[Sink]` into a Sink that will consume the values of the source when the future completes successfully.

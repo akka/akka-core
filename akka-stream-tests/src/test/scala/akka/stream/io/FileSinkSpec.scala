@@ -9,7 +9,6 @@ import java.nio.file.StandardOpenOption.{ CREATE, WRITE }
 
 import scala.annotation.nowarn
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.Success
@@ -197,14 +196,9 @@ class FileSinkSpec extends StreamSpec(UnboundedMailboxConfig) with ScalaFutures 
     "write single line to a file from lazy sink" in {
       //LazySink must wait for result of initialization even if got upstreamComplete
       targetFile { f =>
-        val completion = Source(List(TestByteStrings.head)).runWith(
-          Sink
-            .lazyInitAsync(() => Future.successful(FileIO.toPath(f)))
-            // map a Future[Option[Future[IOResult]]] into a Future[Option[IOResult]]
-            .mapMaterializedValue(_.flatMap {
-              case Some(future) => future.map(Some(_))(ExecutionContext.parasitic)
-              case None         => Future.successful(None)
-            }(ExecutionContext.parasitic)))
+        val completion = Source(List(TestByteStrings.head))
+          .runWith(Sink.lazyFutureSink(() => Future.successful(FileIO.toPath(f))))
+          .flatten
 
         Await.result(completion, 3.seconds)
         checkFileContents(f, TestLines.head)
