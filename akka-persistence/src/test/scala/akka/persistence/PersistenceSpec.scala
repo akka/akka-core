@@ -70,7 +70,6 @@ object PersistenceSpec {
       akka.actor.warn-about-java-serializer-usage = off
       akka.persistence.publish-plugin-commands = on
       akka.persistence.journal.plugin = "akka.persistence.journal.${plugin}"
-      akka.persistence.journal.leveldb.dir = "target/journal-${test}"
       akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
       akka.persistence.snapshot-store.local.dir = "target/snapshots-${test}/"
       akka.test.single-expect-default = 10s

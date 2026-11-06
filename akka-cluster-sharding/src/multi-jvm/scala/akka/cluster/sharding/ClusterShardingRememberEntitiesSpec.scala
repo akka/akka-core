@@ -38,7 +38,6 @@ abstract class ClusterShardingRememberEntitiesSpecConfig(
       additionalConfig = """
       akka.testconductor.barrier-timeout = 60 s
       akka.test.single-expect-default = 60 s
-      akka.persistence.journal.leveldb-shared.store.native = off
       """) {
 
   val first = role("first")

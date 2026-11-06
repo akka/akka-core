@@ -93,7 +93,8 @@ abstract class ClusterShardingCoordinatorRoleSpec(multiNodeConfig: ClusterShardi
   s"Cluster sharding (${multiNodeConfig.mode}, remember ${multiNodeConfig.rememberEntities}) with separate coordinator role" must {
 
     "use nodes with shard role" in within(30.seconds) {
-      startPersistenceIfNeeded(startOn = first, setStoreOn = Seq(first, second, third))
+      // the journal must run on a node that stays in the cluster, first and third are leaving
+      startPersistenceIfNeeded(startOn = second, setStoreOn = Seq(first, second, third))
 
       join(first, first)
       join(second, first)

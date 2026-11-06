@@ -1,0 +1,2 @@
+# Removed the deprecated LevelDB read journal
+ProblemFilters.exclude[Problem]("akka.persistence.query.journal.leveldb.*")

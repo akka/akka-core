@@ -13,9 +13,7 @@ import akka.remote.testconductor.RoleName
 import akka.testkit._
 
 abstract class ClusterShardingGracefulShutdownOldestSpecConfig(mode: String)
-    extends MultiNodeClusterShardingConfig(
-      mode,
-      additionalConfig = "akka.persistence.journal.leveldb-shared.store.native = off") {
+    extends MultiNodeClusterShardingConfig(mode) {
   val first = role("first")
   val second = role("second")
 }
@@ -93,7 +91,8 @@ abstract class ClusterShardingGracefulShutdownOldestSpec(
   s"Cluster sharding (${multiNodeConfig.mode})" must {
 
     "start some shards in both regions" in within(30.seconds) {
-      startPersistenceIfNeeded(startOn = first, setStoreOn = Seq(first, second))
+      // the journal must run on a node that stays in the cluster, first is leaving
+      startPersistenceIfNeeded(startOn = second, setStoreOn = Seq(first, second))
 
       join(first, first, typeName)
       join(second, first, typeName)

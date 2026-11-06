@@ -121,8 +121,6 @@ class PersistenceTestKitDurableStateStore[A](val system: ExtendedActorSystem)
     }
   }
 
-  override def deleteObject(persistenceId: String): Future[Done] = Future.successful(Done)
-
   override def deleteObject(persistenceId: String, revision: Long): Future[Done] =
     internalDeleteObject(persistenceId, revision, changeEvent = None)
 

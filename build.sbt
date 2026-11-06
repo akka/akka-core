@@ -184,7 +184,7 @@ lazy val clusterSharding = akkaModule("akka-cluster-sharding")
   .dependsOn(
     cluster % "compile->compile;test->test;multi-jvm->multi-jvm",
     distributedData,
-    persistence % "compile->compile",
+    persistence % "compile->compile;test->test",
     clusterTools % "compile->compile;test->test",
     jackson % "test->test")
   .settings(Dependencies.clusterSharding)

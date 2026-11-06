@@ -33,11 +33,7 @@ object RemoveInternalClusterShardingDataSpec {
     akka.loggers = ["akka.testkit.SilenceAllTestEventListener"]
     akka.actor.provider = "cluster"
     akka.remote.artery.canonical.port = 0
-    akka.persistence.journal.plugin = "akka.persistence.journal.leveldb"
-    akka.persistence.journal.leveldb {
-      native = off
-      dir = "target/journal-RemoveInternalClusterShardingDataSpec"
-    }
+    akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
     akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
     akka.persistence.snapshot-store.local.dir = "target/snapshots-RemoveInternalClusterShardingDataSpec"
     akka.cluster.sharding.snapshot-after = 5
@@ -103,8 +99,7 @@ class RemoveInternalClusterShardingDataSpec
   import RemoveInternalClusterShardingDataSpec._
 
   val storageLocations =
-    List("akka.persistence.journal.leveldb.dir", "akka.persistence.snapshot-store.local.dir").map(s =>
-      new File(system.settings.config.getString(s)))
+    List("akka.persistence.snapshot-store.local.dir").map(s => new File(system.settings.config.getString(s)))
 
   override protected def atStartup(): Unit = {
     storageLocations.foreach(dir => if (dir.exists) FileUtils.deleteDirectory(dir))
