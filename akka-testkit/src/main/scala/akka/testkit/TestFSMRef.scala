@@ -82,17 +82,6 @@ class TestFSMRef[S, D, T <: Actor](system: ActorSystem, props: Props, supervisor
     fsm.startSingleTimer(name, msg, delay)
 
   /**
-   * Proxy for [[akka.actor.FSM#setTimer]].
-   */
-  @deprecated(
-    "Use startTimerWithFixedDelay or startTimerAtFixedRate instead. This has the same semantics as " +
-    "startTimerAtFixedRate, but startTimerWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  def setTimer(name: String, msg: Any, timeout: FiniteDuration, repeat: Boolean = false): Unit = {
-    fsm.setTimer(name, msg, timeout, repeat)
-  }
-
-  /**
    * Proxy for [[akka.actor.FSM#cancelTimer]].
    */
   def cancelTimer(name: String): Unit = { fsm.cancelTimer(name) }
