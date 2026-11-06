@@ -1,0 +1,3 @@
+# Remove APIs deprecated before 2.10
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.testconductor.Conductor.throttle")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.remote.testconductor.TestConductorExt.throttle")
