@@ -13,6 +13,7 @@ import akka.actor.ActorSelection
 import akka.actor.ActorSystem
 import akka.actor.Address
 import akka.actor.Props
+import akka.actor.SuppressedDeadLetter
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus
 import akka.cluster.TestMember
@@ -34,7 +35,8 @@ object WriteAggregatorSpec {
       nodes: Vector[UniqueAddress],
       unreachable: Set[UniqueAddress],
       replyTo: ActorRef,
-      durable: Boolean): Props =
+      durable: Boolean,
+      lessLikelyToAck: Set[UniqueAddress] = Set.empty): Props =
     Props(
       new TestWriteAggregator(
         KeyA,
@@ -46,7 +48,8 @@ object WriteAggregatorSpec {
         nodes,
         unreachable,
         replyTo,
-        durable))
+        durable,
+        lessLikelyToAck))
 
   def writeAggregatorPropsWithDelta(
       data: ORSet[String],
@@ -57,7 +60,8 @@ object WriteAggregatorSpec {
       nodes: Vector[UniqueAddress],
       unreachable: Set[UniqueAddress],
       replyTo: ActorRef,
-      durable: Boolean): Props =
+      durable: Boolean,
+      lessLikelyToAck: Set[UniqueAddress] = Set.empty): Props =
     Props(
       new TestWriteAggregator(
         KeyB,
@@ -69,7 +73,8 @@ object WriteAggregatorSpec {
         nodes,
         unreachable,
         replyTo,
-        durable))
+        durable,
+        lessLikelyToAck))
 
   class TestWriteAggregator(
       key: Key.KeyR,
@@ -81,7 +86,8 @@ object WriteAggregatorSpec {
       nodes: Vector[UniqueAddress],
       unreachable: Set[UniqueAddress],
       replyTo: ActorRef,
-      durable: Boolean)
+      durable: Boolean,
+      lessLikelyToAck: Set[UniqueAddress])
       extends WriteAggregator(
         key,
         DataEnvelope(data),
@@ -91,6 +97,7 @@ object WriteAggregatorSpec {
         selfUniqueAddress,
         nodes,
         unreachable,
+        lessLikelyToAck,
         shuffle = false,
         replyTo,
         durable) {
@@ -385,6 +392,126 @@ class WriteAggregatorSpec extends AkkaSpec(s"""
       expectTerminated(aggr)
     }
 
+    "not use a node known to be leaving as a primary when there are enough other nodes" in {
+      val testProbes = probes()
+      val testProbeRefs = testProbes.map { case (a, tm) => a -> tm.writeAckAdapter }
+      val aggr = system.actorOf(
+        WriteAggregatorSpec.writeAggregatorProps(
+          data,
+          writeMajority,
+          testProbeRefs,
+          selfUniqueAddress,
+          nodes,
+          Set.empty,
+          testActor,
+          durable = false,
+          lessLikelyToAck = Set(nodeA)))
+
+      testProbes(nodeB).expectMsgType[Write]
+      testProbes(nodeC).expectMsgType[Write]
+
+      // neither are primaries, and no primary is leaving, so nothing sent to the secondaries
+      testProbes(nodeA).expectNoMessage(100.millis)
+      testProbes(nodeD).expectNoMessage(100.millis)
+
+      testProbes(nodeB).lastSender ! WriteAck
+      testProbes(nodeC).lastSender ! WriteAck
+      expectMsg(UpdateSuccess(WriteAggregatorSpec.KeyA, None))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "send to secondaries at startup when a node known to be leaving has to be a primary" in {
+      val testProbes = probes()
+      val testProbeRefs = testProbes.map { case (a, tm) => a -> tm.writeAckAdapter }
+      val aggr = system.actorOf(
+        WriteAggregatorSpec.writeAggregatorProps(
+          data,
+          writeMajority,
+          testProbeRefs,
+          selfUniqueAddress,
+          nodes,
+          Set.empty,
+          testActor,
+          durable = false,
+          lessLikelyToAck = Set(nodeA, nodeB, nodeC)))
+
+      // primaries: nodeD and nodeA, secondaries: nodeB and nodeC
+      testProbes(nodeD).expectMsgType[Write]
+      testProbes(nodeA).expectMsgType[Write]
+      // well before the fallback timer at timeout / 5
+      testProbes(nodeB).expectMsgType[Write](timeout / 10)
+      testProbes(nodeC).expectMsgType[Write](timeout / 10)
+
+      testProbes(nodeB).lastSender ! WriteAck
+      testProbes(nodeD).lastSender ! WriteAck
+      expectMsg(UpdateSuccess(WriteAggregatorSpec.KeyA, None))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "prefer a reachable node known to be leaving over an unreachable node as a primary" in {
+      val testProbes = probes()
+      val testProbeRefs = testProbes.map { case (a, tm) => a -> tm.writeAckAdapter }
+      // 3 primaries (nodeB, nodeC, nodeA) and the secondary nodeD, which is sent to since nodeA is leaving
+      // (if nodeD were a primary, then nodeA would be a secondary which wouldn't be sent to before the fallback timer)
+      val aggr = system.actorOf(
+        WriteAggregatorSpec.writeAggregatorProps(
+          data,
+          WriteTo(4, timeout),
+          testProbeRefs,
+          selfUniqueAddress,
+          nodes,
+          Set(nodeD),
+          testActor,
+          durable = false,
+          lessLikelyToAck = Set(nodeA)))
+
+      testProbes(nodeB).expectMsgType[Write]
+      testProbes(nodeC).expectMsgType[Write]
+      testProbes(nodeA).expectMsgType[Write](timeout / 10)
+      testProbes(nodeD).expectMsgType[Write](timeout / 10)
+
+      testProbes(nodeB).lastSender ! WriteAck
+      testProbes(nodeC).lastSender ! WriteAck
+      testProbes(nodeA).lastSender ! WriteAck
+      expectMsg(UpdateSuccess(WriteAggregatorSpec.KeyA, None))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "suppress the dead letter when a member event arrives after it has stopped" in {
+      val testProbes = probes()
+      val testProbeRefs = testProbes.map { case (a, tm) => a -> tm.writeAckAdapter }
+      val aggr = system.actorOf(
+        WriteAggregatorSpec.writeAggregatorProps(
+          data,
+          writeMajority,
+          testProbeRefs,
+          selfUniqueAddress,
+          nodes,
+          Set.empty,
+          testActor,
+          durable = false))
+
+      testProbes(nodeA).expectMsgType[Write]
+      testProbes(nodeB).expectMsgType[Write]
+      testProbes(nodeA).lastSender ! WriteAck
+      testProbes(nodeB).lastSender ! WriteAck
+      expectMsg(UpdateSuccess(WriteAggregatorSpec.KeyA, None))
+      watch(aggr)
+      expectTerminated(aggr)
+
+      val deadLetterProbe = TestProbe()
+      system.eventStream.subscribe(deadLetterProbe.ref, classOf[SuppressedDeadLetter])
+      val lateEvent = MemberLessLikelyToAck(member(nodeA))
+      aggr ! lateEvent
+      deadLetterProbe.fishForSpecificMessage() {
+        case SuppressedDeadLetter(`lateEvent`, _, _) => ()
+      }
+      system.eventStream.unsubscribe(deadLetterProbe.ref)
+    }
+
     "calculate majority with minCap" in {
       val minCap = 5
 
@@ -483,6 +610,76 @@ class WriteAggregatorSpec extends AkkaSpec(s"""
 
       testProbes(nodeB).lastSender ! WriteAck
       testProbes(nodeC).lastSender ! WriteAck
+      expectMsg(UpdateSuccess(WriteAggregatorSpec.KeyB, None))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "send deltas to the replacement primaries when a node known to be leaving isn't a primary" in {
+      val testProbes = probes()
+      val testProbeRefs = testProbes.map { case (a, tm) => a -> tm.writeAckAdapter }
+      val aggr = system.actorOf(
+        WriteAggregatorSpec.writeAggregatorPropsWithDelta(
+          fullState2,
+          delta,
+          writeMajority,
+          testProbeRefs,
+          selfUniqueAddress,
+          nodes,
+          Set.empty,
+          testActor,
+          durable = false,
+          lessLikelyToAck = Set(nodeA)))
+
+      testProbes(nodeB).expectMsgType[DeltaPropagation]
+      testProbes(nodeC).expectMsgType[DeltaPropagation]
+      testProbes(nodeA).expectNoMessage(100.millis)
+      testProbes(nodeD).expectNoMessage(100.millis)
+
+      // a replacement primary which has missed earlier deltas gets the full state
+      testProbes(nodeC).lastSender ! DeltaNack
+      testProbes(nodeC).expectMsgType[Write]
+
+      testProbes(nodeB).lastSender ! WriteAck
+      testProbes(nodeC).lastSender ! WriteAck
+      expectMsg(UpdateSuccess(WriteAggregatorSpec.KeyB, None))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "still retry with full state to unacknowledged primaries after sending early to secondaries" in {
+      val testProbes = probes()
+      val testProbeRefs = testProbes.map { case (a, tm) => a -> tm.writeAckAdapter }
+      val aggr = system.actorOf(
+        WriteAggregatorSpec.writeAggregatorPropsWithDelta(
+          fullState2,
+          delta,
+          writeMajority,
+          testProbeRefs,
+          selfUniqueAddress,
+          nodes,
+          Set.empty,
+          testActor,
+          durable = false))
+
+      testProbes(nodeA).expectMsgType[DeltaPropagation]
+      testProbes(nodeB).expectMsgType[DeltaPropagation]
+
+      aggr ! MemberLessLikelyToAck(member(nodeA))
+
+      testProbes(nodeC).expectMsgType[Write]
+      testProbes(nodeD).expectMsgType[Write]
+
+      // not enough for the quorum, and nodeB shouldn't be included in the retry
+      testProbes(nodeB).lastSender ! WriteAck
+
+      // from the fallback timer
+      testProbes(nodeA).expectMsgType[Write]
+      testProbes(nodeB).expectNoMessage(100.millis)
+      testProbes(nodeC).expectNoMessage(100.millis)
+      testProbes(nodeD).expectNoMessage(100.millis)
+
+      testProbes(nodeA).lastSender ! WriteAck
       expectMsg(UpdateSuccess(WriteAggregatorSpec.KeyB, None))
       watch(aggr)
       expectTerminated(aggr)

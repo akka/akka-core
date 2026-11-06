@@ -14,6 +14,7 @@ import akka.actor.ActorSystem
 import akka.actor.Address
 import akka.actor.Props
 import akka.actor.Terminated
+import akka.actor.UnhandledMessage
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus
 import akka.cluster.TestMember
@@ -32,8 +33,9 @@ object ReadAggregatorSpec {
       selfUniqueAddress: UniqueAddress,
       nodes: Vector[UniqueAddress],
       localValue: Option[DataEnvelope],
-      replyTo: ActorRef): Props =
-    Props(new TestReadAggregator(consistency, probes, selfUniqueAddress, nodes, localValue, replyTo))
+      replyTo: ActorRef,
+      lessLikelyToAck: Set[UniqueAddress] = Set.empty): Props =
+    Props(new TestReadAggregator(consistency, probes, selfUniqueAddress, nodes, localValue, replyTo, lessLikelyToAck))
 
   class TestReadAggregator(
       consistency: Replicator.ReadConsistency,
@@ -41,7 +43,8 @@ object ReadAggregatorSpec {
       selfUniqueAddress: UniqueAddress,
       nodes: Vector[UniqueAddress],
       localValue: Option[DataEnvelope],
-      replyTo: ActorRef)
+      replyTo: ActorRef,
+      lessLikelyToAck: Set[UniqueAddress])
       extends ReadAggregator(
         KeyA,
         consistency,
@@ -49,6 +52,7 @@ object ReadAggregatorSpec {
         selfUniqueAddress,
         nodes,
         Set.empty,
+        lessLikelyToAck,
         shuffle = false,
         localValue,
         replyTo) {
@@ -128,10 +132,18 @@ class ReadAggregatorSpec extends AkkaSpec(s"""
   def aggregator(
       testProbes: Map[UniqueAddress, TestMock],
       readRepairProbe: ActorRef,
-      localValue: Option[DataEnvelope] = Some(DataEnvelope(data))): ActorRef = {
+      localValue: Option[DataEnvelope] = Some(DataEnvelope(data)),
+      lessLikelyToAck: Set[UniqueAddress] = Set.empty): ActorRef = {
     val probeRefs = testProbes.map { case (address, probe) => address -> probe.readResultAdapter }
     val props =
-      ReadAggregatorSpec.readAggregatorProps(readMajority, probeRefs, selfUniqueAddress, nodes, localValue, testActor)
+      ReadAggregatorSpec.readAggregatorProps(
+        readMajority,
+        probeRefs,
+        selfUniqueAddress,
+        nodes,
+        localValue,
+        testActor,
+        lessLikelyToAck)
     system.actorOf(ReadAggregatorSpec.parentProps(props, readRepairProbe))
   }
 
@@ -237,6 +249,69 @@ class ReadAggregatorSpec extends AkkaSpec(s"""
       testProbes(nodeA).lastSender ! ReadResult(Some(DataEnvelope(data)))
       testProbes(nodeB).lastSender ! ReadResult(Some(DataEnvelope(data)))
       completeReadRepair(readRepairProbe)
+      expectMsg(GetSuccess(KeyA, None)(data))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "not use a node known to be leaving as a primary when there are enough other nodes" in {
+      val testProbes = probes()
+      val readRepairProbe = TestProbe()
+      val aggr = aggregator(testProbes, readRepairProbe.ref, lessLikelyToAck = Set(nodeA))
+
+      testProbes(nodeB).expectMsgType[Read]
+      testProbes(nodeC).expectMsgType[Read]
+
+      // neither are primaries, and no primary is leaving, so nothing sent to the secondaries
+      testProbes(nodeA).expectNoMessage(100.millis)
+      testProbes(nodeD).expectNoMessage(100.millis)
+
+      testProbes(nodeB).lastSender ! ReadResult(Some(DataEnvelope(data)))
+      testProbes(nodeC).lastSender ! ReadResult(Some(DataEnvelope(data)))
+      completeReadRepair(readRepairProbe)
+      expectMsg(GetSuccess(KeyA, None)(data))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "send to secondaries at startup when a node known to be leaving has to be a primary" in {
+      val testProbes = probes()
+      val readRepairProbe = TestProbe()
+      val aggr = aggregator(testProbes, readRepairProbe.ref, lessLikelyToAck = Set(nodeA, nodeB, nodeC))
+
+      // primaries: nodeD and nodeA, secondaries: nodeB and nodeC
+      testProbes(nodeD).expectMsgType[Read]
+      testProbes(nodeA).expectMsgType[Read]
+      // well before the fallback timer at timeout / 5
+      testProbes(nodeB).expectMsgType[Read](timeout / 10)
+      testProbes(nodeC).expectMsgType[Read](timeout / 10)
+
+      testProbes(nodeB).lastSender ! ReadResult(Some(DataEnvelope(data)))
+      testProbes(nodeD).lastSender ! ReadResult(Some(DataEnvelope(data)))
+      completeReadRepair(readRepairProbe)
+      expectMsg(GetSuccess(KeyA, None)(data))
+      watch(aggr)
+      expectTerminated(aggr)
+    }
+
+    "ignore member events while waiting for the read repair" in {
+      val testProbes = probes()
+      val readRepairProbe = TestProbe()
+      val aggr = aggregator(testProbes, readRepairProbe.ref)
+
+      testProbes(nodeA).expectMsgType[Read]
+      testProbes(nodeB).expectMsgType[Read]
+      testProbes(nodeA).lastSender ! ReadResult(Some(DataEnvelope(data)))
+      testProbes(nodeB).lastSender ! ReadResult(Some(DataEnvelope(data)))
+      readRepairProbe.expectMsgType[ReadRepair]
+
+      val unhandledProbe = TestProbe()
+      system.eventStream.subscribe(unhandledProbe.ref, classOf[UnhandledMessage])
+      aggr ! MemberLessLikelyToAck(member(nodeC))
+      unhandledProbe.expectNoMessage(200.millis)
+      system.eventStream.unsubscribe(unhandledProbe.ref)
+
+      readRepairProbe.lastSender ! ReadRepairAck
       expectMsg(GetSuccess(KeyA, None)(data))
       watch(aggr)
       expectTerminated(aggr)

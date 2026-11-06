@@ -1043,6 +1043,8 @@ object Replicator {
     // sent to read/write aggregators proactively on certain cluster gossip changes to potentially trigger early fan-out to
     // secondary replicas
     private[ddata] final case class MemberLessLikelyToAck(m: Member)
+        extends DeadLetterSuppression
+        with NoSerializationVerificationNeeded
 
     // Gossip Status message contains SHA-1 digests of the data to determine when
     // to send the full data
@@ -1561,6 +1563,10 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   var exitingNodes: immutable.SortedSet[UniqueAddress] = immutable.SortedSet.empty
 
   // up and weaklyUp nodes, doesn't contain joining and not selfAddress
+  // cluster membership nodes which are leaving the cluster (status Leaving, Exiting, or Down), and thus aren't
+  // expected to keep responding to reads and writes
+  var lessLikelyToAckNodes: Set[UniqueAddress] = Set.empty
+
   private def allNodes: immutable.SortedSet[UniqueAddress] = nodes.union(weaklyUpNodes)
 
   private def isKnownNode(node: UniqueAddress): Boolean =
@@ -1813,6 +1819,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
             selfUniqueAddress,
             nodesForReadWrite(excludeExiting),
             unreachable,
+            lessLikelyToAckNodes,
             !settings.preferOldest,
             localValue,
             replyTo)
@@ -1922,6 +1929,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
                   selfUniqueAddress,
                   nodesForReadWrite(excludeExiting),
                   unreachable,
+                  lessLikelyToAckNodes,
                   shuffle,
                   replyTo,
                   durable)
@@ -2045,6 +2053,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
                   selfUniqueAddress,
                   nodesForReadWrite(excludeExiting),
                   unreachable,
+                  lessLikelyToAckNodes,
                   !settings.preferOldest,
                   replyTo,
                   durable)
@@ -2633,10 +2642,16 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     }
   }
 
+  private def markLessLikelyToAck(m: Member): Unit =
+    if (m.address != selfAddress) {
+      lessLikelyToAckNodes += m.uniqueAddress
+      lessLikelyToAck(m)
+    }
+
   def receiveMemberExiting(m: Member): Unit =
     if (matchingRole(m) && m.address != selfAddress) {
       exitingNodes += m.uniqueAddress
-      lessLikelyToAck(m)
+      markLessLikelyToAck(m)
     }
 
   def receiveMemberRemoved(m: Member): Unit = {
@@ -2650,6 +2665,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       weaklyUpNodes -= m.uniqueAddress
       joiningNodes -= m.uniqueAddress
       exitingNodes -= m.uniqueAddress
+      lessLikelyToAckNodes -= m.uniqueAddress
       removedNodes = removedNodes.updated(m.uniqueAddress, allReachableClockTime)
       unreachable -= m.uniqueAddress
       if (settings.preferOldest) {
@@ -2664,13 +2680,13 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
 
   def receiveMemberLeft(m: Member): Unit =
     if (matchingRole(m)) {
-      lessLikelyToAck(m)
+      markLessLikelyToAck(m)
       receiveOtherMemberEvent(m)
     }
 
   def receiveMemberDowned(m: Member): Unit =
     if (matchingRole(m)) {
-      lessLikelyToAck(m)
+      markLessLikelyToAck(m)
       receiveOtherMemberEvent(m)
     }
 
@@ -2828,6 +2844,16 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
   def nodes: Vector[UniqueAddress]
   def unreachable: Set[UniqueAddress]
   def reachableNodes: Vector[UniqueAddress] = nodes.filterNot(unreachable)
+
+  /**
+   * Nodes known when this aggregator was started to be leaving the cluster.  Nodes that this aggregator learns are
+   * leaving after being started are signaled with `MemberLessLikelyToAck`.
+   *
+   * Invariant: if a primary is known (by either means) to be leaving before it has replied, this aggregator has
+   * sent to the secondaries.
+   */
+  def lessLikelyToAck: Set[UniqueAddress]
+
   def shuffle: Boolean
 
   import context.dispatcher
@@ -2843,15 +2869,20 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     if (primarySize >= nodes.size)
       (nodes, Vector.empty[UniqueAddress])
     else {
-      // Prefer to use reachable nodes over the unreachable nodes first.
+      // Prefer to use reachable nodes over the unreachable nodes first, and reachable nodes which aren't leaving
+      // over those which are.
       // When RequiresCausalDeliveryOfDeltas (shuffle=false) use deterministic order to so that sequence numbers
-      // of subsequent updates are in sync on the destination nodes.
+      // of subsequent updates are in sync on the destination nodes.  This is an optimization: a destination node
+      // which has missed deltas (e.g. because a leaving node was moved out of the primaries) replies with DeltaNack
+      // and is sent the full state.
       // The order is also kept when prefer-oldest is enabled.
+      val (notLeaving, leaving) = reachableNodes.partition(node => !lessLikelyToAck(node))
       val orderedNodes =
         if (shuffle)
-          scala.util.Random.shuffle(reachableNodes) ++ scala.util.Random.shuffle(unreachable.toVector)
+          scala.util.Random.shuffle(notLeaving) ++ scala.util.Random.shuffle(leaving) ++
+          scala.util.Random.shuffle(unreachable.toVector)
         else
-          reachableNodes ++ unreachable
+          notLeaving ++ leaving ++ unreachable
       val (p, s) = orderedNodes.splitAt(primarySize)
       (p, s.take(MaxSecondaryNodes))
     }
@@ -2880,6 +2911,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       selfUniqueAddress: UniqueAddress,
       nodes: Vector[UniqueAddress],
       unreachable: Set[UniqueAddress],
+      lessLikelyToAck: Set[UniqueAddress],
       shuffle: Boolean,
       replyTo: ActorRef,
       durable: Boolean): Props =
@@ -2893,6 +2925,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
         selfUniqueAddress,
         nodes,
         unreachable,
+        lessLikelyToAck,
         shuffle,
         replyTo,
         durable)).withDeploy(Deploy.local)
@@ -2910,6 +2943,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     selfUniqueAddress: UniqueAddress,
     override val nodes: Vector[UniqueAddress],
     override val unreachable: Set[UniqueAddress],
+    override val lessLikelyToAck: Set[UniqueAddress],
     override val shuffle: Boolean,
     replyTo: ActorRef,
     durable: Boolean)
@@ -2962,6 +2996,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     primaryNodes.foreach { replica(_) ! msg }
 
     if (isDone) reply(isTimeout = false)
+    else if (primaryNodes.exists(lessLikelyToAck)) sendToSecondaries()
   }
 
   def receive: Receive = {
@@ -3052,12 +3087,22 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       selfUniqueAddress: UniqueAddress,
       nodes: Vector[UniqueAddress],
       unreachable: Set[UniqueAddress],
+      lessLikelyToAck: Set[UniqueAddress],
       shuffle: Boolean,
       localValue: Option[Replicator.Internal.DataEnvelope],
       replyTo: ActorRef): Props =
     Props(
-      new ReadAggregator(key, consistency, req, selfUniqueAddress, nodes, unreachable, shuffle, localValue, replyTo))
-      .withDeploy(Deploy.local)
+      new ReadAggregator(
+        key,
+        consistency,
+        req,
+        selfUniqueAddress,
+        nodes,
+        unreachable,
+        lessLikelyToAck,
+        shuffle,
+        localValue,
+        replyTo)).withDeploy(Deploy.local)
 
 }
 
@@ -3071,6 +3116,7 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     selfUniqueAddress: UniqueAddress,
     override val nodes: Vector[UniqueAddress],
     override val unreachable: Set[UniqueAddress],
+    override val lessLikelyToAck: Set[UniqueAddress],
     override val shuffle: Boolean,
     localValue: Option[Replicator.Internal.DataEnvelope],
     replyTo: ActorRef)
@@ -3116,6 +3162,8 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
       reply(ok = true)
     else if (doneWhenRemainingSize < 0 || remaining.size < doneWhenRemainingSize)
       reply(ok = false)
+    else if (primaryNodes.exists(lessLikelyToAck))
+      sendToSecondaries()
   }
 
   def receive = {
@@ -3172,7 +3220,8 @@ final class Replicator(settings: ReplicatorSettings) extends Actor with ActorLog
     case _: ReadResult =>
       //collect late replies
       remaining -= senderAddress()
-    case SendToSecondary =>
-    case ReceiveTimeout  =>
+    case SendToSecondary          =>
+    case _: MemberLessLikelyToAck =>
+    case ReceiveTimeout           =>
   }
 }
