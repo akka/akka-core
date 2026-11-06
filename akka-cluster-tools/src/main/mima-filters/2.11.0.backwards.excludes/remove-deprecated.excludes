@@ -1,0 +1,2 @@
+# Removal of APIs deprecated before 2.10
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.pubsub.DistributedPubSubSettings.this")
