@@ -1,0 +1,7 @@
+# Removed deprecated TestFSMRef.setTimer together with FSM.setTimer (reported by the Scala 3 check)
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.TestFSMRef.setTimer")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.TestFSMRef.setTimer$default$4")
+
+# Removed deprecated Scheduler.schedule overloads, inherited by the test scheduler
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.ExplicitlyTriggeredScheduler.schedule")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.ExplicitlyTriggeredScheduler.schedule$default$6")

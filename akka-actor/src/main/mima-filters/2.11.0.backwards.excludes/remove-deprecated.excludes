@@ -44,3 +44,10 @@ ProblemFilters.exclude[MissingClassProblem]("akka.io.Tcp$WriteFile")
 ProblemFilters.exclude[MissingClassProblem]("akka.io.Tcp$WriteFile$")
 # Serialization.deserialize with Option[Class]
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.serialization.Serialization.deserialize")
+
+# Scala 3 only: synthetic defaults and case object accessors of removed members
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.FSM.setTimer$default$4$")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.Scheduler.schedule$default$6$")
+ProblemFilters.exclude[MissingFieldProblem]("akka.io.Dns.Resolve")
+ProblemFilters.exclude[MissingFieldProblem]("akka.io.Dns.Resolved")
+ProblemFilters.exclude[MissingFieldProblem]("akka.io.Tcp.WriteFile")
