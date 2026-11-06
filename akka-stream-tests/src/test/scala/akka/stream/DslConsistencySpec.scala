@@ -4,10 +4,7 @@
 
 package akka.stream
 
-import java.lang.reflect.Method
 import java.lang.reflect.Modifier
-
-import scala.annotation.nowarn
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -94,9 +91,6 @@ class DslConsistencySpec extends AnyWordSpec with Matchers {
     sSubSourceClass -> Set(),
     sRunnableGraphClass -> Set("builder"))
 
-  @nowarn
-  def materializing(m: Method): Boolean = m.getParameterTypes.contains(classOf[ActorMaterializer])
-
   def assertHasMethod(c: Class[_], name: String): Unit = {
     // include class name to get better error message
     if (!allowMissing.getOrElse(c, Set.empty).contains(name))
@@ -122,25 +116,9 @@ class DslConsistencySpec extends AnyWordSpec with Matchers {
               if !Modifier.isStatic(m.getModifiers)
               if !ignore(m.getName)
               if !m.getName.contains("$")
-              if !materializing(m)
             } yield m.getName).toSet
 
           for (c <- classes; op <- allOps)
-            assertHasMethod(c, op)
-        }
-
-        s"provide same $element materializing operators" in {
-          val materializingOps =
-            (for {
-              c <- classes
-              m <- c.getMethods
-              if !Modifier.isStatic(m.getModifiers)
-              if !ignore(m.getName)
-              if !m.getName.contains("$")
-              if materializing(m)
-            } yield m.getName).toSet
-
-          for (c <- classes; op <- materializingOps)
             assertHasMethod(c, op)
         }
 

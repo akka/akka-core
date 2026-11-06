@@ -227,8 +227,7 @@ class SinkSpec extends StreamSpec with DefaultTimeout with ScalaFutures {
   "The ignore sink" should {
 
     "fail its materialized value on abrupt materializer termination" in {
-      @nowarn("msg=deprecated")
-      val mat = ActorMaterializer()
+      val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
 
       val matVal = Source.maybe[Int].runWith(Sink.ignore)(mat)
 
@@ -259,8 +258,7 @@ class SinkSpec extends StreamSpec with DefaultTimeout with ScalaFutures {
     }
 
     "fail its materialized value on abrupt materializer termination" in {
-      @nowarn("msg=deprecated")
-      val mat = ActorMaterializer()
+      val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
       val matVal = Source.single(1).runWith(Sink.never)(mat)
       mat.shutdown()
       matVal.failed.futureValue shouldBe a[AbruptStageTerminationException]

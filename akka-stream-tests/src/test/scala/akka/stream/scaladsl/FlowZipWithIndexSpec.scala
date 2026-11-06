@@ -5,12 +5,9 @@
 package akka.stream.scaladsl
 
 import akka.stream.testkit.scaladsl.TestSink
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Materializer, UniformFanInShape }
+import akka.stream.{ ActorMaterializerSettings, Materializer, SystemMaterializer, UniformFanInShape }
 import akka.stream.testkit.{ StreamSpec, TestSubscriber }
 
-import scala.annotation.nowarn
-
-@nowarn // keep unused imports
 class FlowZipWithIndexSpec extends StreamSpec {
 
 //#zip-with-index
@@ -20,7 +17,8 @@ class FlowZipWithIndexSpec extends StreamSpec {
 //#zip-with-index
   val settings = ActorMaterializerSettings(system).withInputBuffer(initialSize = 2, maxSize = 16)
 
-  implicit val materializer: Materializer = ActorMaterializer(settings)
+  implicit val materializer: Materializer =
+    SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
   "A ZipWithIndex for Flow " must {
 

@@ -6,24 +6,20 @@ package akka.stream.io
 
 import java.io.OutputStream
 
-import scala.annotation.nowarn
-import scala.util.Success
-
 import org.scalatest.concurrent.ScalaFutures
 
-import akka.Done
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, IOOperationIncompleteException }
+import akka.stream.{ ActorMaterializerSettings, IOOperationIncompleteException, Materializer, SystemMaterializer }
 import akka.stream.scaladsl.{ Source, StreamConverters }
 import akka.stream.testkit._
 import akka.stream.testkit.Utils._
 import akka.testkit.TestProbe
 import akka.util.ByteString
 
-@nowarn
 class OutputStreamSinkSpec extends StreamSpec(UnboundedMailboxConfig) with ScalaFutures {
 
   val settings = ActorMaterializerSettings(system).withDispatcher("akka.actor.default-dispatcher")
-  implicit val materializer: ActorMaterializer = ActorMaterializer(settings)
+  implicit val materializer: Materializer =
+    SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
   "OutputStreamSink" must {
     "write bytes to void OutputStream" in {
@@ -40,7 +36,6 @@ class OutputStreamSinkSpec extends StreamSpec(UnboundedMailboxConfig) with Scala
       p.expectMsg(data(1).utf8String)
       p.expectMsg(data(2).utf8String)
       completion.futureValue.count shouldEqual 3
-      completion.futureValue.status shouldEqual Success(Done)
     }
 
     "auto flush when enabled" in {

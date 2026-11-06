@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Await
@@ -25,7 +24,6 @@ import akka.Done
 import akka.stream.AbruptTerminationException
 import akka.stream.ActorAttributes
 import akka.stream.ActorAttributes._
-import akka.stream.ActorMaterializer
 import akka.stream.Supervision._
 import akka.stream.SystemMaterializer
 import akka.stream.impl.PhasedFusingActorMaterializer
@@ -369,8 +367,7 @@ class MapWithResourceSpec extends StreamSpec(UnboundedMailboxConfig) {
     }
 
     "will close the resource on abrupt materializer termination" in {
-      @nowarn("msg=deprecated")
-      val mat = ActorMaterializer()
+      val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
       val promise = Promise[Done]()
       val matVal = Source
         .single(1)

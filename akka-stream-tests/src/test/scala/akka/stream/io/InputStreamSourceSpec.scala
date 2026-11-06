@@ -7,22 +7,24 @@ package akka.stream.io
 import java.io.{ ByteArrayInputStream, InputStream }
 import java.util.concurrent.CountDownLatch
 
-import scala.annotation.nowarn
-import scala.util.Success
-
-import akka.Done
-import akka.stream.{ AbruptStageTerminationException, ActorMaterializer, ActorMaterializerSettings, IOResult }
+import akka.stream.{
+  AbruptStageTerminationException,
+  ActorMaterializerSettings,
+  IOResult,
+  Materializer,
+  SystemMaterializer
+}
 import akka.stream.scaladsl.{ Keep, Sink, StreamConverters }
 import akka.stream.testkit._
 import akka.stream.testkit.Utils._
 import akka.stream.testkit.scaladsl.TestSink
 import akka.util.ByteString
 
-@nowarn
 class InputStreamSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
 
   val settings = ActorMaterializerSettings(system).withDispatcher("akka.actor.default-dispatcher")
-  implicit val materializer: ActorMaterializer = ActorMaterializer(settings)
+  implicit val materializer: Materializer =
+    SystemMaterializer(system).createAdditionalLegacySystemMaterializer("flow", settings)
 
   private def inputStreamFor(bytes: Array[Byte]): InputStream =
     new ByteArrayInputStream(bytes)
@@ -41,7 +43,7 @@ class InputStreamSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
         .fromInputStream(() => inputStreamFor(Array(1, 2, 3)))
         .toMat(Sink.ignore)(Keep.left)
         .run()
-        .futureValue shouldEqual IOResult(3, Success(Done))
+        .futureValue shouldEqual IOResult(3)
     }
 
     "return fail if close fails" in {
@@ -91,12 +93,11 @@ class InputStreamSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
         .run()
         .futureValue
 
-      f.status shouldEqual Success(Done)
       f.count shouldBe >=(1L)
     }
 
     "handle actor materializer shutdown" in {
-      val mat = ActorMaterializer()
+      val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
       val source = StreamConverters.fromInputStream(() => inputStreamFor(Array(1, 2, 3)))
       val pubSink = Sink.asPublisher[ByteString](false)
       val (f, neverPub) = source.toMat(pubSink)(Keep.both).run()(mat)
