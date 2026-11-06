@@ -1,6 +1,0 @@
-# Provider users shouldn't rely on the more specific type anyway
-ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.query.journal.leveldb.LeveldbReadJournalProvider.scaladslReadJournal")
-ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.query.journal.leveldb.LeveldbReadJournalProvider.javadslReadJournal")
-
-# Buffer is private[leveldb]
-ProblemFilters.exclude[ReversedMissingMethodProblem]("akka.persistence.query.journal.leveldb.Buffer.doPush")
