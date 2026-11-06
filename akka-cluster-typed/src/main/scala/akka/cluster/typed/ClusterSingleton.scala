@@ -58,17 +58,6 @@ final class ClusterSingletonSettings(
     val bufferSize: Int,
     val leaseSettings: Option[LeaseUsageSettings]) {
 
-  // bin compat for 2.6.14
-  @deprecated("Use constructor with leaseSettings", "2.6.15")
-  def this(
-      role: Option[String],
-      dataCenter: Option[DataCenter],
-      singletonIdentificationInterval: FiniteDuration,
-      removalMargin: FiniteDuration,
-      handOverRetryInterval: FiniteDuration,
-      bufferSize: Int) =
-    this(role, dataCenter, singletonIdentificationInterval, removalMargin, handOverRetryInterval, bufferSize, None)
-
   def withRole(role: String): ClusterSingletonSettings = copy(role = Some(role))
 
   def withNoRole(): ClusterSingletonSettings = copy(role = None)
@@ -319,15 +308,6 @@ final class ClusterSingletonManagerSettings(
     val removalMargin: FiniteDuration,
     val handOverRetryInterval: FiniteDuration,
     val leaseSettings: Option[LeaseUsageSettings]) {
-
-  // bin compat for 2.6.14
-  @deprecated("Use constructor with leaseSettings", "2.6.15")
-  def this(
-      singletonName: String,
-      role: Option[String],
-      removalMargin: FiniteDuration,
-      handOverRetryInterval: FiniteDuration) =
-    this(singletonName, role, removalMargin, handOverRetryInterval, None)
 
   def withSingletonName(name: String): ClusterSingletonManagerSettings = copy(singletonName = name)
 
