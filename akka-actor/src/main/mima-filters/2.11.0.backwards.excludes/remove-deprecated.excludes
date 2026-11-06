@@ -1,4 +1,4 @@
-# remove APIs deprecated before 2.10 in akka-actor
+# Removed APIs deprecated in 2.10.0 or earlier in akka-actor
 # FSM.setTimer / AbstractFSM.setTimer
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractFSM.setTimer")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.actor.AbstractFSM.setTimer$default$4")
