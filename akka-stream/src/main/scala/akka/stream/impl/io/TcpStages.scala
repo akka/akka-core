@@ -8,7 +8,6 @@ import java.net.InetSocketAddress
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.{ AtomicBoolean, AtomicLong }
 
-import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.{ Future, Promise }
@@ -21,6 +20,7 @@ import akka.io.Inet.SocketOption
 import akka.io.Tcp
 import akka.io.Tcp._
 import akka.stream._
+import akka.stream.impl.ExtendedActorMaterializer
 import akka.stream.impl.ReactiveStreamsCompliance
 import akka.stream.impl.fusing.GraphStages.detacher
 import akka.stream.scaladsl.{ BidiFlow, Flow, TcpIdleTimeoutException, Tcp => StreamTcp }
@@ -250,10 +250,10 @@ private[stream] object ConnectionSourceStage {
     // After that remains immutable
     private var connection: ActorRef = _
 
-    @nowarn("msg=deprecated")
     private val writeBufferSize = inheritedAttributes
       .get[TcpAttributes.TcpWriteBufferSize](
-        TcpAttributes.TcpWriteBufferSize(eagerMaterializer.settings.ioSettings.tcpWriteBufferSize))
+        TcpAttributes.TcpWriteBufferSize(
+          ExtendedActorMaterializer.settingsOf(eagerMaterializer).ioSettings.tcpWriteBufferSize))
       .size
 
     private var writeBuffer = ByteString.empty
@@ -263,8 +263,7 @@ private[stream] object ConnectionSourceStage {
     // upstream already finished but are still writing the last data to the connection
     private var connectionClosePending = false
 
-    @nowarn("msg=deprecated")
-    private val coalesceWrites = eagerMaterializer.settings.ioSettings.coalesceWrites
+    private val coalesceWrites = ExtendedActorMaterializer.settingsOf(eagerMaterializer).ioSettings.coalesceWrites
     private def coalesceWritesDisabled = coalesceWrites == 0
     private var writeDelayCountDown = 0
     private var previousWriteBufferSize = 0

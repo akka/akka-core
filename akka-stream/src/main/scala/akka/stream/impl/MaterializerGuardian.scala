@@ -26,8 +26,7 @@ private[akka] object MaterializerGuardian {
 
   final case class MaterializerStarted(materializer: Materializer)
 
-  // this is available to keep backwards compatibility with ActorMaterializer and should
-  // be removed together with ActorMaterializer in a future version
+  // used by Artery to start materializers with a name prefix and custom settings
   final case class LegacyStartMaterializer(namePrefix: String, settings: ActorMaterializerSettings)
 
   def props(systemMaterializer: Promise[Materializer], materializerSettings: ActorMaterializerSettings) =

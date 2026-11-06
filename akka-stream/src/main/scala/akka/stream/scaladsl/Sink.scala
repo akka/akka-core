@@ -21,7 +21,6 @@ import org.reactivestreams.Subscriber
 import akka.Done
 import akka.NotUsed
 import akka.actor.ActorRef
-import akka.actor.Status
 import akka.annotation.InternalApi
 import akka.stream._
 import akka.stream.impl._
@@ -171,17 +170,6 @@ object Sink {
         })
       })
       .to(Sink.head)
-
-  /**
-   * Defers the creation of a [[Sink]] until materialization. The `factory` function
-   * exposes [[ActorMaterializer]] which is going to be used during materialization and
-   * [[Attributes]] of the [[Sink]] returned by this method.
-   */
-  @deprecated("Use 'fromMaterializer' instead", "2.6.0")
-  def setup[T, M](factory: (ActorMaterializer, Attributes) => Sink[T, M]): Sink[T, Future[M]] =
-    fromMaterializer { (mat, attr) =>
-      factory(ActorMaterializerHelper.downcast(mat), attr)
-    }
 
   /**
    * Helper to create [[Sink]] from `Subscriber`.
@@ -491,25 +479,6 @@ object Sink {
     fromGraph(new ActorRefSinkStage[T](ref, onCompleteMessage, onFailureMessage))
 
   /**
-   * Sends the elements of the stream to the given `ActorRef`.
-   * If the target actor terminates the stream will be canceled.
-   * When the stream is completed successfully the given `onCompleteMessage`
-   * will be sent to the destination actor.
-   * When the stream is completed with failure a [[akka.actor.Status.Failure]]
-   * message will be sent to the destination actor.
-   *
-   * It will request at most `maxInputBufferSize` number of elements from
-   * upstream, but there is no back-pressure signal from the destination actor,
-   * i.e. if the actor is not consuming the messages fast enough the mailbox
-   * of the actor will grow. For potentially slow consumer actors it is recommended
-   * to use a bounded mailbox with zero `mailbox-push-timeout-time` or use a rate
-   * limiting operator in front of this `Sink`.
-   */
-  @deprecated("Use variant accepting both on complete and on failure message", "2.6.0")
-  def actorRef[T](ref: ActorRef, onCompleteMessage: Any): Sink[T, NotUsed] =
-    fromGraph(new ActorRefSinkStage[T](ref, onCompleteMessage, t => Status.Failure(t)))
-
-  /**
    * INTERNAL API
    *
    * Sends the elements of the stream to the given `ActorRef` that sends back back-pressure signal.
@@ -588,28 +557,6 @@ object Sink {
     actorRefWithAck(ref, _ => identity, _ => onInitMessage, None, onCompleteMessage, onFailureMessage)
 
   /**
-   * Sends the elements of the stream to the given `ActorRef` that sends back back-pressure signal.
-   * First element is always `onInitMessage`, then stream is waiting for acknowledgement message
-   * `ackMessage` from the given actor which means that it is ready to process
-   * elements. It also requires `ackMessage` message after each stream element
-   * to make backpressure work.
-   *
-   * If the target actor terminates the stream will be canceled.
-   * When the stream is completed successfully the given `onCompleteMessage`
-   * will be sent to the destination actor.
-   * When the stream is completed with failure - result of `onFailureMessage(throwable)`
-   * function will be sent to the destination actor.
-   */
-  @deprecated("Use actorRefWithBackpressure accepting completion and failure matchers instead", "2.6.0")
-  def actorRefWithAck[T](
-      ref: ActorRef,
-      onInitMessage: Any,
-      ackMessage: Any,
-      onCompleteMessage: Any,
-      onFailureMessage: (Throwable) => Any = Status.Failure.apply): Sink[T, NotUsed] =
-    actorRefWithAck(ref, _ => identity, _ => onInitMessage, Some(ackMessage), onCompleteMessage, onFailureMessage)
-
-  /**
    * Creates a `Sink` that is materialized as an [[akka.stream.scaladsl.SinkQueueWithCancel]].
    * [[akka.stream.scaladsl.SinkQueueWithCancel.pull]] method is pulling element from the stream and returns ``Future[Option[T]``.
    * `Future` completes when element is available.
@@ -648,37 +595,6 @@ object Sink {
    * See also [[akka.stream.scaladsl.SinkQueueWithCancel]]
    */
   def queue[T](): Sink[T, SinkQueueWithCancel[T]] = queue(1)
-
-  /**
-   * Creates a real `Sink` upon receiving the first element. Internal `Sink` will not be created if there are no elements,
-   * because of completion or error.
-   *
-   * If upstream completes before an element was received then the `Future` is completed with the value created by fallback.
-   * If upstream fails before an element was received, `sinkFactory` throws an exception, or materialization of the internal
-   * sink fails then the `Future` is completed with the exception.
-   * Otherwise the `Future` is completed with the materialized value of the internal sink.
-   */
-  @deprecated("Use 'Sink.lazyFutureSink' in combination with 'Flow.prefixAndTail(1)' instead", "2.6.0")
-  def lazyInit[T, M](sinkFactory: T => Future[Sink[T, M]], fallback: () => M): Sink[T, Future[M]] =
-    Sink
-      .fromGraph(new LazySink[T, M](sinkFactory))
-      .mapMaterializedValue(_.recover { case _: NeverMaterializedException => fallback() }(ExecutionContext.parasitic))
-
-  /**
-   * Creates a real `Sink` upon receiving the first element. Internal `Sink` will not be created if there are no elements,
-   * because of completion or error.
-   *
-   * If upstream completes before an element was received then the `Future` is completed with `None`.
-   * If upstream fails before an element was received, `sinkFactory` throws an exception, or materialization of the internal
-   * sink fails then the `Future` is completed with the exception.
-   * Otherwise the `Future` is completed with the materialized value of the internal sink.
-   */
-  @deprecated("Use 'Sink.lazyFutureSink' instead", "2.6.0")
-  def lazyInitAsync[T, M](sinkFactory: () => Future[Sink[T, M]]): Sink[T, Future[Option[M]]] =
-    Sink.fromGraph(new LazySink[T, M](_ => sinkFactory())).mapMaterializedValue { m =>
-      implicit val ec = ExecutionContext.parasitic
-      m.map(Option.apply _).recover { case _: NeverMaterializedException => None }
-    }
 
   /**
    * Turn a `Future[Sink]` into a Sink that will consume the values of the source when the future completes successfully.

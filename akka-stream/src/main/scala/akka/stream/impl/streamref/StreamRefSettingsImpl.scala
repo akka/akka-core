@@ -4,7 +4,11 @@
 
 package akka.stream.impl.streamref
 
-import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit
+
+import scala.concurrent.duration._
+
+import com.typesafe.config.Config
 
 import akka.annotation.InternalApi
 import akka.event.Logging
@@ -28,4 +32,15 @@ private[akka] final case class StreamRefSettingsImpl(
 
   override def productPrefix: String = Logging.simpleName(classOf[StreamRefSettings])
 
+}
+
+/** INTERNAL API */
+@InternalApi
+private[akka] object StreamRefSettingsImpl {
+  def apply(c: Config): StreamRefSettingsImpl =
+    StreamRefSettingsImpl(
+      bufferCapacity = c.getInt("buffer-capacity"),
+      demandRedeliveryInterval = c.getDuration("demand-redelivery-interval", TimeUnit.MILLISECONDS).millis,
+      subscriptionTimeout = c.getDuration("subscription-timeout", TimeUnit.MILLISECONDS).millis,
+      finalTerminationSignalDeadline = c.getDuration("final-termination-signal-deadline", TimeUnit.MILLISECONDS).millis)
 }

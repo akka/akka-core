@@ -6,7 +6,6 @@ package akka.stream.impl
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.annotation.nowarn
 import scala.collection.immutable
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -28,8 +27,12 @@ import akka.util.OptionVal
  *
  * INTERNAL API
  */
-@nowarn("msg=deprecated")
-@DoNotInherit private[akka] abstract class ExtendedActorMaterializer extends ActorMaterializer {
+@DoNotInherit private[akka] abstract class ExtendedActorMaterializer
+    extends Materializer
+    with MaterializerLoggingProvider {
+
+  /** INTERNAL API */
+  @InternalApi private[akka] def settings: ActorMaterializerSettings
 
   override def withNamePrefix(name: String): ExtendedActorMaterializer
 
@@ -87,6 +90,19 @@ import akka.util.OptionVal
 }
 
 /**
+ * INTERNAL API
+ */
+@InternalApi private[akka] object ExtendedActorMaterializer {
+
+  /** Settings of the given materializer, falling back to the system materializer settings for custom materializers. */
+  def settingsOf(materializer: Materializer): ActorMaterializerSettings = materializer match {
+    case extended: ExtendedActorMaterializer       => extended.settings
+    case subFusing: SubFusingActorMaterializerImpl => settingsOf(subFusing.delegate)
+    case other                                     => SystemMaterializer(other.system).materializerSettings
+  }
+}
+
+/**
  * This materializer replaces the default phase with one that will fuse operators into an existing interpreter (via `registerShell`),
  * rather than start a new actor for each of them.
  *
@@ -141,12 +157,6 @@ private[akka] class SubFusingActorMaterializerImpl(
       task: Runnable): Cancellable =
     delegate.scheduleAtFixedRate(initialDelay, interval, task)
 
-  override def schedulePeriodically(
-      initialDelay: FiniteDuration,
-      interval: FiniteDuration,
-      task: Runnable): Cancellable =
-    scheduleAtFixedRate(initialDelay, interval, task)
-
   override def withNamePrefix(name: String): SubFusingActorMaterializerImpl =
     new SubFusingActorMaterializerImpl(delegate.withNamePrefix(name), registerShell)
 
@@ -162,9 +172,6 @@ private[akka] class SubFusingActorMaterializerImpl(
 
   override private[akka] def actorOf(context: MaterializationContext, props: Props): ActorRef =
     delegate.actorOf(context, props)
-
-  @nowarn("msg=deprecated")
-  override def settings: ActorMaterializerSettings = delegate.settings
 }
 
 /**

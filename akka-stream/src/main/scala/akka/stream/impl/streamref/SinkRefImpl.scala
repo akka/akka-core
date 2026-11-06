@@ -4,7 +4,6 @@
 
 package akka.stream.impl.streamref
 
-import scala.annotation.nowarn
 import scala.util.{ Failure, Success, Try }
 
 import akka.Done
@@ -13,6 +12,7 @@ import akka.actor.{ ActorRef, Terminated }
 import akka.annotation.InternalApi
 import akka.event.Logging
 import akka.stream._
+import akka.stream.impl.ExtendedActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.stream.stage._
 import akka.util.{ OptionVal, PrettyDuration }
@@ -64,10 +64,9 @@ private[stream] final class SinkRefStageImpl[In] private[akka] (val initialPartn
       private[this] val streamRefsMaster = StreamRefsMaster(eagerMaterializer.system)
 
       // settings ---
-      @nowarn("msg=deprecated") // can't remove this settings access without breaking compat
       private[this] val subscriptionTimeout = {
         import StreamRefAttributes._
-        val settings = eagerMaterializer.settings.streamRefSettings
+        val settings = ExtendedActorMaterializer.settingsOf(eagerMaterializer).streamRefSettings
         inheritedAttributes.get[StreamRefAttributes.SubscriptionTimeout](
           SubscriptionTimeout(settings.subscriptionTimeout))
       }

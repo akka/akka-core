@@ -23,10 +23,10 @@ after creation.
 * If the downstream of this source cancels or fails before the promise has been completed, then the promise will be completed
   with @scala[`None`]@java[empty `Optional`].
 
-`Source.maybe` has some similarities with @scala[@ref:[`Source.fromFuture`](fromFuture.md)]@java[@ref:[`Source.fromCompletionStage`](fromCompletionStage.md)].
+`Source.maybe` has some similarities with @scala[@ref:[`Source.future`](future.md)]@java[@ref:[`Source.completionStage`](completionStage.md)].
 One difference is that a new @scala[`Promise`]@java[`CompletableFuture`] is materialized from `Source.maybe` each time
 the stream is run while the @scala[`Future`]@java[`CompletionStage`] given to 
-@scala[`Source.fromFuture`]@java[`Source.fromCompletionStage`] can only be completed once.
+@scala[`Source.future`]@java[`Source.completionStage`] can only be completed once.
 
 @ref:[`Source.queue`](queue.md) is an alternative for emitting more than one element. 
 
