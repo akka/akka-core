@@ -1,4 +1,4 @@
-# Removal of APIs deprecated before 2.10
+# Removed APIs deprecated in 2.10.0 or earlier
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.UniqueAddress.apply")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.UniqueAddress.this")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.UniqueAddress.uid")
