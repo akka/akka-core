@@ -6,7 +6,6 @@ ProblemFilters.exclude[MissingClassProblem]("akka.persistence.journal.AsyncWrite
 ProblemFilters.exclude[MissingClassProblem]("akka.persistence.journal.AsyncWriteProxy$SetStore$")
 ProblemFilters.exclude[MissingClassProblem]("akka.persistence.journal.AsyncWriteProxy$InitTimeout$")
 ProblemFilters.exclude[MissingClassProblem]("akka.persistence.journal.AsyncWriteTarget*")
-ProblemFilters.exclude[MissingClassProblem]("akka.persistence.journal.AsyncReplayTimeoutException")
 ProblemFilters.exclude[MissingClassProblem]("akka.persistence.journal.ReplayMediator")
 
 # Removed deprecated deleteObject without revision
