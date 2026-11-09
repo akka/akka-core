@@ -7,7 +7,6 @@ package akka.testkit.javadsl
 import java.util.{ List => JList }
 import java.util.function.{ Supplier, Function => JFunction }
 
-import scala.annotation.nowarn
 import scala.annotation.varargs
 import scala.concurrent.duration._
 import scala.jdk.DurationConverters._
@@ -339,24 +338,12 @@ class TestKit(system: ActorSystem) {
    * Use this variant to implement more complicated or conditional
    * processing.
    */
-  @deprecated("Use the overloaded one which accepts java.time.Duration instead.", since = "2.6.0")
-  def expectMsgPF[T](max: Duration, hint: String, f: JFunction[Any, T]): T = {
-    tp.expectMsgPF(max, hint)(new CachingPartialFunction[Any, T] {
+  def expectMsgPF[T](max: java.time.Duration, hint: String, f: JFunction[Any, T]): T = {
+    tp.expectMsgPF(max.toScala, hint)(new CachingPartialFunction[Any, T] {
       @throws(classOf[Exception])
       override def `match`(x: Any): T = f.apply(x)
     })
   }
-
-  /**
-   * Receive one message from the test actor and assert that the given
-   * partial function accepts it. Wait time is bounded by the given duration,
-   * with an AssertionFailure being thrown in case of timeout.
-   *
-   * Use this variant to implement more complicated or conditional
-   * processing.
-   */
-  @nowarn("msg=deprecated")
-  def expectMsgPF[T](max: java.time.Duration, hint: String, f: JFunction[Any, T]): T = expectMsgPF(max.toScala, hint, f)
 
   /**
    * Same as `expectMsgClass(remainingOrDefault, c)`, but correctly treating the timeFactor.
@@ -438,18 +425,6 @@ class TestKit(system: ActorSystem) {
    * @param target the actor ref expected to be Terminated
    * @return the received Terminated message
    */
-  @deprecated("Use the overloaded one which accepts java.time.Duration instead.", since = "2.6.0")
-  def expectTerminated(max: Duration, target: ActorRef): Terminated = tp.expectTerminated(target, max)
-
-  /**
-   * Receive one message from the test actor and assert that it is the Terminated message of the given ActorRef.
-   * Before calling this method, you have to `watch` the target actor ref.
-   * Wait time is bounded by the given duration, with an AssertionFailure being thrown in case of timeout.
-   *
-   * @param max wait no more than max time, otherwise throw AssertionFailure
-   * @param target the actor ref expected to be Terminated
-   * @return the received Terminated message
-   */
   def expectTerminated(max: java.time.Duration, target: ActorRef): Terminated = tp.expectTerminated(target, max.toScala)
 
   /**
@@ -470,42 +445,21 @@ class TestKit(system: ActorSystem) {
    * @return the last received message, i.e. the first one for which the
    *         partial function returned true
    */
-  @deprecated("Use the overloaded one which accepts java.time.Duration instead.", since = "2.6.0")
-  def fishForMessage(max: Duration, hint: String, f: JFunction[Any, Boolean]): Any =
-    tp.fishForMessage(max, hint)(new CachingPartialFunction[Any, Boolean] {
+  def fishForMessage(max: java.time.Duration, hint: String, f: JFunction[Any, Boolean]): Any =
+    tp.fishForMessage(max.toScala, hint)(new CachingPartialFunction[Any, Boolean] {
       @throws(classOf[Exception])
       override def `match`(x: Any): Boolean = f.apply(x)
     })
 
   /**
-   * Hybrid of expectMsgPF and receiveWhile: receive messages while the
-   * partial function matches and returns false. Use it to ignore certain
-   * messages while waiting for a specific message.
-   *
-   * @return the last received message, i.e. the first one for which the
-   *         partial function returned true
-   */
-  @nowarn("msg=deprecated")
-  def fishForMessage(max: java.time.Duration, hint: String, f: JFunction[Any, Boolean]): Any =
-    fishForMessage(max.toScala, hint, f)
-
-  /**
    * Same as `fishForMessage`, but gets a different partial function and returns properly typed message.
    */
-  @deprecated("Use the overloaded one which accepts java.time.Duration instead.", since = "2.6.0")
-  def fishForSpecificMessage[T](max: Duration, hint: String, f: JFunction[Any, T]): T = {
-    tp.fishForSpecificMessage(max, hint)(new CachingPartialFunction[Any, T] {
+  def fishForSpecificMessage[T](max: java.time.Duration, hint: String, f: JFunction[Any, T]): T = {
+    tp.fishForSpecificMessage(max.toScala, hint)(new CachingPartialFunction[Any, T] {
       @throws(classOf[Exception])
       override def `match`(x: Any): T = f.apply(x)
     })
   }
-
-  /**
-   * Same as `fishForMessage`, but gets a different partial function and returns properly typed message.
-   */
-  @nowarn("msg=deprecated")
-  def fishForSpecificMessage[T](max: java.time.Duration, hint: String, f: JFunction[Any, T]): T =
-    fishForSpecificMessage(max.toScala, hint, f)
 
   /**
    * Same as `receiveN(n, remaining)` but correctly taking into account
