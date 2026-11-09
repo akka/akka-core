@@ -14,3 +14,9 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 ### akka-cluster-typed
 
 * `ClusterSingletonSettings` and `ClusterSingletonManagerSettings` constructors without `leaseSettings`: use the constructor with `leaseSettings`.
+
+### akka-distributed-data
+
+* `ReplicatorSettings` constructors with fewer parameters than the full constructor: use the full constructor, `ReplicatorSettings(config)` or the `with*` methods.
+* `ORMap.updated(Cluster, key, initial, modify)` (Java API): use `ORMap.update(SelfUniqueAddress, key, initial, modify)`.
+* `GSet.copy$default$1`, a binary compatibility stub in the Scala 2 sources only.
