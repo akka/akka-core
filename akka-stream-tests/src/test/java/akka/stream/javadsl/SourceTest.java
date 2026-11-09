@@ -281,7 +281,7 @@ public class SourceTest extends StreamTest {
   public void mustBeAbleToConcatEmptySource() {
     Source.from(Arrays.asList("A", "B", "C"))
         .concat(Source.empty())
-        .runWith(TestSink.probe(system), system)
+        .runWith(TestSink.create(system), system)
         .ensureSubscription()
         .request(3)
         .expectNext("A", "B", "C")
@@ -294,7 +294,7 @@ public class SourceTest extends StreamTest {
     final Source<Integer, NotUsed> sourceB = Source.from(Arrays.asList(4, 5, 6));
     final Source<Integer, NotUsed> sourceC = Source.from(Arrays.asList(7, 8, 9));
     final TestSubscriber.Probe<Integer> sub =
-        sourceA.concatAllLazy(sourceB, sourceC).runWith(TestSink.probe(system), system);
+        sourceA.concatAllLazy(sourceB, sourceC).runWith(TestSink.create(system), system);
     sub.expectSubscription().request(9);
     sub.expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9).expectComplete();
   }
@@ -824,7 +824,7 @@ public class SourceTest extends StreamTest {
     final TestSubscriber.Probe<Integer> sub =
         sourceA
             .interleaveAll(Arrays.asList(sourceB, sourceC), 2, false)
-            .runWith(TestSink.probe(system), system);
+            .runWith(TestSink.create(system), system);
     sub.expectSubscription().request(9);
     sub.expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9).expectComplete();
   }
@@ -1172,7 +1172,7 @@ public class SourceTest extends StreamTest {
     final TestSubscriber.Probe<Integer> sub =
         sourceA
             .mergeAll(Arrays.asList(sourceB, sourceC), false)
-            .runWith(TestSink.probe(system), system);
+            .runWith(TestSink.create(system), system);
     sub.expectSubscription().request(9);
     sub.expectNextUnorderedN(Util.immutableSeq(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9)))
         .expectComplete();

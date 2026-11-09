@@ -45,8 +45,8 @@ public class RecipeMissedTicks extends RecipeTest {
       final Tick Tick = new Tick();
 
       {
-        final Source<Tick, TestPublisher.Probe<Tick>> tickStream = TestSource.probe(system);
-        final Sink<Integer, TestSubscriber.Probe<Integer>> sink = TestSink.probe(system);
+        final Source<Tick, TestPublisher.Probe<Tick>> tickStream = TestSource.create(system);
+        final Sink<Integer, TestSubscriber.Probe<Integer>> sink = TestSink.create(system);
 
         @SuppressWarnings("unused")
         // #missed-ticks

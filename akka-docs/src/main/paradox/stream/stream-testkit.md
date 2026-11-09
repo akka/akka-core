@@ -115,7 +115,7 @@ provide sources and sinks that materialize to probes that allow fluent API.
 
 ### Using the TestKit
 
-A sink returned by @apidoc[TestSink.probe](akka.stream.testkit.*.TestSink$) {scala="#probe[T](implicitsystem:akka.actor.ActorSystem):akka.stream.scaladsl.Sink[T,akka.stream.testkit.TestSubscriber.Probe[T]]" java="#probe(akka.actor.ActorSystem)"} allows manual control over demand and
+A sink returned by @apidoc[TestSink](akka.stream.testkit.*.TestSink$) {scala="#apply[T]()(implicitsystem:akka.actor.ClassicActorSystemProvider):akka.stream.scaladsl.Sink[T,akka.stream.testkit.TestSubscriber.Probe[T]]" java="#create(akka.actor.ClassicActorSystemProvider)"} allows manual control over demand and
 assertions over elements coming downstream.
 
 Scala
@@ -124,7 +124,7 @@ Scala
 Java
 :   @@snip [StreamTestKitDocTest.java](/akka-docs/src/test/java/jdocs/stream/StreamTestKitDocTest.java) { #test-sink-probe }
 
-A source returned by @apidoc[TestSource.probe](akka.stream.testkit.*.TestSource$) {scala="#probe[T](implicitsystem:akka.actor.ActorSystem):akka.stream.scaladsl.Source[T,akka.stream.testkit.TestPublisher.Probe[T]]" java="#probe(akka.actor.ActorSystem)"} can be used for asserting demand or
+A source returned by @apidoc[TestSource](akka.stream.testkit.*.TestSource$) {scala="#apply[T]()(implicitsystem:akka.actor.ClassicActorSystemProvider):akka.stream.scaladsl.Source[T,akka.stream.testkit.TestPublisher.Probe[T]]" java="#create(akka.actor.ClassicActorSystemProvider)"} can be used for asserting demand or
 controlling when stream is completed or ended with an error.
 
 Scala

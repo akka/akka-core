@@ -162,7 +162,7 @@ public class StreamTestKitDocTest extends AbstractJavaTest {
         Source.from(Arrays.asList(1, 2, 3, 4)).filter(elem -> elem % 2 == 0).map(elem -> elem * 2);
 
     sourceUnderTest
-        .runWith(TestSink.probe(system), system)
+        .runWith(TestSink.create(system), system)
         .request(2)
         .expectNext(4, 8)
         .expectComplete();
@@ -174,7 +174,7 @@ public class StreamTestKitDocTest extends AbstractJavaTest {
     // #test-source-probe
     final Sink<Integer, NotUsed> sinkUnderTest = Sink.cancelled();
 
-    TestSource.<Integer>probe(system)
+    TestSource.<Integer>create(system)
         .toMat(sinkUnderTest, Keep.left())
         .run(system)
         .expectCancellation();
@@ -187,7 +187,7 @@ public class StreamTestKitDocTest extends AbstractJavaTest {
     final Sink<Integer, CompletionStage<Integer>> sinkUnderTest = Sink.head();
 
     final Pair<TestPublisher.Probe<Integer>, CompletionStage<Integer>> probeAndCompletionStage =
-        TestSource.<Integer>probe(system).toMat(sinkUnderTest, Keep.both()).run(system);
+        TestSource.<Integer>create(system).toMat(sinkUnderTest, Keep.both()).run(system);
     final TestPublisher.Probe<Integer> probe = probeAndCompletionStage.first();
     final CompletionStage<Integer> future = probeAndCompletionStage.second();
     probe.sendError(new Exception("boom"));
@@ -214,9 +214,9 @@ public class StreamTestKitDocTest extends AbstractJavaTest {
                         () -> CompletableFuture.completedFuture(sleep)));
 
     final Pair<TestPublisher.Probe<Integer>, TestSubscriber.Probe<Integer>> pubAndSub =
-        TestSource.<Integer>probe(system)
+        TestSource.<Integer>create(system)
             .via(flowUnderTest)
-            .toMat(TestSink.<Integer>probe(system), Keep.both())
+            .toMat(TestSink.<Integer>create(system), Keep.both())
             .run(system);
     final TestPublisher.Probe<Integer> pub = pubAndSub.first();
     final TestSubscriber.Probe<Integer> sub = pubAndSub.second();

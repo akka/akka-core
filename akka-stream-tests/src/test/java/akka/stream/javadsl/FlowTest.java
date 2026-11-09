@@ -1150,7 +1150,7 @@ public class FlowTest extends StreamTest {
             .mapError(NoSuchElementException.class, IllegalArgumentException::new);
 
     final Throwable actual =
-        source.via(flow).runWith(TestSink.probe(system), system).request(1).expectError();
+        source.via(flow).runWith(TestSink.create(system), system).request(1).expectError();
     org.junit.Assert.assertTrue(actual instanceof IndexOutOfBoundsException);
   }
 
@@ -1166,7 +1166,7 @@ public class FlowTest extends StreamTest {
 
     source
         .via(flow)
-        .runWith(TestSink.probe(system), system)
+        .runWith(TestSink.create(system), system)
         .request(2)
         .expectNext(head)
         .expectError(boom);

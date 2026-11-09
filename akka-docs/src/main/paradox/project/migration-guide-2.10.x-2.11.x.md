@@ -49,6 +49,11 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 * `snapshotSelectionCriteria` in the javadsl `EventSourcedBehavior`, `EventSourcedOnCommandBehavior` and `EventSourcedOnCommandWithReplyBehavior`: override `recovery` instead and return `Recovery.withSnapshotSelectionCriteria(...)`. Overriding `snapshotSelectionCriteria` had no effect since Akka 2.6.5.
 * `EventSourcedBehavior.withSnapshotSelectionCriteria` in scaladsl: use `withRecovery(Recovery.withSnapshotSelectionCriteria(...))`.
 
+### akka-stream-testkit
+
+* `TestSink.probe` and `TestSource.probe` (scaladsl): use `TestSink()` and `TestSource()` with an implicit `ClassicActorSystemProvider` instead.
+* `TestSink.probe(system)` and `TestSource.probe(system)` (javadsl): use `TestSink.create(system)` and `TestSource.create(system)` with a `ClassicActorSystemProvider` instead.
+
 ### akka-stream-typed
 
 * `ActorSource.actorRefWithAck` (scaladsl and javadsl): use `ActorSource.actorRefWithBackpressure` instead.

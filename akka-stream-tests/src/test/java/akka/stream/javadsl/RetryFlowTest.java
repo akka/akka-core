@@ -92,9 +92,9 @@ public class RetryFlowTest extends StreamTest {
     // #withBackoff-demo
 
     final Pair<TestPublisher.Probe<Integer>, TestSubscriber.Probe<Integer>> probes =
-        TestSource.<Integer>probe(system)
+        TestSource.<Integer>create(system)
             .via(retryFlow)
-            .toMat(TestSink.probe(system), Keep.both())
+            .toMat(TestSink.create(system), Keep.both())
             .run(system);
 
     final TestPublisher.Probe<Integer> source = probes.first();
@@ -151,10 +151,10 @@ public class RetryFlowTest extends StreamTest {
 
     final Pair<TestPublisher.Probe<Integer>, TestSubscriber.Probe<Pair<Integer, SomeContext>>>
         probes =
-            TestSource.<Integer>probe(system)
+            TestSource.<Integer>create(system)
                 .map(i -> Pair.create(i, new SomeContext()))
                 .via(retryFlow)
-                .toMat(TestSink.probe(system), Keep.both())
+                .toMat(TestSink.create(system), Keep.both())
                 .run(system);
 
     final TestPublisher.Probe<Integer> source = probes.first();
@@ -202,10 +202,10 @@ public class RetryFlowTest extends StreamTest {
 
     final Pair<TestPublisher.Probe<Integer>, TestSubscriber.Probe<Pair<Try<Integer>, Integer>>>
         probes =
-            TestSource.<Integer>probe(system)
+            TestSource.<Integer>create(system)
                 .map(i -> Pair.create(i, i))
                 .via(retryFlow)
-                .toMat(TestSink.probe(system), Keep.both())
+                .toMat(TestSink.create(system), Keep.both())
                 .run(system);
 
     final TestPublisher.Probe<Integer> source = probes.first();
@@ -239,7 +239,7 @@ public class RetryFlowTest extends StreamTest {
 
     final Pair<TestPublisher.Probe<Integer>, TestSubscriber.Probe<Pair<Try<Integer>, Integer>>>
         probes =
-            TestSource.<Integer>probe(system)
+            TestSource.<Integer>create(system)
                 .asSourceWithContext(ctx -> ctx)
                 .via(
                     RetryFlow.withBackoffAndContext(
@@ -256,7 +256,7 @@ public class RetryFlowTest extends StreamTest {
                           }
                           return Optional.empty();
                         }))
-                .toMat(TestSink.probe(system), Keep.both())
+                .toMat(TestSink.create(system), Keep.both())
                 .run(system);
 
     final TestPublisher.Probe<Integer> source = probes.first();

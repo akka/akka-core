@@ -142,8 +142,8 @@ public class RecipeHold extends RecipeTest {
   public void workForVersion1() throws Exception {
     new TestKit(system) {
       {
-        final Source<Integer, TestPublisher.Probe<Integer>> source = TestSource.probe(system);
-        final Sink<Integer, TestSubscriber.Probe<Integer>> sink = TestSink.probe(system);
+        final Source<Integer, TestPublisher.Probe<Integer>> source = TestSource.create(system);
+        final Sink<Integer, TestSubscriber.Probe<Integer>> sink = TestSink.create(system);
 
         Pair<TestPublisher.Probe<Integer>, TestSubscriber.Probe<Integer>> pubSub =
             source.via(new HoldWithInitial<>(0)).toMat(sink, Keep.both()).run(system);
@@ -170,8 +170,8 @@ public class RecipeHold extends RecipeTest {
   public void workForVersion2() throws Exception {
     new TestKit(system) {
       {
-        final Source<Integer, TestPublisher.Probe<Integer>> source = TestSource.probe(system);
-        final Sink<Integer, TestSubscriber.Probe<Integer>> sink = TestSink.probe(system);
+        final Source<Integer, TestPublisher.Probe<Integer>> source = TestSource.create(system);
+        final Sink<Integer, TestSubscriber.Probe<Integer>> sink = TestSink.create(system);
 
         Pair<TestPublisher.Probe<Integer>, TestSubscriber.Probe<Integer>> pubSub =
             source.via(new HoldWithWait<>()).toMat(sink, Keep.both()).run(system);

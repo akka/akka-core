@@ -90,7 +90,7 @@ public class RecipeAdhocSourceTest extends RecipeTest {
       {
         TestSubscriber.Probe<String> probe =
             adhocSource(Source.repeat("a"), duration200mills, 3)
-                .toMat(TestSink.probe(system), Keep.right())
+                .toMat(TestSink.create(system), Keep.right())
                 .run(system);
         probe.requestNext("a");
       }
@@ -110,7 +110,7 @@ public class RecipeAdhocSourceTest extends RecipeTest {
                             (a, term) -> term.thenRun(() -> shutdown.success(Done.getInstance()))),
                     duration200mills,
                     3)
-                .toMat(TestSink.probe(system), Keep.right())
+                .toMat(TestSink.create(system), Keep.right())
                 .run(system);
 
         probe.requestNext("a");
@@ -133,7 +133,7 @@ public class RecipeAdhocSourceTest extends RecipeTest {
                             (a, term) -> term.thenRun(() -> shutdown.success(Done.getInstance()))),
                     duration200mills,
                     3)
-                .toMat(TestSink.probe(system), Keep.right())
+                .toMat(TestSink.create(system), Keep.right())
                 .run(system);
 
         probe.requestNext("a");
@@ -171,7 +171,7 @@ public class RecipeAdhocSourceTest extends RecipeTest {
                         (a, term) -> term.thenRun(() -> shutdown.success(Done.getInstance()))),
                     duration200mills,
                     3)
-                .toMat(TestSink.probe(system), Keep.right())
+                .toMat(TestSink.create(system), Keep.right())
                 .run(system);
 
         probe.requestNext("a");
@@ -201,7 +201,7 @@ public class RecipeAdhocSourceTest extends RecipeTest {
                         (a, term) -> term.thenRun(() -> shutdown.success(Done.getInstance()))),
                     duration200mills,
                     3)
-                .toMat(TestSink.probe(system), Keep.right())
+                .toMat(TestSink.create(system), Keep.right())
                 .run(system);
 
         probe.requestNext("a");
