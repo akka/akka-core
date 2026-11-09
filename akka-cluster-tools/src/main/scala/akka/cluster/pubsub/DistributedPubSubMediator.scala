@@ -99,21 +99,6 @@ final class DistributedPubSubSettings(
     val sendToDeadLettersWhenNoSubscribers: Boolean)
     extends NoSerializationVerificationNeeded {
 
-  @deprecated("Use the other constructor instead.", "2.5.5")
-  def this(
-      role: Option[String],
-      routingLogic: RoutingLogic,
-      gossipInterval: FiniteDuration,
-      removedTimeToLive: FiniteDuration,
-      maxDeltaElements: Int) =
-    this(
-      role,
-      routingLogic,
-      gossipInterval,
-      removedTimeToLive,
-      maxDeltaElements,
-      sendToDeadLettersWhenNoSubscribers = true)
-
   require(
     !routingLogic.isInstanceOf[ConsistentHashingRoutingLogic],
     "'ConsistentHashingRoutingLogic' can't be used by the pub-sub mediator")

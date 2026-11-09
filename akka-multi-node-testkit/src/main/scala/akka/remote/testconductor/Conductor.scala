@@ -31,7 +31,6 @@ import io.netty.channel.ChannelHandlerContext
 
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentHashMap
-import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -98,33 +97,11 @@ trait Conductor { this: TestConductorExt =>
     (controller ? GetSockAddr).mapTo(classTag[InetSocketAddress])
   }
 
-  /**
-   * Make the remoting pipeline on the node throttle data sent to or received
-   * from the given remote peer. Throttling works by delaying packet submission
-   * within the netty pipeline until the packet would have been completely sent
-   * according to the given rate, the previous packet completion and the current
-   * packet length. In case of large packets they are split up if the calculated
-   * send pause would exceed `akka.testconductor.packet-split-threshold`
-   * (roughly). All of this uses the system’s scheduler, which is not
-   * terribly precise and will execute tasks later than they are schedule (even
-   * on average), but that is countered by using the actual execution time for
-   * determining how much to send, leading to the correct output rate, but with
-   * increased latency.
-   *
-   * ====Note====
-   * To use this feature you must activate the failure injector and throttler
-   * transport adapters by specifying `testTransport(on = true)` in your MultiNodeConfig.
-   *
-   * @param node is the symbolic name of the node which is to be affected
-   * @param target is the symbolic name of the other node to which connectivity shall be throttled
-   * @param direction can be either `Direction.Send`, `Direction.Receive` or `Direction.Both`
-   * @param rateMBit is the maximum data rate in MBit
-   */
-  @deprecated("Throttle is not implemented, use blackhole and passThrough.", "2.8.0")
-  def throttle(node: RoleName, target: RoleName, direction: Direction, rateMBit: Double): Future[Done] = {
+  // rate 0 means blackhole, negative rate means pass through
+  private def throttle(node: RoleName, target: RoleName, direction: Direction, rateMBit: Float): Future[Done] = {
     import Settings.QueryTimeout
     requireTestConductorTranport()
-    (controller ? Throttle(node, target, direction, rateMBit.toFloat)).mapTo(classTag[Done])
+    (controller ? Throttle(node, target, direction, rateMBit)).mapTo(classTag[Done])
   }
 
   /**
@@ -141,7 +118,6 @@ trait Conductor { this: TestConductorExt =>
    * @param target is the symbolic name of the other node to which connectivity shall be impeded
    * @param direction can be either `Direction.Send`, `Direction.Receive` or `Direction.Both`
    */
-  @nowarn("msg=deprecated")
   def blackhole(node: RoleName, target: RoleName, direction: Direction): Future[Done] =
     throttle(node, target, direction, 0f)
 
@@ -164,7 +140,6 @@ trait Conductor { this: TestConductorExt =>
    * @param target is the symbolic name of the other node to which connectivity shall be impeded
    * @param direction can be either `Direction.Send`, `Direction.Receive` or `Direction.Both`
    */
-  @nowarn("msg=deprecated")
   def passThrough(node: RoleName, target: RoleName, direction: Direction): Future[Done] =
     throttle(node, target, direction, -1f)
 
