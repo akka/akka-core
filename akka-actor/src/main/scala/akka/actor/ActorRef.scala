@@ -540,7 +540,7 @@ private[akka] trait MinimalActorRef extends InternalActorRef with LocalRef {
   override val path: ActorPath = IgnoreActorRef.path
 
   @throws(classOf[java.io.ObjectStreamException])
-  override protected def writeReplace(): AnyRef = SerializedIgnore
+  override protected def writeReplace(): AnyRef = new SerializedIgnore
 }
 
 /**
@@ -572,9 +572,9 @@ private[akka] trait MinimalActorRef extends InternalActorRef with LocalRef {
 /**
  * INTERNAL API
  */
-@InternalApi @SerialVersionUID(1L) private[akka] object SerializedIgnore extends Serializable {
+@InternalApi @SerialVersionUID(1L) private[akka] final class SerializedIgnore extends Serializable {
   @throws(classOf[java.io.ObjectStreamException])
-  private def readResolve(): AnyRef = IgnoreActorRef
+  private def readResolve(): AnyRef = JavaSerializer.currentSystem.value.provider.ignoreRef
 }
 
 /**

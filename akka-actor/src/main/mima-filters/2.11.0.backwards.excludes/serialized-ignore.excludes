@@ -1,0 +1,2 @@
+# Internal, Java serialization replacement of IgnoreActorRef changed from an object to a class
+ProblemFilters.exclude[MissingClassProblem]("akka.actor.SerializedIgnore$")
