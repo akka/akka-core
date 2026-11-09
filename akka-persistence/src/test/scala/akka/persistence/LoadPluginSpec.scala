@@ -7,10 +7,13 @@ package akka.persistence
 import scala.annotation.nowarn
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 
 import akka.actor.Actor
+import akka.actor.ActorSystem
 import akka.persistence.journal.inmem.InmemJournal
 import akka.testkit.ImplicitSender
+import akka.testkit.TestKit
 
 object LoadPluginSpec {
 
@@ -60,6 +63,25 @@ class LoadPluginSpec
       expectNoMessage()
       Persistence(system).journalFor("test-plugin")
       expectMsg(JournalWithStartupNotification.Started("test-plugin"))
+    }
+
+    Map[String, Any]("zero" -> 0, "negative" -> -1, "not-a-number" -> """"boom!"""").foreach {
+      case (whyBad, badValue) =>
+        s"fail to create with $whyBad write-reply ordering groups" in {
+          val badConfig = ConfigFactory
+            .parseString(s"akka.persistence.journal.inmem.write-reply-ordering-groups = $badValue")
+            .withFallback(system.settings.config)
+
+          val sys = ActorSystem(s"test-$whyBad", badConfig)
+          val tk = new TestKit(sys)
+          try {
+            val journal = Persistence(sys).journalFor("akka.persistence.journal.inmem")
+            tk.watch(journal)
+            tk.expectTerminated(journal)
+          } finally {
+            TestKit.shutdownActorSystem(sys)
+          }
+        }
     }
   }
 }
