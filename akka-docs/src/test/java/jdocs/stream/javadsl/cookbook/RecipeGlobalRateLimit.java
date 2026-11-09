@@ -200,7 +200,7 @@ public class RecipeGlobalRateLimit extends RecipeTest {
 
         final Duration twoSeconds = dilated(Duration.ofSeconds(2));
 
-        final Sink<String, TestSubscriber.Probe<String>> sink = TestSink.probe(system);
+        final Sink<String, TestSubscriber.Probe<String>> sink = TestSink.create(system);
         final TestSubscriber.Probe<String> probe =
             RunnableGraph.<TestSubscriber.Probe<String>>fromGraph(
                     GraphDSL.create(

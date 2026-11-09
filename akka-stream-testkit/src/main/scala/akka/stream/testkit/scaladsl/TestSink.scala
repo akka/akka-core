@@ -21,13 +21,6 @@ object TestSink {
   /**
    * A Sink that materialized to a [[akka.stream.testkit.TestSubscriber.Probe]].
    */
-  @deprecated("Use `TestSink()` with implicit ClassicActorSystemProvider instead.", "2.7.0")
-  def probe[T](implicit system: ActorSystem): Sink[T, Probe[T]] =
-    apply()
-
-  /**
-   * A Sink that materialized to a [[akka.stream.testkit.TestSubscriber.Probe]].
-   */
   def apply[T]()(implicit system: ClassicActorSystemProvider): Sink[T, Probe[T]] = {
     implicit val sys: ActorSystem = system.classicSystem
     Sink.fromGraph[T, TestSubscriber.Probe[T]](new ProbeSink(none, SinkShape(Inlet("ProbeSink.in"))))
