@@ -1,0 +1,5 @@
+# Removed APIs deprecated in 2.10.0 or earlier
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.javadsl.TestKit.expectMsgPF")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.javadsl.TestKit.expectTerminated")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.javadsl.TestKit.fishForMessage")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.testkit.javadsl.TestKit.fishForSpecificMessage")

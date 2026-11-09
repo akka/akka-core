@@ -48,7 +48,7 @@ object TestConductor extends ExtensionId[TestConductorExt] with ExtensionIdProvi
  * This extension requires the `akka.actor.provider`
  * to be a [[akka.remote.RemoteActorRefProvider]].
  *
- * To use ``blackhole``, ``passThrough``, and ``throttle`` you must activate the
+ * To use ``blackhole`` and ``passThrough`` you must activate the
  * failure injector and throttler transport adapters by specifying `testTransport(on = true)`
  * in your MultiNodeConfig.
  *

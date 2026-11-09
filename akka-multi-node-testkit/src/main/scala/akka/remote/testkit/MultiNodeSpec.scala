@@ -97,7 +97,7 @@ abstract class MultiNodeConfig {
   def deployOnAll(deployment: String): Unit = _allDeploy :+= deployment
 
   /**
-   * To be able to use `blackhole`, `passThrough`, and `throttle` you must
+   * To be able to use `blackhole` and `passThrough` you must
    * activate the failure injector and throttler transport adapters by
    * specifying `testTransport(on = true)` in your MultiNodeConfig.
    */
