@@ -44,6 +44,11 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 
 * `TestConductor.throttle`: throttle was not implemented, use `blackhole` and `passThrough` instead.
 
+### akka-persistence-query
+
+* The LevelDB read journal (`akka.persistence.query.journal.leveldb`, `LeveldbReadJournal` in scaladsl and javadsl, `LeveldbReadJournalProvider`): use another journal and query implementation, such as [Akka Persistence R2DBC](https://doc.akka.io/libraries/akka-persistence-r2dbc/current/). The `akka.persistence.query.journal.leveldb` configuration section no longer exists.
+* `EventEnvelope(offset, persistenceId, sequenceNr, event)` and `new EventEnvelope(offset, persistenceId, sequenceNr, event)` in `akka.persistence.query`: use the overloads with a `timestamp` parameter. The `EventEnvelope` companion object no longer extends `Function4`.
+
 ### akka-persistence-typed
 
 * `snapshotSelectionCriteria` in the javadsl `EventSourcedBehavior`, `EventSourcedOnCommandBehavior` and `EventSourcedOnCommandWithReplyBehavior`: override `recovery` instead and return `Recovery.withSnapshotSelectionCriteria(...)`. Overriding `snapshotSelectionCriteria` had no effect since Akka 2.6.5.

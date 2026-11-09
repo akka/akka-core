@@ -254,12 +254,7 @@ object Dependencies {
         TestDependencies.commonsIo,
         TestDependencies.commonsCodec)
 
-  val persistenceQuery = l ++= Seq(
-        TestDependencies.scalatest,
-        TestDependencies.junit,
-        TestDependencies.commonsIo,
-        Provided.levelDB,
-        Provided.levelDBNative)
+  val persistenceQuery = l ++= Seq(TestDependencies.scalatest, TestDependencies.junit, TestDependencies.commonsIo)
 
   val persistenceTck = l ++= Seq(
         TestDependencies.scalatest.withConfigurations(Some("compile")),

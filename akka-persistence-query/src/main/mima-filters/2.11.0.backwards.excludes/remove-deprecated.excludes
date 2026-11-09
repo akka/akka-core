@@ -1,0 +1,9 @@
+# Removed the deprecated LevelDB read journal
+ProblemFilters.exclude[Problem]("akka.persistence.query.journal.leveldb.*")
+
+# Removed deprecated EventEnvelope constructor and apply without timestamp, kept for binary compatibility since 2.6.2
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.query.EventEnvelope.this")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.query.EventEnvelope.apply")
+ProblemFilters.exclude[MissingTypesProblem]("akka.persistence.query.EventEnvelope$")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.query.EventEnvelope.tupled")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.query.EventEnvelope.curried")

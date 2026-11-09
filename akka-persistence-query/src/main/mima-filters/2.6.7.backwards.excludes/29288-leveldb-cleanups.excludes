@@ -1,3 +1,0 @@
-ProblemFilters.exclude[Problem]("akka.persistence.query.journal.leveldb.AllPersistenceIdsStage.*")
-ProblemFilters.exclude[IncompatibleSignatureProblem]("akka.persistence.query.journal.leveldb.EventsByPersistenceIdStage.createLogicAndMaterializedValue")
-ProblemFilters.exclude[Problem]("akka.persistence.query.journal.leveldb.EventsByTagStage.*")
