@@ -15,7 +15,6 @@ import akka.actor.typed.ActorSystem
 import akka.annotation.{ ApiMayChange, InternalApi }
 import akka.cluster.ClusterSettings.DataCenter
 import akka.cluster.sharding.{ ClusterShardingSettings => ClassicShardingSettings }
-import akka.cluster.sharding.typed.ClusterShardingSettings.RememberEntitiesStoreModeDData
 import akka.cluster.singleton.{ ClusterSingletonManagerSettings => ClassicClusterSingletonManagerSettings }
 import akka.cluster.typed.Cluster
 import akka.cluster.typed.ClusterSingletonManagerSettings
@@ -842,125 +841,6 @@ final class ClusterShardingSettings(
     val coordinatorSingletonSettings: ClusterSingletonManagerSettings,
     val leaseSettings: Option[LeaseUsageSettings]) {
 
-  @deprecated("Use constructor with coordinatorSingletonOverrideRole", "2.6.20")
-  def this(
-      numberOfShards: Int,
-      role: Option[String],
-      dataCenter: Option[DataCenter],
-      rememberEntities: Boolean,
-      journalPluginId: String,
-      snapshotPluginId: String,
-      passivationStrategySettings: ClusterShardingSettings.PassivationStrategySettings,
-      shardRegionQueryTimeout: FiniteDuration,
-      stateStoreMode: ClusterShardingSettings.StateStoreMode,
-      rememberEntitiesStoreMode: ClusterShardingSettings.RememberEntitiesStoreMode,
-      tuningParameters: ClusterShardingSettings.TuningParameters,
-      coordinatorSingletonSettings: ClusterSingletonManagerSettings,
-      leaseSettings: Option[LeaseUsageSettings]) =
-    this(
-      numberOfShards,
-      role,
-      dataCenter,
-      rememberEntities,
-      journalPluginId,
-      snapshotPluginId,
-      passivationStrategySettings,
-      shardRegionQueryTimeout,
-      stateStoreMode,
-      rememberEntitiesStoreMode,
-      tuningParameters,
-      coordinatorSingletonOverrideRole = true,
-      coordinatorSingletonSettings,
-      leaseSettings)
-
-  @deprecated("Use constructor with passivationStrategySettings", "2.6.18")
-  def this(
-      numberOfShards: Int,
-      role: Option[String],
-      dataCenter: Option[DataCenter],
-      rememberEntities: Boolean,
-      journalPluginId: String,
-      snapshotPluginId: String,
-      passivateIdleEntityAfter: FiniteDuration,
-      shardRegionQueryTimeout: FiniteDuration,
-      stateStoreMode: ClusterShardingSettings.StateStoreMode,
-      rememberEntitiesStoreMode: ClusterShardingSettings.RememberEntitiesStoreMode,
-      tuningParameters: ClusterShardingSettings.TuningParameters,
-      coordinatorSingletonSettings: ClusterSingletonManagerSettings,
-      leaseSettings: Option[LeaseUsageSettings]) =
-    this(
-      numberOfShards,
-      role,
-      dataCenter,
-      rememberEntities,
-      journalPluginId,
-      snapshotPluginId,
-      ClusterShardingSettings.PassivationStrategySettings.oldDefault(passivateIdleEntityAfter),
-      shardRegionQueryTimeout,
-      stateStoreMode,
-      rememberEntitiesStoreMode,
-      tuningParameters,
-      coordinatorSingletonOverrideRole = true,
-      coordinatorSingletonSettings,
-      leaseSettings)
-
-  @deprecated("Use constructor with leaseSettings", "2.6.11")
-  def this(
-      numberOfShards: Int,
-      role: Option[String],
-      dataCenter: Option[DataCenter],
-      rememberEntities: Boolean,
-      journalPluginId: String,
-      snapshotPluginId: String,
-      passivateIdleEntityAfter: FiniteDuration,
-      shardRegionQueryTimeout: FiniteDuration,
-      stateStoreMode: ClusterShardingSettings.StateStoreMode,
-      rememberEntitiesStoreMode: ClusterShardingSettings.RememberEntitiesStoreMode,
-      tuningParameters: ClusterShardingSettings.TuningParameters,
-      coordinatorSingletonSettings: ClusterSingletonManagerSettings) =
-    this(
-      numberOfShards,
-      role,
-      dataCenter,
-      rememberEntities,
-      journalPluginId,
-      snapshotPluginId,
-      passivateIdleEntityAfter,
-      shardRegionQueryTimeout,
-      stateStoreMode,
-      rememberEntitiesStoreMode,
-      tuningParameters,
-      coordinatorSingletonSettings,
-      None)
-
-  @deprecated("Use constructor with rememberEntitiesStoreMode", "2.6.6")
-  def this(
-      numberOfShards: Int,
-      role: Option[String],
-      dataCenter: Option[DataCenter],
-      rememberEntities: Boolean,
-      journalPluginId: String,
-      snapshotPluginId: String,
-      passivateIdleEntityAfter: FiniteDuration,
-      shardRegionQueryTimeout: FiniteDuration,
-      stateStoreMode: ClusterShardingSettings.StateStoreMode,
-      tuningParameters: ClusterShardingSettings.TuningParameters,
-      coordinatorSingletonSettings: ClusterSingletonManagerSettings) =
-    this(
-      numberOfShards,
-      role,
-      dataCenter,
-      rememberEntities,
-      journalPluginId,
-      snapshotPluginId,
-      passivateIdleEntityAfter,
-      shardRegionQueryTimeout,
-      stateStoreMode,
-      RememberEntitiesStoreModeDData,
-      tuningParameters,
-      coordinatorSingletonSettings,
-      None)
-
   /**
    * INTERNAL API
    * If true, this node should run the shard region, otherwise just a shard proxy should started on this node.
@@ -998,18 +878,6 @@ final class ClusterShardingSettings(
   def withRememberEntitiesStoreMode(
       rememberEntitiesStoreMode: ClusterShardingSettings.RememberEntitiesStoreMode): ClusterShardingSettings =
     copy(rememberEntitiesStoreMode = rememberEntitiesStoreMode)
-
-  @deprecated("See passivationStrategySettings.idleEntitySettings instead", since = "2.6.18")
-  def passivateIdleEntityAfter: FiniteDuration =
-    passivationStrategySettings.idleEntitySettings.fold(Duration.Zero)(_.timeout)
-
-  @deprecated("Use withPassivationStrategy instead", since = "2.6.18")
-  def withPassivateIdleEntityAfter(duration: FiniteDuration): ClusterShardingSettings =
-    copy(passivationStrategySettings = passivationStrategySettings.withOldIdleStrategy(duration))
-
-  @deprecated("Use withPassivationStrategy instead", since = "2.6.18")
-  def withPassivateIdleEntityAfter(duration: java.time.Duration): ClusterShardingSettings =
-    copy(passivationStrategySettings = passivationStrategySettings.withOldIdleStrategy(duration.toScala))
 
   /**
    * API MAY CHANGE: Settings for passivation strategies may change after additional testing and feedback.

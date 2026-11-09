@@ -15,6 +15,12 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 
 * `LoggingTestKit.intercept` (scaladsl): use `expect` instead.
 
+### akka-cluster-sharding-typed
+
+* The deprecated `ClusterShardingSettings` constructors: use `ClusterShardingSettings(system)` or `ClusterShardingSettings.create(system)` with the `with*` methods, or the full constructor.
+* `ClusterShardingSettings.passivateIdleEntityAfter` and `withPassivateIdleEntityAfter`: use `withPassivationStrategy` and `passivationStrategySettings`, see @ref:[Automatic Passivation](../typed/cluster-sharding.md).
+* `ShardingProducerController.Settings.resendFirsUnconfirmedIdleTimeout` and `withResendFirsUnconfirmedIdleTimeout`: use the correctly spelled `resendFirstUnconfirmedIdleTimeout` and `withResendFirstUnconfirmedIdleTimeout`.
+
 ### akka-cluster-tools
 
 * `DistributedPubSubSettings` constructor without `sendToDeadLettersWhenNoSubscribers`: use the constructor with `sendToDeadLettersWhenNoSubscribers`, or `DistributedPubSubSettings(config)`.
