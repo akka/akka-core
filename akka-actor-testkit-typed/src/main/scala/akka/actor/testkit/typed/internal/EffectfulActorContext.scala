@@ -165,9 +165,6 @@ import akka.util.Timeout
     override def startTimerAtFixedRate(key: Any, msg: T, initialDelay: FiniteDuration, interval: FiniteDuration): Unit =
       startTimer(key, msg, interval, Effect.TimerScheduled.FixedRateModeWithInitialDelay(initialDelay))
 
-    override def startPeriodicTimer(key: Any, msg: T, interval: FiniteDuration): Unit =
-      startTimer(key, msg, interval, Effect.TimerScheduled.FixedRateMode)
-
     override def startSingleTimer(key: Any, msg: T, delay: FiniteDuration): Unit =
       startTimer(key, msg, delay, Effect.TimerScheduled.SingleMode)
 
