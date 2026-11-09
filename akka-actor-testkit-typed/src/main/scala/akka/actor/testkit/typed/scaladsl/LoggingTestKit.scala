@@ -100,16 +100,6 @@ import akka.annotation.DoNotInherit
    */
   def expect[T](code: => T)(implicit system: ActorSystem[_]): T
 
-  /**
-   * Run the given code block and assert that the criteria of this `LoggingTestKit` has
-   * matched within the configured `akka.actor.testkit.typed.filter-leeway`
-   * as often as requested by its `occurrences` parameter specifies.
-   *
-   * Care is taken to remove the testkit when the block is finished or aborted.
-   */
-  @deprecated("Use expect instead.", "2.6.0")
-  def intercept[T](code: => T)(implicit system: ActorSystem[_]): T
-
 }
 
 /**
