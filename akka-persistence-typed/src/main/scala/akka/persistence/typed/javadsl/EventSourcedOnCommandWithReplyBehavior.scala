@@ -14,7 +14,6 @@ import akka.persistence.typed.EventAdapter
 import akka.persistence.typed.NoOpEventAdapter
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.SnapshotAdapter
-import akka.persistence.typed.SnapshotSelectionCriteria
 import akka.persistence.typed.internal
 import akka.persistence.typed.internal.EffectImpl
 import akka.persistence.typed.internal.NoOpSnapshotAdapter
@@ -119,17 +118,6 @@ abstract class EventSourcedOnCommandWithReplyBehavior[Command, Event, State](
    * Override and define the snapshot store plugin id that this actor should use instead of the default.
    */
   def snapshotPluginId: String = ""
-
-  /**
-   * Override and define the snapshot selection criteria used by this actor instead of the default.
-   * By default the most recent snapshot is used, and the remaining state updates are recovered by replaying events
-   * from the sequence number up until which the snapshot reached.
-   *
-   * You may configure the behavior to skip replaying snapshots completely, in which case the recovery will be
-   * performed by replaying all events -- which may take a long time.
-   */
-  @deprecated("override recovery instead", "2.6.5")
-  def snapshotSelectionCriteria: SnapshotSelectionCriteria = SnapshotSelectionCriteria.latest
 
   /**
    * Initiates a snapshot if the given predicate evaluates to true.

@@ -42,7 +42,6 @@ import akka.persistence.typed.ReplicaId
 import akka.persistence.typed.SnapshotAdapter
 import akka.persistence.typed.SnapshotCompleted
 import akka.persistence.typed.SnapshotFailed
-import akka.persistence.typed.SnapshotSelectionCriteria
 import akka.persistence.typed.scaladsl._
 import akka.persistence.typed.scaladsl.RetentionCriteria
 import akka.persistence.typed.telemetry.EventSourcedBehaviorInstrumentationProvider
@@ -287,11 +286,6 @@ private[akka] final case class EventSourcedBehaviorImpl[Command, Event, State](
   override def withSnapshotPluginId(id: String): EventSourcedBehavior[Command, Event, State] = {
     require(id != null, "snapshot plugin id must not be null; use empty string for 'default' snapshot store")
     copy(snapshotPluginId = if (id != "") Some(id) else None)
-  }
-
-  override def withSnapshotSelectionCriteria(
-      selection: SnapshotSelectionCriteria): EventSourcedBehavior[Command, Event, State] = {
-    copy(recovery = Recovery.withSnapshotSelectionCriteria(selection))
   }
 
   override def snapshotWhen(predicate: (State, Event, Long) => Boolean): EventSourcedBehavior[Command, Event, State] =

@@ -307,10 +307,7 @@ object MemberStatus {
       Removed -> Set.empty[MemberStatus])
 }
 
-object UniqueAddress extends AbstractFunction2[Address, Int, UniqueAddress] {
-  // for binary compatibility
-  @deprecated("Use Long UID apply instead", since = "2.4.11")
-  def apply(address: Address, uid: Int) = new UniqueAddress(address, uid.toLong)
+object UniqueAddress extends AbstractFunction2[Address, Long, UniqueAddress] {
 
   def apply(remoteUniqueAddress: akka.remote.UniqueAddress): UniqueAddress =
     new UniqueAddress(remoteUniqueAddress.address, remoteUniqueAddress.uid)
@@ -353,20 +350,5 @@ final class UniqueAddress(val address: Address, val longUid: Long)
     if (result == 0) if (this.longUid < that.longUid) -1 else if (this.longUid == that.longUid) 0 else 1
     else result
   }
-
-  // for binary compatibility
-
-  @deprecated("Use Long UID constructor instead", since = "2.4.11")
-  def this(address: Address, uid: Int) = this(address, uid.toLong)
-
-  @deprecated("Use longUid instead", since = "2.4.11")
-  def uid = longUid.toInt
-
-  /**
-   * For binary compatibility
-   * Stops `copy(Address, Long)` copy from being generated, use `apply` instead.
-   */
-  @deprecated("Use Long UID constructor instead", since = "2.4.11")
-  def copy(address: Address = address, uid: Int = uid) = new UniqueAddress(address, uid.toLong)
 
 }

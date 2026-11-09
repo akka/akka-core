@@ -7,7 +7,6 @@ package akka.cluster.ddata
 import scala.collection.immutable
 
 import akka.annotation.InternalApi
-import akka.cluster.Cluster
 import akka.cluster.UniqueAddress
 import akka.cluster.ddata.ORMap.ZeroTag
 import akka.util.HashCode
@@ -267,17 +266,6 @@ final class ORMap[A, B <: ReplicatedData] private[akka] (
    */
   def updated(node: SelfUniqueAddress, key: A, initial: B)(modify: B => B): ORMap[A, B] =
     updated(node.uniqueAddress, key, initial)(modify)
-
-  /**
-   * Java API: Replace a value by applying the `modify` function on the existing value.
-   *
-   * If there is no current value for the `key` the `initial` value will be
-   * passed to the `modify` function.
-   */
-  @Deprecated
-  @deprecated("use update for the Java API as updated is ambiguous with the Scala API", "2.5.20")
-  def updated(node: Cluster, key: A, initial: B, modify: java.util.function.Function[B, B]): ORMap[A, B] =
-    updated(node.selfUniqueAddress, key, initial)(value => modify.apply(value))
 
   /**
    * Java API: Replace a value by applying the `modify` function on the existing value.
