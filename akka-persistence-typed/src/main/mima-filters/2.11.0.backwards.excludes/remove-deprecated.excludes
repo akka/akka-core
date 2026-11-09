@@ -1,0 +1,6 @@
+# Removed deprecated snapshot selection criteria overrides, use recovery instead
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.typed.javadsl.EventSourcedBehavior.snapshotSelectionCriteria")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.typed.javadsl.EventSourcedOnCommandBehavior.snapshotSelectionCriteria")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.typed.javadsl.EventSourcedOnCommandWithReplyBehavior.snapshotSelectionCriteria")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.typed.scaladsl.EventSourcedBehavior.withSnapshotSelectionCriteria")
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.persistence.typed.internal.EventSourcedBehaviorImpl.withSnapshotSelectionCriteria")

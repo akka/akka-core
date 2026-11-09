@@ -44,6 +44,11 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 
 * `TestConductor.throttle`: throttle was not implemented, use `blackhole` and `passThrough` instead.
 
+### akka-persistence-typed
+
+* `snapshotSelectionCriteria` in the javadsl `EventSourcedBehavior`, `EventSourcedOnCommandBehavior` and `EventSourcedOnCommandWithReplyBehavior`: override `recovery` instead and return `Recovery.withSnapshotSelectionCriteria(...)`. Overriding `snapshotSelectionCriteria` had no effect since Akka 2.6.5.
+* `EventSourcedBehavior.withSnapshotSelectionCriteria` in scaladsl: use `withRecovery(Recovery.withSnapshotSelectionCriteria(...))`.
+
 ### akka-stream-typed
 
 * `ActorSource.actorRefWithAck` (scaladsl and javadsl): use `ActorSource.actorRefWithBackpressure` instead.
