@@ -21,6 +21,11 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 * `ClusterShardingSettings.passivateIdleEntityAfter` and `withPassivateIdleEntityAfter`: use `withPassivationStrategy` and `passivationStrategySettings`, see @ref:[Automatic Passivation](../typed/cluster-sharding.md).
 * `ShardingProducerController.Settings.resendFirsUnconfirmedIdleTimeout` and `withResendFirsUnconfirmedIdleTimeout`: use the correctly spelled `resendFirstUnconfirmedIdleTimeout` and `withResendFirstUnconfirmedIdleTimeout`.
 
+### akka-cluster
+
+* `UniqueAddress` constructor and `UniqueAddress.apply` with an `Int` uid, `UniqueAddress.uid` and `UniqueAddress.copy`: use the `Long` uid constructor or `apply`, and `longUid`.
+* `ClusterEvent.CurrentClusterState` constructors without `unreachableDataCenters` and `memberTombstones`: use the main constructor, or `CurrentClusterState.apply`, which keeps the default arguments.
+
 ### akka-cluster-tools
 
 * `DistributedPubSubSettings` constructor without `sendToDeadLettersWhenNoSubscribers`: use the constructor with `sendToDeadLettersWhenNoSubscribers`, or `DistributedPubSubSettings(config)`.
