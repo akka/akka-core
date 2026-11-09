@@ -11,6 +11,10 @@ project.description: Migrating to Akka 2.11.
 
 APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below list the removed APIs and their replacements.
 
+### akka-cluster-tools
+
+* `DistributedPubSubSettings` constructor without `sendToDeadLettersWhenNoSubscribers`: use the constructor with `sendToDeadLettersWhenNoSubscribers`, or `DistributedPubSubSettings(config)`.
+
 ### akka-distributed-data
 
 * `ReplicatorSettings` constructors with fewer parameters than the full constructor: use the full constructor, `ReplicatorSettings(config)` or the `with*` methods.
