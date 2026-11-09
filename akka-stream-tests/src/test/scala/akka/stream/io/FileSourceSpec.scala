@@ -199,7 +199,7 @@ class FileSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
       c.expectComplete()
     }
 
-    "onError with failure and return a failed IOResult when trying to read from file which does not exist" in {
+    "onError with failure and fail the materialized value when trying to read from file which does not exist" in {
       val (r, p) = FileIO.fromPath(notExistingFile).toMat(Sink.asPublisher(false))(Keep.both).run()
       val c = TestSubscriber.manualProbe[ByteString]()
       p.subscribe(c)
@@ -212,7 +212,7 @@ class FileSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
       r.failed.futureValue shouldBe an[IOOperationIncompleteException]
     }
 
-    "onError with failure and return a failed IOResult when trying to read from a directory instead of a file" in {
+    "onError with failure and fail the materialized value when trying to read from a directory instead of a file" in {
       val (r, p) = FileIO.fromPath(directoryInsteadOfFile).toMat(Sink.asPublisher(false))(Keep.both).run()
       val c = TestSubscriber.manualProbe[ByteString]()
       p.subscribe(c)
