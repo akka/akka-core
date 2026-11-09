@@ -95,32 +95,4 @@ object ActorSource {
         completionMatcher.asInstanceOf[PartialFunction[Any, CompletionStrategy]],
         failureMatcher.asInstanceOf[PartialFunction[Any, Throwable]])
       .mapMaterializedValue(actorRefAdapter)
-
-  /**
-   * Creates a `Source` that is materialized as an [[akka.actor.typed.ActorRef]].
-   * Messages sent to this actor will be emitted to the stream if there is demand from downstream,
-   * and a new message will only be accepted after the previous messages has been consumed and acknowledged back.
-   * The stream will complete with failure if a message is sent before the acknowledgement has been replied back.
-   *
-   * The stream can be completed with failure by sending a message that is matched by `failureMatcher`. The extracted
-   * [[Throwable]] will be used to fail the stream. In case the Actor is still draining its internal buffer (after having received
-   * a message matched by `completionMatcher`) before signaling completion and it receives a message matched by `failureMatcher`,
-   * the failure will be signaled downstream immediately (instead of the completion signal).
-   *
-   * The actor will be stopped when the stream is completed, failed or canceled from downstream,
-   * i.e. you can watch it to get notified when that happens.
-   */
-  @deprecated("Use actorRefWithBackpressure instead", "2.6.0")
-  def actorRefWithAck[T, Ack](
-      ackTo: ActorRef[Ack],
-      ackMessage: Ack,
-      completionMatcher: PartialFunction[T, CompletionStrategy],
-      failureMatcher: PartialFunction[T, Throwable]): Source[T, ActorRef[T]] =
-    Source
-      .actorRefWithAck[T](
-        Some(ackTo.toClassic),
-        ackMessage,
-        completionMatcher.asInstanceOf[PartialFunction[Any, CompletionStrategy]],
-        failureMatcher.asInstanceOf[PartialFunction[Any, Throwable]])
-      .mapMaterializedValue(actorRefAdapter)
 }

@@ -29,6 +29,10 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 
 * `TestConductor.throttle`: throttle was not implemented, use `blackhole` and `passThrough` instead.
 
+### akka-stream-typed
+
+* `ActorSource.actorRefWithAck` (scaladsl and javadsl): use `ActorSource.actorRefWithBackpressure` instead.
+
 ### akka-testkit
 
 * `akka.testkit.javadsl.TestKit` overloads of `expectMsgPF`, `expectTerminated`, `fishForMessage` and `fishForSpecificMessage` taking a `scala.concurrent.duration.Duration`: use the overloads that accept `java.time.Duration` instead.
