@@ -54,6 +54,8 @@ import com.typesafe.tools.mima.plugin.MimaPlugin
 import sbt.Keys.{ initialCommands, parallelExecution }
 import spray.boilerplate.BoilerplatePlugin
 
+ThisBuild / makeBomIncludeDependencies := true
+
 initialize := {
   // Load system properties from a file to make configuration from Jenkins easier
   loadSystemProperties("project/akka-build.properties")
