@@ -36,18 +36,6 @@ public class DnsCompileOnlyDocTest {
     // #resolve
 
     {
-      // #actor-api-inet-address
-      final ActorRef dnsManager = Dns.get(system).manager();
-      CompletionStage<Object> resolved =
-          ask(
-              dnsManager,
-              new DnsProtocol.Resolve("google.com", DnsProtocol.ipRequestType()),
-              timeout);
-      // #actor-api-inet-address
-
-    }
-
-    {
       // #actor-api-async
       final ActorRef dnsManager = Dns.get(system).manager();
       CompletionStage<Object> resolved =

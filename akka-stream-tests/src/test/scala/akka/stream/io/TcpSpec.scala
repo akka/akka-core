@@ -69,13 +69,6 @@ class NonResolvingDnsManager(ext: akka.io.DnsExt) extends Actor {
 @nowarn("msg=deprecated")
 class FailingDnsResolver extends DnsProvider {
   override val cache: Dns = new Dns {
-    override def cached(name: String): Option[Dns.Resolved] = None
-    override def resolve(name: String)(system: ActorSystem, sender: ActorRef): Option[Dns.Resolved] = {
-      // tricky impl detail this is actually where the resolve response is triggered
-      // we fake that it fails directly from here
-      sender ! Dns.Resolved(name, immutable.Seq.empty, immutable.Seq.empty)
-      None
-    }
     override def cached(request: DnsProtocol.Resolve): Option[DnsProtocol.Resolved] = None
     override def resolve(
         request: DnsProtocol.Resolve,

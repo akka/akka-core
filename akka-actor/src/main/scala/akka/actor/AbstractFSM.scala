@@ -495,48 +495,6 @@ abstract class AbstractFSM[S, D] extends FSM[S, D] {
     startSingleTimer(name, msg, delay.toScala)
 
   /**
-   * Schedule named timer to deliver message after given delay, possibly repeating.
-   * Any existing timer with the same name will automatically be canceled before
-   * adding the new timer.
-   * @param name identifier to be used with cancelTimer()
-   * @param msg message to be delivered
-   * @param timeout delay of first message delivery and between subsequent messages
-   */
-  @deprecated("Use startSingleTimer instead.", since = "2.6.0")
-  final def setTimer(name: String, msg: Any, timeout: FiniteDuration): Unit =
-    setTimer(name, msg, timeout, repeat = false)
-
-  /**
-   * Schedule named timer to deliver message after given delay, possibly repeating.
-   * Any existing timer with the same name will automatically be canceled before
-   * adding the new timer.
-   * @param name identifier to be used with cancelTimer()
-   * @param msg message to be delivered
-   * @param timeout delay of first message delivery and between subsequent messages
-   */
-  @deprecated("Use startSingleTimer instead.", since = "2.6.0")
-  final def setTimer(name: String, msg: Any, timeout: java.time.Duration): Unit = {
-    setTimer(name, msg, timeout.toScala, repeat = false)
-  }
-
-  /**
-   * Schedule named timer to deliver message after given delay, possibly repeating.
-   * Any existing timer with the same name will automatically be canceled before
-   * adding the new timer.
-   * @param name identifier to be used with cancelTimer()
-   * @param msg message to be delivered
-   * @param timeout delay of first message delivery and between subsequent messages
-   * @param repeat send once if false, scheduleAtFixedRate if true
-   */
-  @deprecated(
-    "Use startSingleTimer, startTimerWithFixedDelay or startTimerAtFixedRate instead. This has the same semantics as " +
-    "startTimerAtFixedRate, but startTimerWithFixedDelay is often preferred.",
-    since = "2.6.0")
-  final def setTimer(name: String, msg: Any, timeout: java.time.Duration, repeat: Boolean): Unit = {
-    setTimer(name, msg, timeout.toScala, repeat)
-  }
-
-  /**
    * Default reason if calling `stop()`.
    */
   val Normal: FSM.Reason = FSM.Normal

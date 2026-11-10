@@ -420,8 +420,6 @@ object ActorSystem {
     final val UnstartedPushTimeout: Timeout = Timeout(config.getMillisDuration("akka.actor.unstarted-push-timeout"))
 
     final val AllowJavaSerialization: Boolean = getBoolean("akka.actor.allow-java-serialization")
-    @deprecated("Always enabled from Akka 2.6.0", "2.6.0")
-    final val EnableAdditionalSerializationBindings: Boolean = true
     final val SerializeAllMessages: Boolean = getBoolean("akka.actor.serialize-messages")
     final val SerializeAllCreators: Boolean = getBoolean("akka.actor.serialize-creators")
     final val NoSerializationVerificationNeededClassPrefix: Set[String] = {
