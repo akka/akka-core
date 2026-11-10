@@ -25,6 +25,12 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 * `UniqueAddress` constructor and `UniqueAddress.apply` with an `Int` uid, `UniqueAddress.uid` and `UniqueAddress.copy`: use the `Long` uid constructor or `apply`, and `longUid`.
 * `ClusterEvent.CurrentClusterState` constructors without `unreachableDataCenters` and `memberTombstones`: use the main constructor, or `CurrentClusterState.apply`, which keeps the default arguments.
 
+### akka-cluster-sharding
+
+* The deprecated `ClusterShardingSettings` and `ClusterShardingSettings.TuningParameters` constructors: use `ClusterShardingSettings(system)` or `ClusterShardingSettings.create(system)` with the `with*` methods, or the full constructor.
+* `ClusterShardingSettings.passivateIdleEntityAfter` and `withPassivateIdleAfter`: use `withPassivationStrategy` and `passivationStrategySettings`, see @ref:[Automatic Passivation](../typed/cluster-sharding.md).
+* `ClusterShardingHealthCheckSettings(names, timeout)`: use the full constructor.
+
 ### akka-cluster-sharding-typed
 
 * The deprecated `ClusterShardingSettings` constructors: use `ClusterShardingSettings(system)` or `ClusterShardingSettings.create(system)` with the `with*` methods, or the full constructor.
