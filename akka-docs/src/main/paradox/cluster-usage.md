@@ -368,7 +368,7 @@ Go to the corresponding Scala version of this page for details.
 ## Management
 
 There are several management tools for the cluster. Please refer to the
-@ref:[Cluster Management](additional/operations.md#cluster-management) for more information
+@ref:[Cluster Management](additional/operations.md#cluster-management) for more information.
 
 <a id="cluster-configuration"></a>
 
