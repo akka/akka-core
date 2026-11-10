@@ -17,6 +17,7 @@ import akka.actor.Props
 import akka.cluster.Cluster
 import akka.cluster.sharding.ShardRegion.CurrentRegions
 import akka.persistence.PersistentActor
+import akka.persistence.journal.inmem.SharedInmemJournal
 import akka.testkit.AkkaSpec
 import akka.testkit.ImplicitSender
 import akka.testkit.TestProbe
@@ -26,7 +27,8 @@ import akka.testkit.TestProbe
  * is changed so that entities should live on other shards after a full restart of the cluster.
  */
 object RememberEntitiesShardIdExtractorChangeSpec {
-  val config = ConfigFactory.parseString(s"""
+  val config = ConfigFactory
+    .parseString(s"""
        akka.loglevel = INFO
        akka.actor.provider = "cluster"
        akka.remote.artery.canonical.port = 0 
@@ -36,16 +38,13 @@ object RememberEntitiesShardIdExtractorChangeSpec {
         state-store-mode = "ddata"
        }
        akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
-       akka.persistence.journal.plugin = "akka.persistence.journal.leveldb"
+       akka.persistence.journal.plugin = "${SharedInmemJournal.PluginId}"
        akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
        akka.persistence.snapshot-store.local.dir = "target/RememberEntitiesShardIdExtractorChangeSpec-${UUID
-    .randomUUID()
-    .toString}"
-       akka.persistence.journal.leveldb {
-         native = off
-          dir = "target/journal-PersistentShardingMigrationSpec-${UUID.randomUUID()}"
-      }
+      .randomUUID()
+      .toString}"
       """)
+    .withFallback(SharedInmemJournal.config)
 
   case class Message(id: Long)
 

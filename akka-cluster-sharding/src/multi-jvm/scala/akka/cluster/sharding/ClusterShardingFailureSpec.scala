@@ -60,7 +60,6 @@ abstract class ClusterShardingFailureSpecConfig(override val mode: String)
         }
         # don't leak ddata state across runs
         akka.cluster.sharding.distributed-data.durable.keys = []
-        akka.persistence.journal.leveldb-shared.store.native = off
         # using Java serialization for these messages because test is sending them
         # to other nodes, which isn't normal usage.
         akka.actor.serialization-bindings {

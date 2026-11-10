@@ -10,7 +10,6 @@ import com.typesafe.config.ConfigFactory
 
 import akka.actor._
 import akka.cluster.{ Cluster, MemberStatus }
-import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import akka.testkit._
 
 object ClusterShardingRememberEntitiesNewExtractorSpec {
@@ -50,9 +49,7 @@ object ClusterShardingRememberEntitiesNewExtractorSpec {
 }
 
 abstract class ClusterShardingRememberEntitiesNewExtractorSpecConfig(mode: String)
-    extends MultiNodeClusterShardingConfig(
-      mode,
-      additionalConfig = "akka.persistence.journal.leveldb-shared.store.native = off") {
+    extends MultiNodeClusterShardingConfig(mode) {
   val first = role("first")
   val second = role("second")
   val third = role("third")
@@ -202,11 +199,7 @@ abstract class ClusterShardingRememberEntitiesNewExtractorSpec(
         val sys2 = ActorSystem(system.name, system.settings.config)
         val probe2 = TestProbe()(sys2)
 
-        if (persistenceIsNeeded) {
-          sys2.actorSelection(node(first) / "user" / "store").tell(Identify(None), probe2.ref)
-          val sharedStore = probe2.expectMsgType[ActorIdentity](10.seconds).ref.get
-          SharedLeveldbJournal.setStore(sharedStore, sys2)
-        }
+        setStoreIfNeeded(sys2, first)
 
         Cluster(sys2).join(node(first).address)
         startShardingWithExtractor2(sys2, probe2.ref)

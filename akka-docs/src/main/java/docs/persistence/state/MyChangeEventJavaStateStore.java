@@ -66,12 +66,6 @@ class MyChangeEventJavaStateStore<A> implements DurableStateUpdateWithChangeEven
     return null;
   }
 
-  /** Deprecated. Use the deleteObject overload with revision instead. */
-  @Override
-  public CompletionStage<Done> deleteObject(String persistenceId) {
-    return deleteObject(persistenceId, 0);
-  }
-
   @Override
   public CompletionStage<Done> upsertObject(
       String persistenceId, long revision, A value, String tag, Object changeEvent) {

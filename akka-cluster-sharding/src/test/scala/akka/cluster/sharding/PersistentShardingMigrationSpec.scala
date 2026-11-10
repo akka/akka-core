@@ -14,6 +14,7 @@ import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.cluster.{ Cluster, MemberStatus }
 import akka.cluster.sharding.ShardRegion.CurrentRegions
 import akka.persistence.PersistentActor
+import akka.persistence.journal.inmem.SharedInmemJournal
 import akka.testkit.{ AkkaSpec, ImplicitSender, TestProbe }
 
 /**
@@ -22,7 +23,8 @@ import akka.testkit.{ AkkaSpec, ImplicitSender, TestProbe }
  * replicated entity store.
  */
 object PersistentShardingMigrationSpec {
-  val config = ConfigFactory.parseString(s"""
+  val config = ConfigFactory
+    .parseString(s"""
        akka.loglevel = INFO
        akka.actor.provider = "cluster"
        akka.remote.artery.canonical.port = 0 
@@ -44,37 +46,32 @@ object PersistentShardingMigrationSpec {
         retry-interval = 500ms 
        }
        
-       akka.persistence.journal.plugin = "akka.persistence.journal.leveldb"
+       akka.persistence.journal.plugin = "${SharedInmemJournal.PluginId}"
        akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
        akka.persistence.snapshot-store.local.dir = "target/PersistentShardingMigrationSpec-${UUID
-    .randomUUID()
-    .toString}"
-       akka.persistence.journal.leveldb {
-         native = off
-          dir = "target/journal-PersistentShardingMigrationSpec-${UUID.randomUUID()}"
-      }
+      .randomUUID()
+      .toString}"
       """)
+    .withFallback(SharedInmemJournal.config)
 
-  val configForNewMode = ConfigFactory
-    .parseString("""
+  val configForNewMode = ConfigFactory.parseString(s"""
        akka.cluster.sharding {
         remember-entities = on
         remember-entities-store = "eventsourced"
         state-store-mode = "ddata"
        }
-       
-       akka.persistence.journal.leveldb {
+
+       ${SharedInmemJournal.PluginId} {
         event-adapters {
           coordinator-migration = "akka.cluster.sharding.OldCoordinatorStateMigrationEventAdapter"
         }
 
         event-adapter-bindings {
-          "akka.cluster.sharding.ShardCoordinator$Internal$DomainEvent"        = coordinator-migration
+          "akka.cluster.sharding.ShardCoordinator$$Internal$$DomainEvent"        = coordinator-migration
         }
       }
        
-      """)
-    .withFallback(config)
+      """).withFallback(config)
 
   case class Message(id: Long)
 

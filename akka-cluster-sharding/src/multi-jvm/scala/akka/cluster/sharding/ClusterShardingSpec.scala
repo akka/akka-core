@@ -19,8 +19,7 @@ import akka.cluster.sharding.ShardRegion.{ CurrentRegions, GetCurrentRegions, Pa
 import akka.cluster.sharding.internal.{ DDataRememberEntitiesProvider, EventSourcedRememberEntitiesProvider }
 import akka.cluster.singleton.{ ClusterSingletonManager, ClusterSingletonManagerSettings }
 import akka.pattern.BackoffOpts
-import akka.persistence.{ Persistence, PersistentActor }
-import akka.persistence.journal.leveldb.{ SharedLeveldbJournal, SharedLeveldbStore }
+import akka.persistence.PersistentActor
 import akka.remote.testconductor.RoleName
 import akka.testkit._
 import akka.testkit.TestEvent.Mute
@@ -140,7 +139,6 @@ abstract class ClusterShardingSpecConfig(
     
     akka.cluster.roles = ["backend"]
     akka.cluster.distributed-data.gossip-interval = 1s
-    akka.persistence.journal.leveldb-shared.timeout = 10s #the original default, base test uses 5s
     akka.cluster.sharding {
       retry-interval = 1 s
       handoff-timeout = 10 s
@@ -404,20 +402,7 @@ abstract class ClusterShardingSpec(multiNodeConfig: ClusterShardingSpecConfig)
 
     // must be done also in ddata mode since Counter is PersistentActor
     "setup shared journal" in {
-      // start the Persistence extension
-      Persistence(system)
-      runOn(controller) {
-        system.actorOf(Props[SharedLeveldbStore](), "store")
-      }
-      enterBarrier("peristence-started")
-
-      runOn(first, second, third, fourth, fifth, sixth) {
-        system.actorSelection(node(controller) / "user" / "store") ! Identify(None)
-        val sharedStore = expectMsgType[ActorIdentity](10.seconds).ref.get
-        SharedLeveldbJournal.setStore(sharedStore, system)
-      }
-
-      enterBarrier("after-1")
+      startPersistence(startOn = controller, setStoreOn = Seq(first, second, third, fourth, fifth, sixth))
     }
 
     "work in single node cluster" in within(20 seconds) {
