@@ -368,50 +368,7 @@ Go to the corresponding Scala version of this page for details.
 ## Management
 
 There are several management tools for the cluster. Please refer to the
-@ref:[Cluster Management](additional/operations.md#cluster-management) for more information.
- 
-<a id="cluster-command-line"></a>
-### Command Line
-
-@@@ warning
-
-**Deprecation warning** - The command line script has been deprecated and is scheduled for removal
-in the next major version. Use the @ref:[HTTP management](additional/operations.md#http) API with [curl](https://curl.se/)
-or similar instead.
-
-@@@
-
-The cluster can be managed with the script `akka-cluster` provided in the Akka GitHub repository @extref[here](github:akka-cluster/jmx-client). Place the script and the `jmxsh-R5.jar` library in the same directory.
-
-Run it without parameters to see instructions about how to use the script:
-
-```
-Usage: ./akka-cluster <node-hostname> <jmx-port> <command> ...
-
-Supported commands are:
-           join <node-url> - Sends request a JOIN node with the specified URL
-          leave <node-url> - Sends a request for node with URL to LEAVE the cluster
-           down <node-url> - Sends a request for marking node with URL as DOWN
-             member-status - Asks the member node for its current status
-                   members - Asks the cluster for addresses of current members
-               unreachable - Asks the cluster for addresses of unreachable members
-            cluster-status - Asks the cluster for its current status (member ring,
-                             unavailable nodes, meta data etc.)
-                    leader - Asks the cluster who the current leader is
-              is-singleton - Checks if the cluster is a singleton cluster (single
-                             node cluster)
-              is-available - Checks if the member node is available
-Where the <node-url> should be on the format of
-  'akka.<protocol>://<actor-system-name>@<hostname>:<port>'
-
-Examples: ./akka-cluster localhost 9999 is-available
-          ./akka-cluster localhost 9999 join akka://MySystem@darkstar:2552
-          ./akka-cluster localhost 9999 cluster-status
-```
-
-To be able to use the script you must enable remote monitoring and management when starting the JVMs of the cluster nodes,
-as described in [Monitoring and Management Using JMX Technology](https://docs.oracle.com/javase/8/docs/technotes/guides/management/agent.html).
-Make sure you understand the security implications of enabling remote monitoring and management.
+@ref:[Cluster Management](additional/operations.md#cluster-management) for more information
 
 <a id="cluster-configuration"></a>
 
