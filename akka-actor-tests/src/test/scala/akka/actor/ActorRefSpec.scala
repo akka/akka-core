@@ -310,6 +310,14 @@ class ActorRefSpec extends AkkaSpec("""
       (readA eq a) should ===(true)
     }
 
+    "be serializable using Java Serialization when it is the ignore ref" in {
+      val esys = system.asInstanceOf[ExtendedActorSystem]
+      val ignoreRef = esys.provider.ignoreRef
+      val ser = new JavaSerializer(esys)
+      val readRef = ser.fromBinary(ser.toBinary(ignoreRef), None)
+      (readRef eq ignoreRef) should ===(true)
+    }
+
     "throw an exception on deserialize if no system in scope" in {
       val a = system.actorOf(Props[InnerActor]())
 
