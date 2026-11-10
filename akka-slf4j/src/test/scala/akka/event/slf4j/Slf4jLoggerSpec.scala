@@ -6,6 +6,7 @@ package akka.event.slf4j
 
 import java.io.ByteArrayOutputStream
 
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 
 import ch.qos.logback.core.OutputStreamAppender
@@ -33,6 +34,14 @@ object Slf4jLoggerSpec {
   final case class StringWithMarker(s: String, marker: LogMarker)
   final case class StringWithSlf4jMarker(s: String, marker: Marker)
   final case class StringWithSlf4jMarkerMDC(s: String, marker: Marker, mdc: Map[String, Any])
+
+  // Keep coverage for child markers supplied by applications using the deprecated SLF4J API.
+  @nowarn("msg=method add in trait Marker is deprecated")
+  def markerWithChild(): Marker = {
+    val marker = MarkerFactory.getMarker("SLF")
+    marker.add(MarkerFactory.getMarker("ADDED"))
+    marker
+  }
 
   final class LogProducer extends Actor with DiagnosticActorLogging {
 
@@ -136,8 +145,7 @@ class Slf4jLoggerSpec extends AkkaSpec(Slf4jLoggerSpec.config) with BeforeAndAft
     }
 
     "log info with slf4j marker" in {
-      val slf4jMarker = MarkerFactory.getMarker("SLF")
-      slf4jMarker.add(MarkerFactory.getMarker("ADDED")) // slf4j markers can have children
+      val slf4jMarker = markerWithChild()
       producer ! StringWithSlf4jMarker("security-wise interesting message", slf4jMarker)
 
       awaitCond(outputString.contains("----"), 5 seconds)
@@ -146,8 +154,7 @@ class Slf4jLoggerSpec extends AkkaSpec(Slf4jLoggerSpec.config) with BeforeAndAft
       s should include("msg=[security-wise interesting message]")
     }
     "log info with slf4j marker and MDC" in {
-      val slf4jMarker = MarkerFactory.getMarker("SLF")
-      slf4jMarker.add(MarkerFactory.getMarker("ADDED")) // slf4j markers can have children
+      val slf4jMarker = markerWithChild()
       producer ! StringWithSlf4jMarkerMDC(
         "security-wise interesting message",
         slf4jMarker,
