@@ -1,4 +1,5 @@
 # Removed APIs deprecated in 2.10.0 or earlier
+# Constructor filters match by name, so they cover the retained constructors too
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.ClusterShardingSettings.passivateIdleEntityAfter")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.ClusterShardingSettings.withPassivateIdleAfter")
 ProblemFilters.exclude[DirectMissingMethodProblem]("akka.cluster.sharding.ClusterShardingSettings.this")
