@@ -6,7 +6,6 @@ package akka.stream.scaladsl
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.Promise
 import scala.concurrent.duration.DurationInt
@@ -16,7 +15,7 @@ import scala.util.control.NoStackTrace
 import akka.Done
 import akka.stream.AbruptStageTerminationException
 import akka.stream.ActorAttributes
-import akka.stream.ActorMaterializer
+import akka.stream.SystemMaterializer
 import akka.stream.Supervision
 import akka.stream.testkit.StreamSpec
 import akka.stream.testkit.TestSubscriber
@@ -183,8 +182,7 @@ class FlowStatefulMapSpec extends StreamSpec {
     }
 
     "call its onComplete callback on abrupt materializer termination" in {
-      @nowarn("msg=deprecated")
-      val mat = ActorMaterializer()
+      val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
       val promise = Promise[Done]()
 
       val matVal = Source

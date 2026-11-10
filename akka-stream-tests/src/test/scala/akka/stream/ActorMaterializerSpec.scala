@@ -32,10 +32,9 @@ object IndirectMaterializerCreation extends ExtensionId[IndirectMaterializerCrea
   def lookup: ExtensionId[IndirectMaterializerCreation] = this
 }
 
-@nowarn
 class IndirectMaterializerCreation(ex: ExtendedActorSystem) extends Extension {
   // extension instantiation blocked on materializer (which has Await.result inside)
-  implicit val mat: ActorMaterializer = ActorMaterializer()(ex)
+  implicit val mat: Materializer = SystemMaterializer(ex).createAdditionalSystemMaterializer()
 
   def futureThing(n: Int): Future[Int] = {
     Source.single(n).runWith(Sink.head)
@@ -46,7 +45,7 @@ class IndirectMaterializerCreation(ex: ExtendedActorSystem) extends Extension {
 @nowarn
 class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
 
-  "ActorMaterializer" must {
+  "Materializer" must {
 
     "not suffer from deadlock" in {
       val n = 4
@@ -84,7 +83,7 @@ class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
     }
 
     "report shutdown status properly" in {
-      val m = ActorMaterializer.create(system)
+      val m = SystemMaterializer(system).createAdditionalSystemMaterializer()
 
       m.isShutdown should ===(false)
       m.shutdown()
@@ -92,7 +91,7 @@ class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
     }
 
     "properly shut down actors associated with it" in {
-      val m = ActorMaterializer.create(system)
+      val m = SystemMaterializer(system).createAdditionalSystemMaterializer()
 
       val f = Source.fromPublisher(TestPublisher.probe[Int]()(system)).runFold(0)(_ + _)(m)
 
@@ -102,7 +101,7 @@ class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
     }
 
     "refuse materialization after shutdown" in {
-      val m = ActorMaterializer.create(system)
+      val m = SystemMaterializer(system).createAdditionalSystemMaterializer()
       m.shutdown()
       (the[IllegalStateException] thrownBy {
         Source(1 to 5).runWith(Sink.ignore)(m)
@@ -110,7 +109,7 @@ class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
     }
 
     "refuse materialization when shutdown while materializing" in {
-      val m = ActorMaterializer.create(system)
+      val m = SystemMaterializer(system).createAdditionalSystemMaterializer()
 
       (the[IllegalStateException] thrownBy {
         Source(1 to 5)
@@ -124,7 +123,8 @@ class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
     }
 
     "shut down the supervisor actor it encapsulates" in {
-      val m = ActorMaterializer.create(system).asInstanceOf[PhasedFusingActorMaterializer]
+      val m =
+        SystemMaterializer(system).createAdditionalSystemMaterializer().asInstanceOf[PhasedFusingActorMaterializer]
 
       Source.maybe[Any].to(Sink.ignore).run()(m)
       m.supervisor ! StreamSupervisor.GetChildren
@@ -147,7 +147,7 @@ class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
 
     "report correctly if it has been shut down from the side" in {
       val sys = ActorSystem()
-      val m = ActorMaterializer.create(sys)
+      val m = SystemMaterializer(sys).createAdditionalSystemMaterializer()
       Await.result(sys.terminate(), Duration.Inf)
       m.isShutdown should ===(true)
     }
@@ -157,11 +157,8 @@ class ActorMaterializerSpec extends StreamSpec with ImplicitSender {
 
 object ActorMaterializerSpec {
 
-  @nowarn("msg=deprecated")
   class ActorWithMaterializer(p: TestProbe) extends Actor {
-    private val settings: ActorMaterializerSettings =
-      ActorMaterializerSettings(context.system).withDispatcher("akka.test.stream-dispatcher")
-    implicit val mat: ActorMaterializer = ActorMaterializer(settings)(context)
+    implicit val mat: Materializer = Materializer(context, ActorAttributes.dispatcher("akka.test.stream-dispatcher"))
 
     Source
       .repeat("hello")

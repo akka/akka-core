@@ -44,9 +44,6 @@ private[akka] case class NoMaterializer(system: ActorSystem) extends Materialize
   def scheduleOnce(delay: FiniteDuration, task: Runnable): Cancellable =
     throw new UnsupportedOperationException("NoMaterializer cannot schedule a single event")
 
-  def schedulePeriodically(initialDelay: FiniteDuration, interval: FiniteDuration, task: Runnable): Cancellable =
-    throw new UnsupportedOperationException("NoMaterializer cannot schedule a repeated event")
-
   override def scheduleWithFixedDelay(
       initialDelay: FiniteDuration,
       delay: FiniteDuration,
@@ -71,8 +68,6 @@ private[akka] case class NoMaterializer(system: ActorSystem) extends Materialize
   override private[akka] def actorOf(context: MaterializationContext, props: Props) =
     throw new UnsupportedOperationException("NoMaterializer cannot spawn actors")
 
-  override def settings: ActorMaterializerSettings =
-    throw new UnsupportedOperationException("NoMaterializer does not have settings")
 }
 
 @nowarn
@@ -97,7 +92,6 @@ object GraphInterpreterSpecKit {
     if (attributes.nonEmpty && attributes.length != stages.length)
       throw new IllegalArgumentException("Attributes must be either empty or one per stage")
 
-    @nowarn("msg=deprecated")
     val defaultAttributes = ActorMaterializerSettings(system).toAttributes
 
     var inOwners = SMap.empty[Inlet[_], GraphStageLogic]
@@ -247,7 +241,6 @@ trait GraphInterpreterSpecKit extends StreamSpec {
 
   import GraphInterpreterSpecKit._
   val logger = Logging(system, "InterpreterSpecKit")
-  @nowarn("msg=deprecated")
   val defaultAttributes = ActorMaterializerSettings(system).toAttributes
 
   abstract class Builder {

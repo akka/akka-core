@@ -13,7 +13,6 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
 
-import akka.Done
 import akka.stream.{ IOResult, _ }
 import akka.stream.Attributes.InputBuffer
 import akka.stream.stage._
@@ -74,7 +73,7 @@ private[akka] final class FileSource(path: Path, chunkSize: Int, startPosition: 
           channel.position(position)
         } catch {
           case ex: Exception =>
-            ioResultPromise.trySuccess(IOResult(position, Failure(ex)))
+            ioResultPromise.tryFailure(new IOOperationIncompleteException(position, ex))
             throw ex
         }
       }
@@ -91,7 +90,7 @@ private[akka] final class FileSource(path: Path, chunkSize: Int, startPosition: 
 
       private def success(): Unit = {
         completeStage()
-        ioResultPromise.trySuccess(IOResult(position, Success(Done)))
+        ioResultPromise.trySuccess(IOResult(position))
       }
 
       /** BLOCKING I/O READ */
@@ -101,7 +100,7 @@ private[akka] final class FileSource(path: Path, chunkSize: Int, startPosition: 
           catch {
             case NonFatal(ex) =>
               failStage(ex)
-              ioResultPromise.trySuccess(IOResult(position, Failure(ex)))
+              ioResultPromise.tryFailure(new IOOperationIncompleteException(position, ex))
               throw ex
           }
 
@@ -133,7 +132,7 @@ private[akka] final class FileSource(path: Path, chunkSize: Int, startPosition: 
       }
 
       override def postStop(): Unit = {
-        ioResultPromise.trySuccess(IOResult(position, Success(Done)))
+        ioResultPromise.trySuccess(IOResult(position))
         if ((channel ne null) && channel.isOpen) channel.close()
       }
     }

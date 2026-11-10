@@ -9,7 +9,6 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.util.Random
 
-import scala.annotation.nowarn
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -34,7 +33,6 @@ object FileSourceSpec {
   final case class Settings(chunkSize: Int, readAhead: Int)
 }
 
-@nowarn
 class FileSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
 
   val fs = Jimfs.newFileSystem("FileSourceSpec", Configuration.unix())
@@ -114,7 +112,7 @@ class FileSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
 
     "complete future even when abrupt termination happened" in {
       val chunkSize = 512
-      val mat = ActorMaterializer()
+      val mat = SystemMaterializer(system).createAdditionalSystemMaterializer()
       val (future, p) = FileIO
         .fromPath(testFile, chunkSize)
         .addAttributes(Attributes.inputBuffer(1, 2))
@@ -201,7 +199,7 @@ class FileSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
       c.expectComplete()
     }
 
-    "onError with failure and return a failed IOResult when trying to read from file which does not exist" in {
+    "onError with failure and fail the materialized value when trying to read from file which does not exist" in {
       val (r, p) = FileIO.fromPath(notExistingFile).toMat(Sink.asPublisher(false))(Keep.both).run()
       val c = TestSubscriber.manualProbe[ByteString]()
       p.subscribe(c)
@@ -211,10 +209,10 @@ class FileSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
       val error = c.expectError()
       error shouldBe a[NoSuchFileException]
 
-      r.futureValue.status.isFailure shouldBe true
+      r.failed.futureValue shouldBe an[IOOperationIncompleteException]
     }
 
-    "onError with failure and return a failed IOResult when trying to read from a directory instead of a file" in {
+    "onError with failure and fail the materialized value when trying to read from a directory instead of a file" in {
       val (r, p) = FileIO.fromPath(directoryInsteadOfFile).toMat(Sink.asPublisher(false))(Keep.both).run()
       val c = TestSubscriber.manualProbe[ByteString]()
       p.subscribe(c)
@@ -224,7 +222,7 @@ class FileSourceSpec extends StreamSpec(UnboundedMailboxConfig) {
       val error = c.expectError()
       error shouldBe an[IllegalArgumentException]
 
-      r.futureValue.status.isFailure shouldBe true
+      r.failed.futureValue shouldBe an[IOOperationIncompleteException]
     }
 
     List(

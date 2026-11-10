@@ -75,6 +75,24 @@ APIs deprecated in Akka 2.10.0 or earlier have been removed. The sections below 
 * `AddressUidExtension`: use `ExtendedActorSystem.uid` instead. In general `akka.cluster.UniqueAddress` is a better source for getting the uid. With typed Cluster that is accessible via `selfMember` and with classic Cluster via `selfUniqueAddress`.
 * `akka.remote.serialization.LongSerializer`, `IntSerializer`, `StringSerializer` and `ByteStringSerializer`: moved to `akka.serialization` in akka-actor. The serializer ids 18 to 21 are unchanged and used by the akka-actor serializers, so persisted data still deserializes.
 
+### akka-stream
+
+* `ActorMaterializer`: `Materializer` has all the methods `ActorMaterializer` had. Use the system materializer: `Materializer.matFromSystem` provides it implicitly when an implicit `ActorSystem`, or another `ClassicActorSystemProvider`, is in scope. Replace `ActorMaterializer(...)(context)` in an actor with `Materializer(context)` or `Materializer.createMaterializer(context)`, and `ActorMaterializer(...)(system)` with `Materializer(system)`, to create a separate materializer.
+* The `ActorMaterializerSettings`, `IOSettings` and `StreamRefSettings` factories and `with*` methods, and `Materializer.settings`: configure streams with the `akka.stream.materializer` config, or per stream with `ActorAttributes`, `TcpAttributes` and `StreamRefAttributes`. Operators read the settings from their attributes.
+* The settings accessors are no longer public. Read the attribute that replaces each: `ActorMaterializerSettings.dispatcher`: `ActorAttributes.dispatcher`; `initialInputBufferSize` and `maxInputBufferSize`: `Attributes.inputBuffer`; `supervisionDecider`: `ActorAttributes.supervisionStrategy`; `debugLogging`: `ActorAttributes.debugLogging`; `outputBurstLimit`: `ActorAttributes.outputBurstLimit`; `fuzzingMode`: `ActorAttributes.fuzzingMode`; `maxFixedBufferSize`: `ActorAttributes.maxFixedBufferSize`; `syncProcessingLimit`: `ActorAttributes.syncProcessingLimit`; `blockingIoDispatcher`: the `ActorAttributes.IODispatcher` attribute, which selects the `akka.stream.materializer.blocking-io-dispatcher` config; `autoFusing`: no replacement, it had no effect. `IOSettings.tcpWriteBufferSize`: `TcpAttributes.tcpWriteBufferSize`. `StreamSubscriptionTimeoutSettings.mode` and `timeout`: `ActorAttributes.streamSubscriptionTimeout`. `StreamRefSettings.bufferCapacity`, `demandRedeliveryInterval`, `subscriptionTimeout` and `finalTerminationSignalDeadline`: the `StreamRefAttributes` methods with the same names.
+* `IOResult.status`, `wasSuccessful`, `getError` and `createFailed`, and `AbruptIOTerminationException`: IO operators fail the materialized value with `IOOperationIncompleteException`. `FileIO.fromPath` now also fails the materialized value when the file can't be read, instead of completing it with a failed status.
+* The `copy`, `unapply` and `Product` methods of `Attributes`: use the explicit methods on `Attributes`. `Attributes` no longer extends `Product`.
+* `Source.fromFuture`, `fromCompletionStage`, `fromFutureSource` and `fromSourceCompletionStage`: use `Source.future`, `Source.completionStage`, `Source.futureSource` and `Source.completionStageSource`.
+* `Source.lazily` and `Source.lazilyAsync`: use `Source.lazySource`, `Source.lazyFuture` or `Source.lazyCompletionStage`.
+* `Sink.lazyInit` and `Sink.lazyInitAsync`: use `Sink.lazyFutureSink` or `Sink.lazyCompletionStageSink`. `Flow.lazyInit` and `Flow.lazyInitAsync`: use `Flow.lazyFutureFlow` or `Flow.lazyCompletionStageFlow`.
+* `Source.setup`, `Flow.setup` and `Sink.setup`: use `fromMaterializer`.
+* `Source.actorRef(bufferSize, overflowStrategy)` and `Sink.actorRef(ref, onCompleteMessage)`: use the overloads that take completion and failure matchers, or an on-complete and an on-failure message. `Source.actorRefWithAck` and `Sink.actorRefWithAck`: use `actorRefWithBackpressure`.
+* `FileIO.fromFile` and `FileIO.toFile`: use `FileIO.fromPath` and `FileIO.toPath`.
+* The `akka.stream.javadsl.Tcp.bind` and `outgoingConnection` overloads that take a `scala.concurrent.duration.Duration`: use the overloads that take a `java.time.Duration`.
+* The `RestartSource`, `RestartFlow` and `RestartSink` overloads without `RestartSettings`: use the overloads that take `RestartSettings`.
+* `TimerGraphStageLogic.schedulePeriodically`, `schedulePeriodicallyWithInitialDelay` and `Materializer.schedulePeriodically`: use `scheduleWithFixedDelay` or `scheduleAtFixedRate`.
+* The `BindFailedException` object: match on the `BindFailedException` class instead.
+
 ### akka-stream-testkit
 
 * `TestSink.probe` and `TestSource.probe` (scaladsl): use `TestSink()` and `TestSource()` with an implicit `ClassicActorSystemProvider` instead.

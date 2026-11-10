@@ -6,7 +6,6 @@ package akka.stream.testkit
 
 import java.util.concurrent.ThreadLocalRandom
 
-import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
@@ -235,10 +234,9 @@ trait ScriptedTest extends Matchers {
 
   }
 
-  @nowarn("msg=deprecated")
   def runScript[In, Out, M](script: Script[In, Out])(op: Flow[In, In, NotUsed] => Flow[In, Out, M])(
       implicit system: ActorSystem): Unit =
-    runScript(script, SystemMaterializer(system).materializer.settings)(op)(system)
+    runScript(script, SystemMaterializer(system).materializerSettings)(op)(system)
 
   def runScript[In, Out, M](
       script: Script[In, Out],

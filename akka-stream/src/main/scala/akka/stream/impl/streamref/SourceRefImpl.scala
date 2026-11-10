@@ -4,13 +4,12 @@
 
 package akka.stream.impl.streamref
 
-import scala.annotation.nowarn
-
 import akka.NotUsed
 import akka.actor.{ ActorRef, Terminated }
 import akka.annotation.InternalApi
 import akka.event.Logging
 import akka.stream._
+import akka.stream.impl.ExtendedActorMaterializer
 import akka.stream.impl.FixedSizeBuffer
 import akka.stream.scaladsl.Source
 import akka.stream.stage._
@@ -124,24 +123,19 @@ private[stream] final class SourceRefStageImpl[Out](val initialPartnerRef: Optio
 
       // settings ---
       import StreamRefAttributes._
-      @nowarn("msg=deprecated") // can't remove this settings access without breaking compat
-      private[this] val settings = eagerMaterializer.settings.streamRefSettings
+      private[this] val settings = ExtendedActorMaterializer.settingsOf(eagerMaterializer).streamRefSettings
 
-      @nowarn("msg=deprecated") // can't remove this settings access without breaking compat
       private[this] val subscriptionTimeout = inheritedAttributes.get[StreamRefAttributes.SubscriptionTimeout](
         SubscriptionTimeout(settings.subscriptionTimeout))
 
-      @nowarn("msg=deprecated") // can't remove this settings access without breaking compat
       private[this] val bufferCapacity = inheritedAttributes
         .get[StreamRefAttributes.BufferCapacity](StreamRefAttributes.BufferCapacity(settings.bufferCapacity))
         .capacity
 
-      @nowarn("msg=deprecated") // can't remove this settings access without breaking compat
       private[this] val demandRedeliveryInterval = inheritedAttributes
         .get[StreamRefAttributes.DemandRedeliveryInterval](DemandRedeliveryInterval(settings.demandRedeliveryInterval))
         .timeout
 
-      @nowarn("msg=deprecated") // can't remove this settings access without breaking compat
       private[this] val finalTerminationSignalDeadline =
         inheritedAttributes
           .get[StreamRefAttributes.FinalTerminationSignalDeadline](

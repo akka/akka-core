@@ -4,7 +4,6 @@
 
 package akka.stream
 
-import scala.annotation.nowarn
 import scala.concurrent.Await
 import scala.concurrent.Promise
 import scala.jdk.DurationConverters._
@@ -45,7 +44,7 @@ final class SystemMaterializer(system: ExtendedActorSystem) extends Extension {
   /**
    * INTERNAL API
    */
-  @InternalApi @nowarn("msg=deprecated")
+  @InternalApi
   private[akka] val materializerSettings = ActorMaterializerSettings(system)
 
   private implicit val materializerTimeout: Timeout =
