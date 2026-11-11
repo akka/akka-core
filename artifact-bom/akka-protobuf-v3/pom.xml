@@ -4,8 +4,5 @@
     <artifactId>akka-protobuf-v3</artifactId>
     <version>100.0.0</version>
     <packaging>pom</packaging>
-    <dependencyManagement>
-        <dependencies> </dependencies>
-    </dependencyManagement>
     <dependencies></dependencies>
 </project>
