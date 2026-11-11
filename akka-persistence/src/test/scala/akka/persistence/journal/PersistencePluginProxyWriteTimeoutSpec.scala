@@ -12,6 +12,7 @@ import com.typesafe.config.ConfigFactory
 import akka.actor.ActorRef
 import akka.persistence.AtomicWrite
 import akka.persistence.JournalProtocol._
+import akka.persistence.NonPersistentRepr
 import akka.persistence.PersistentRepr
 import akka.persistence.Persistence
 import akka.testkit.AkkaSpec
@@ -19,14 +20,18 @@ import akka.testkit.ImplicitSender
 import akka.testkit.TestProbe
 
 object PersistencePluginProxyWriteTimeoutSpec {
-  // drops writes for persistence ids starting with "lost", and replies only for the whole write for "partial"
+  // Drops writes for persistence ids starting with "lost". For "partial" it replies only for the whole write,
+  // for "partial-first" also for the first event.
   class LossyJournal(cfg: Config) extends akka.persistence.journal.inmem.InmemJournal(cfg) {
     override protected[akka] def aroundReceive(receive: Receive, msg: Any): Unit = msg match {
-      case WriteMessages(messages, persistentActor, _, _) =>
-        messages.collectFirst { case a: AtomicWrite => a.persistenceId } match {
-          case Some(pid) if pid.startsWith("lost")    => // drop
-          case Some(pid) if pid.startsWith("partial") => persistentActor ! WriteMessagesSuccessful
-          case _                                      => super.aroundReceive(receive, msg)
+      case WriteMessages(messages, persistentActor, actorInstanceId, _) =>
+        messages.collectFirst { case a: AtomicWrite => a } match {
+          case Some(a) if a.persistenceId.startsWith("lost") => // drop
+          case Some(a) if a.persistenceId.startsWith("partial") =>
+            persistentActor ! WriteMessagesSuccessful
+            if (a.persistenceId.startsWith("partial-first"))
+              persistentActor ! WriteMessageSuccess(a.payload.head, actorInstanceId)
+          case _ => super.aroundReceive(receive, msg)
         }
       case _ => super.aroundReceive(receive, msg)
     }
@@ -53,10 +58,26 @@ class PersistencePluginProxyWriteTimeoutSpec
 
   private val journal: ActorRef = Persistence(system).journalFor(null)
 
-  private def write(pid: String, probe: TestProbe): WriteMessages = {
-    val repr = PersistentRepr("evt", 1L, pid, writerUuid = "w")
-    WriteMessages(List(AtomicWrite(repr)), probe.ref, 1)
-  }
+  private def event(pid: String, seqNr: Long) = PersistentRepr("evt", seqNr, pid, writerUuid = "w")
+
+  private def write(pid: String, probe: TestProbe): WriteMessages =
+    WriteMessages(List(AtomicWrite(event(pid, 1L))), probe.ref, 1)
+
+  // two events in one atomic write, a deferred message, and one more event
+  private def mixedWrite(pid: String, probe: TestProbe): WriteMessages =
+    WriteMessages(
+      List(
+        AtomicWrite(List(event(pid, 1L), event(pid, 2L))),
+        NonPersistentRepr("deferred", probe.ref),
+        AtomicWrite(event(pid, 3L))),
+      probe.ref,
+      1)
+
+  private def expectSuccess(probe: TestProbe, seqNr: Long): Unit =
+    probe.expectMsgType[WriteMessageSuccess](5.seconds).persistent.sequenceNr should ===(seqNr)
+
+  private def expectFailure(probe: TestProbe, seqNr: Long): Unit =
+    probe.expectMsgType[WriteMessageFailure](5.seconds).message.sequenceNr should ===(seqNr)
 
   "PersistencePluginProxy with write-timeout" must {
     "relay all replies of a successful write" in {
@@ -79,6 +100,39 @@ class PersistencePluginProxyWriteTimeoutSpec
       journal.tell(write("partial-1", probe), probe.ref)
       probe.expectMsg(WriteMessagesSuccessful)
       probe.expectMsgType[WriteMessageFailure](5.seconds)
+    }
+
+    "relay all replies of a write with several events and a deferred message" in {
+      val probe = TestProbe()
+      journal.tell(mixedWrite("ok-mixed", probe), probe.ref)
+      probe.expectMsg(WriteMessagesSuccessful)
+      expectSuccess(probe, 1L)
+      expectSuccess(probe, 2L)
+      probe.expectMsg(LoopMessageSuccess("deferred", 1))
+      expectSuccess(probe, 3L)
+      probe.expectNoMessage(1.second)
+    }
+
+    "fail all events of a write with several events and a deferred message that gets no reply" in {
+      val probe = TestProbe()
+      journal.tell(mixedWrite("lost-mixed", probe), probe.ref)
+      probe.expectMsgType[WriteMessagesFailed](5.seconds).writeCount should ===(2)
+      expectFailure(probe, 1L)
+      expectFailure(probe, 2L)
+      probe.expectMsg(LoopMessageSuccess("deferred", 1))
+      expectFailure(probe, 3L)
+      probe.expectNoMessage(1.second)
+    }
+
+    "fail only the messages after the last reply, when some replies arrived" in {
+      val probe = TestProbe()
+      journal.tell(mixedWrite("partial-first-mixed", probe), probe.ref)
+      probe.expectMsg(WriteMessagesSuccessful)
+      expectSuccess(probe, 1L)
+      expectFailure(probe, 2L)
+      probe.expectMsg(LoopMessageSuccess("deferred", 1))
+      expectFailure(probe, 3L)
+      probe.expectNoMessage(1.second)
     }
   }
 }

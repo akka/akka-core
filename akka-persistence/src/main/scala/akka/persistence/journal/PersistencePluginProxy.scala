@@ -140,7 +140,7 @@ final class PersistencePluginProxy(config: Config) extends Actor with Stash with
   }
   // only the journal proxy has a write timeout
   private val writeTimeout: Option[FiniteDuration] =
-    if (pluginType == Journal && config.hasPath("write-timeout") && config.getString("write-timeout") != "off")
+    if (pluginType == Journal && config.getString("write-timeout").toLowerCase != "off")
       Some(
         config
           .getDuration("write-timeout", MILLISECONDS)
