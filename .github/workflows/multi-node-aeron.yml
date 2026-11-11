@@ -34,9 +34,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Kubectl
-        run: |
-          sudo snap install kubectl --classic
       # https://github.com/google-github-actions/auth/releases
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -54,7 +51,7 @@ jobs:
 
       - name: Create the cluster
         run: |-
-          gcloud components install gke-gcloud-auth-plugin
+          gcloud components install kubectl gke-gcloud-auth-plugin
           gcloud config set compute/region us-central1
           gcloud config set compute/zone us-central1-c
           # zones to try in order, if creation fails in one (for example out of capacity)
