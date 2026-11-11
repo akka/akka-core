@@ -9,6 +9,7 @@ import scala.concurrent.duration._
 import akka.actor._
 import akka.cluster.sharding.ShardRegion.Passivate
 import akka.cluster.sharding.ShardRegion.StartEntity
+import akka.persistence.journal.inmem.FailingInmemJournal
 import akka.remote.testconductor.RoleName
 import akka.remote.testkit.Direction
 import akka.serialization.jackson.CborSerializable
@@ -60,6 +61,7 @@ abstract class ClusterShardingFailureSpecConfig(override val mode: String)
         }
         # don't leak ddata state across runs
         akka.cluster.sharding.distributed-data.durable.keys = []
+        akka.persistence.journal.inmem.class = "akka.persistence.journal.inmem.FailingInmemJournal"
         # using Java serialization for these messages because test is sending them
         # to other nodes, which isn't normal usage.
         akka.actor.serialization-bindings {
@@ -138,8 +140,7 @@ abstract class ClusterShardingFailureSpec(multiNodeConfig: ClusterShardingFailur
     "recover after journal/network failure" in within(20.seconds) {
       runOn(controller) {
         if (persistenceIsNeeded) {
-          testConductor.blackhole(controller, first, Direction.Both).await
-          testConductor.blackhole(controller, second, Direction.Both).await
+          FailingInmemJournal.failWrites.set(true)
         } else {
           testConductor.blackhole(first, second, Direction.Both).await
         }
@@ -158,8 +159,7 @@ abstract class ClusterShardingFailureSpec(multiNodeConfig: ClusterShardingFailur
 
       runOn(controller) {
         if (persistenceIsNeeded) {
-          testConductor.passThrough(controller, first, Direction.Both).await
-          testConductor.passThrough(controller, second, Direction.Both).await
+          FailingInmemJournal.failWrites.set(false)
         } else {
           testConductor.passThrough(first, second, Direction.Both).await
         }
