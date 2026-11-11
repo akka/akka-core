@@ -149,3 +149,9 @@ proxy to work, the persistence plugin on the target node must be instantiated. T
 @@@ note
 The proxied persistence plugin can (and should) be configured using its original configuration keys.
 @@@
+
+The journal proxy forwards a write to the target journal, which replies directly to the persistent actor. If the
+network loses the write, nothing replies and the persistent actor waits. To fail such a write, set
+`akka.persistence.journal.proxy.write-timeout` to a duration, for example `5s`. The persistent actor then stops or
+restarts, as for any failed write. The target journal may still store the events of a write that timed out. The
+timeout is disabled by default.

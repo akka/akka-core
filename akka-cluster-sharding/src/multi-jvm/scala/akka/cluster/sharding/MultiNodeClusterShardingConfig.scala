@@ -62,6 +62,7 @@ object MultiNodeClusterShardingConfig {
     ConfigFactory.parseString(s"""
       akka.persistence.journal.plugin = "akka.persistence.journal.proxy"
       akka.persistence.journal.proxy.target-journal-plugin = "akka.persistence.journal.inmem"
+      akka.persistence.journal.proxy.write-timeout = 5s
       akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
       akka.persistence.snapshot-store.local.dir = "$targetDir/snapshots"
       """)
