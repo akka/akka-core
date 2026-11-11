@@ -52,7 +52,7 @@ object JournalReplyOrderingSpec {
         .withReplyWhileStopped(BackingOff))
 
   private def persistentActorProps(pid: String, expected: Int, onSpawn: ActorRef) =
-    Props(new PersistentActor with ActorLogging {
+    Props[PersistentActor](new PersistentActor with ActorLogging {
       override def preStart(): Unit = {
         val (groupAssignor, _) = AsyncWriteJournal.writeReplyGroupAssignor(context.system, journal)
         if (groupAssignor(self) != expected) {
