@@ -20,6 +20,7 @@ import akka.persistence.{
   JournalProtocol,
   NonPersistentRepr,
   Persistence,
+  PersistentRepr,
   SaveSnapshotFailure,
   SnapshotProtocol
 }
@@ -28,6 +29,53 @@ import akka.util.Helpers.Requiring
 object PersistencePluginProxy {
   final case class TargetLocation(address: Address)
   private case object InitTimeout
+
+  // Relays the replies of one write to the persistent actor, and fails what is not answered in time.
+  private final class WriteMediator(write: JournalProtocol.WriteMessages, timeout: FiniteDuration) extends Actor {
+    import JournalProtocol._
+    private val messageCount = perMessage(write).size
+    private var writeReplied = false
+    private var messagesReplied = 0
+
+    context.setReceiveTimeout(timeout)
+
+    def receive: Receive = {
+      case ReceiveTimeout =>
+        val cause = new TimeoutException(s"No reply from target journal to write within [$timeout]")
+        // the per-message replies follow the reply for the whole write, in message order
+        if (writeReplied) failMessages(write, messagesReplied, cause)
+        else failWrite(write, cause)
+        context.stop(self)
+      case msg =>
+        write.persistentActor.tell(msg, sender())
+        msg match {
+          case WriteMessagesSuccessful | _: WriteMessagesFailed => writeReplied = true
+          case _                                                => messagesReplied += 1
+        }
+        if (writeReplied && messagesReplied >= messageCount) context.stop(self)
+    }
+  }
+
+  private def perMessage(write: JournalProtocol.WriteMessages): Vector[Any] =
+    write.messages.toVector.flatMap[Any] {
+      case a: AtomicWrite       => a.payload
+      case r: NonPersistentRepr => Vector(r)
+    }
+
+  private def failMessages(write: JournalProtocol.WriteMessages, alreadyReplied: Int, cause: Throwable): Unit = {
+    import JournalProtocol._
+    perMessage(write).drop(alreadyReplied).foreach {
+      case p: PersistentRepr    => write.persistentActor ! WriteMessageFailure(p, cause, write.actorInstanceId)
+      case r: NonPersistentRepr => write.persistentActor ! LoopMessageSuccess(r.payload, write.actorInstanceId)
+      case _                    =>
+    }
+  }
+
+  private def failWrite(write: JournalProtocol.WriteMessages, cause: Throwable): Unit = {
+    val atomicWriteCount = write.messages.count(_.isInstanceOf[AtomicWrite])
+    write.persistentActor ! JournalProtocol.WriteMessagesFailed(cause, atomicWriteCount)
+    failMessages(write, 0, cause)
+  }
 
   def setTargetLocation(system: ActorSystem, address: Address): Unit = {
     Persistence(system).journalFor(null) ! TargetLocation(address)
@@ -90,6 +138,15 @@ final class PersistencePluginProxy(config: Config) extends Actor with Stash with
     val key = s"target-${pluginType.qualifier}-plugin"
     config.getString(key).requiring(_ != "", s"$pluginId.$key must be defined")
   }
+  // only the journal proxy has a write timeout
+  private val writeTimeout: Option[FiniteDuration] =
+    if (pluginType == Journal && config.getString("write-timeout").toLowerCase != "off")
+      Some(
+        config
+          .getDuration("write-timeout", MILLISECONDS)
+          .millis
+          .requiring(_ > Duration.Zero, "write-timeout must be > 0"))
+    else None
   private val startTarget: Boolean = config.getBoolean(s"start-target-${pluginType.qualifier}")
 
   override def preStart(): Unit = {
@@ -181,6 +238,10 @@ final class PersistencePluginProxy(config: Config) extends Actor with Stash with
       context.become(initTimedOut)
     case Terminated(_) =>
     case InitTimeout   =>
+    case write: WriteMessages if writeTimeout.isDefined =>
+      val timeout = writeTimeout.get
+      val mediator = context.actorOf(Props(new WriteMediator(write, timeout)).withDeploy(Deploy.local))
+      targetJournal.tell(write.copy(persistentActor = mediator), sender())
     case msg =>
       targetJournal.forward(msg)
   }
@@ -189,17 +250,8 @@ final class PersistencePluginProxy(config: Config) extends Actor with Stash with
 
     case req: JournalProtocol.Request =>
       req match { // exhaustive match
-        case WriteMessages(messages, persistentActor, actorInstanceId, _) =>
-          val atomicWriteCount = messages.count(_.isInstanceOf[AtomicWrite])
-          persistentActor ! WriteMessagesFailed(timeoutException(), atomicWriteCount)
-          messages.foreach {
-            case a: AtomicWrite =>
-              a.payload.foreach { p =>
-                persistentActor ! WriteMessageFailure(p, timeoutException(), actorInstanceId)
-              }
-            case r: NonPersistentRepr =>
-              persistentActor ! LoopMessageSuccess(r.payload, actorInstanceId)
-          }
+        case write: WriteMessages =>
+          failWrite(write, timeoutException())
         case ReplayMessages(_, _, _, _, persistentActor) =>
           persistentActor ! ReplayMessagesFailure(timeoutException())
         case DeleteMessagesTo(_, toSequenceNr, persistentActor) =>
