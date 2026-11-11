@@ -4,7 +4,7 @@ version := "1.0"
 
 scalaVersion := "2.13.18"
 
-lazy val akkaVersion = sys.props.getOrElse("akka.version", "2.10.24")
+lazy val akkaVersion = sys.props.getOrElse("akka.version", "2.11.0")
 
 // Run in a separate JVM, to make sure sbt waits until all threads have
 // finished before returning.
