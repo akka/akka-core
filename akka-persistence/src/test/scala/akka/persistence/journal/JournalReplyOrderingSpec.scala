@@ -52,54 +52,61 @@ object JournalReplyOrderingSpec {
         .withReplyWhileStopped(BackingOff))
 
   private def persistentActorProps(pid: String, expected: Int, onSpawn: ActorRef) =
-    Props(new PersistentActor with ActorLogging {
-      override def preStart(): Unit = {
-        val (groupAssignor, _) = AsyncWriteJournal.writeReplyGroupAssignor(context.system, journal)
-        if (groupAssignor(self) != expected) {
-          // effectively a "lane departure warning", since we can't change our UID
-          super.preStart() // pro-forma: PersistentActor doesn't override preStart()
-          context.stop(self) // supervisor will restart
-        } else {
-          onSpawn ! self
-          super.preStart()
-        }
+    Props(new ReplyOrderingTestActor(pid, expected, onSpawn))
+
+  // named class rather than anonymous: on Scala 3 the ClassTag of an anonymous
+  // `new PersistentActor with ActorLogging` is plain Actor, which loses the
+  // deque mailbox requirement from Stash
+  private class ReplyOrderingTestActor(pid: String, expected: Int, onSpawn: ActorRef)
+      extends PersistentActor
+      with ActorLogging {
+    override def preStart(): Unit = {
+      val (groupAssignor, _) = AsyncWriteJournal.writeReplyGroupAssignor(context.system, journal)
+      if (groupAssignor(self) != expected) {
+        // effectively a "lane departure warning", since we can't change our UID
+        super.preStart() // pro-forma: PersistentActor doesn't override preStart()
+        context.stop(self) // supervisor will restart
+      } else {
+        onSpawn ! self
+        super.preStart()
       }
+    }
 
-      var pending: Promise[Done] = null
+    var pending: Promise[Done] = null
 
-      override def postStop(): Unit = {
-        if (pending ne null) {
-          pending.failure(new RuntimeException("persist failed"))
-        }
-        super.postStop()
+    override def postStop(): Unit = {
+      if (pending ne null) {
+        pending.failure(new RuntimeException("persist failed"))
       }
+      super.postStop()
+    }
 
-      override val persistenceId: String = pid
+    override val persistenceId: String = pid
 
-      override def receiveRecover = {
-        case _ => // nop, no meaningful state
-      }
+    override def receiveRecover = {
+      case _ => // nop, no meaningful state
+    }
 
-      override def receiveCommand = {
-        case "get-persistence-id" =>
-          sender() ! persistenceId
+    override def receiveCommand = {
+      case "get-persistence-id" =>
+        sender() ! persistenceId
 
-        case (s: String, p: Promise[Done @unchecked]) =>
-          pending = p
-          if ((lastSequenceNr % 3) == 0) {
-            // alternating persists of 2 then 1
-            persistAll(Seq(s, s"$s again")) { _ =>
-              p.trySuccess(Done)
-              pending = null
-            }
-          } else {
-            persist(s) { _ =>
-              p.success(Done)
-              pending = null
-            }
+      case (s: String, p: Promise[Done @unchecked]) =>
+        pending = p
+        if ((lastSequenceNr % 3) == 0) {
+          // alternating persists of 2 then 1
+          persistAll(Seq(s, s"$s again")) { _ =>
+            p.trySuccess(Done)
+            pending = null
           }
-      }
-    })
+        } else {
+          persist(s) { _ =>
+            p.success(Done)
+            pending = null
+          }
+        }
+    }
+  }
 
   val oneSuccessUnit = List(Success(()))
   val twoSuccessUnit = oneSuccessUnit.head :: oneSuccessUnit
