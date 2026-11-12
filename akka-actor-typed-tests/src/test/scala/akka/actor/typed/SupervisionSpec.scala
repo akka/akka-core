@@ -833,9 +833,8 @@ class SupervisionSpec extends ScalaTestWithActorTestKit("""
 
     "support nesting to handle different exceptions" in {
       val probe = TestProbe[Event]("evt")
-      val behv = Behaviors
-        .supervise(Behaviors.supervise(targetBehavior(probe.ref)).onFailure[Exc2](SupervisorStrategy.resume))
-        .onFailure[Exc3](SupervisorStrategy.restart)
+      val behv =
+        targetBehavior(probe.ref).onFailure[Exc2](SupervisorStrategy.resume).onFailure[Exc3](SupervisorStrategy.restart)
       val ref = spawn(behv)
       ref ! IncrementState
       ref ! GetState
