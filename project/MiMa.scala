@@ -23,6 +23,8 @@ object MiMa extends AutoPlugin {
   private val latestPatchOf29 = 8
   private val firstPatchOf210 = 0
   private val latestPatchOf210 = 24
+  private val firstPatchOf211 = 0
+  private val latestPatchOf211 = 0
 
   override def requires = MimaPlugin
   override def trigger = allRequirements
@@ -36,10 +38,10 @@ object MiMa extends AutoPlugin {
     checkMimaFilterDirectories := checkFilterDirectories(baseDirectory.value))
 
   def checkFilterDirectories(moduleRoot: File): Unit = {
-    val nextVersionFilterDir = moduleRoot / "src" / "main" / "mima-filters" / s"2.10.${latestPatchOf210 + 1}.backwards.excludes"
+    val nextVersionFilterDir = moduleRoot / "src" / "main" / "mima-filters" / s"2.11.${latestPatchOf211 + 1}.backwards.excludes"
     if (nextVersionFilterDir.exists()) {
       throw new IllegalArgumentException(s"Incorrect mima filter directory exists: '$nextVersionFilterDir' " +
-      s"should be with number from current release '${moduleRoot / "src" / "main" / "mima-filters" / s"2.10.$latestPatchOf210.backwards.excludes"}")
+      s"should be with number from current release '${moduleRoot / "src" / "main" / "mima-filters" / s"2.11.$latestPatchOf211.backwards.excludes"}")
     }
   }
 
@@ -50,14 +52,15 @@ object MiMa extends AutoPlugin {
     val akka28Previous = expandVersions(2, 8, Vector(latestPatchOf28)) :+ "2.7.1"
     val akka29Previous = expandVersions(2, 9, Vector(latestPatchOf29))
     val akka210Previous = expandVersions(2, 10, Vector(firstPatchOf210, latestPatchOf210))
+    val akka211Previous = expandVersions(2, 11, Vector(firstPatchOf211, latestPatchOf211))
     val versions: Seq[String] =
       if (scalaBinaryVersion.startsWith("3")) {
         // was experimental before 2.7.0
-        akka28Previous ++ akka29Previous ++ akka210Previous
+        akka28Previous ++ akka29Previous ++ akka210Previous ++ akka211Previous
       } else {
         val akka26Previous = expandVersions(2, 6, Vector(latestPatchOf26))
         val akka27Previous = expandVersions(2, 7, Vector(latestPatchOf27))
-        akka26Previous ++ akka27Previous ++ akka28Previous ++ akka29Previous
+        akka26Previous ++ akka27Previous ++ akka28Previous ++ akka29Previous ++ akka210Previous ++ akka211Previous
       }
 
     // check against all binary compatible artifacts
