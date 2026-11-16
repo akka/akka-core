@@ -9,7 +9,7 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.6")
 addSbtPlugin("com.github.sbt" % "sbt-unidoc" % "0.6.1")
 addSbtPlugin("com.thoughtworks.sbt-api-mappings" % "sbt-api-mappings" % "3.0.3")
-addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.7")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.8")
 addSbtPlugin("com.github.sbt" % "sbt-boilerplate" % "0.8.1")
 addSbtPlugin("io.akka" % "sbt-paradox-akka" % "25.10.2")
 
