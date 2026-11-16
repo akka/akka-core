@@ -15,7 +15,7 @@ addSbtPlugin("io.akka" % "sbt-paradox-akka" % "25.10.2")
 
 addSbtPlugin("com.github.sbt" % "sbt-header" % "5.11.0")
 addSbtPlugin("com.github.sbt" % "sbt-pull-request-validator" % "2.0.0")
-addSbtPlugin("net.bzzt" % "sbt-reproducible-builds" % "0.32")
+addSbtPlugin("net.bzzt" % "sbt-reproducible-builds" % "0.35")
 
 addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.11.2")
 addSbtPlugin("com.lightbend.sbt" % "sbt-publish-rsync" % "0.3")
