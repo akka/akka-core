@@ -158,7 +158,7 @@ object Dependencies {
     val protobufRuntime = "com.google.protobuf" % "protobuf-java" % protobufJavaVersion % "optional;provided"
 
     // used for classpath scanning in testkit/tests for native-image metadata
-    val classgraph = "io.github.classgraph" % "classgraph" % "4.8.179" % "optional;provided;test" // MIT
+    val classgraph = "io.github.classgraph" % "classgraph" % "4.8.194" % "optional;provided;test" // MIT
     val jacksonCore = Compile.jacksonCore % "optional;provided;test"
     val jacksonScala = Compile.jacksonScala % "optional;provided;test"
     val optionalForNativeImageMetadata = Seq(classgraph, jacksonCore, jacksonScala)
