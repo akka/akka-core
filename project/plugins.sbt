@@ -4,7 +4,7 @@ libraryDependencies += Defaults.sbtPluginExtra(
   (pluginCrossBuild / scalaBinaryVersion).value)
 
 addSbtPlugin("com.lightbend.sbt" % "sbt-java-formatter" % "0.8.0")
-addSbtPlugin("com.lightbend.sbt" % "sbt-bill-of-materials" % "1.0.2")
+addSbtPlugin("com.lightbend.sbt" % "sbt-bill-of-materials" % "1.1.1")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.4")
 addSbtPlugin("com.github.sbt" % "sbt-unidoc" % "0.6.1")
