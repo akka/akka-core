@@ -77,6 +77,10 @@ private[akka] final class EventSourcedRememberEntitiesCoordinatorStore(
     case RememberEntitiesCoordinatorStore.GetShards =>
       sender() ! RememberEntitiesCoordinatorStore.RememberedShards(shards.toSet)
 
+    case RememberEntitiesCoordinatorStore.AddShard(shardId: ShardId) if shards.contains(shardId) =>
+      // the coordinator adds a shard again each time it is allocated after a rebalance or region leaving
+      sender() ! RememberEntitiesCoordinatorStore.UpdateDone(shardId)
+
     case RememberEntitiesCoordinatorStore.AddShard(shardId: ShardId) =>
       persistAsync(shardId) { shardId =>
         shards.add(shardId)
