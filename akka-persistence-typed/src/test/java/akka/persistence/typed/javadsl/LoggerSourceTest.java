@@ -118,18 +118,24 @@ public class LoggerSourceTest extends JUnitSuite {
     // EventSourcedBehaviorImpl
     // isn't involved.
 
-    LoggingTestKit.info("command-received")
-        .withCustom(
-            event -> {
-              return event.loggerName().equals(LoggingBehavior.class.getName())
-                  && event.getMdc().get("akkaSource").equals(ref.path().toString());
-            })
+    // also wait for the event-received of this command, so that it isn't counted by the next filter
+    LoggingTestKit.info("event-received")
+        .withCustom(event -> event.loggerName().equals(LoggingBehavior.class.getName()))
         .expect(
             testKit.system(),
-            () -> {
-              ref.tell("command");
-              return null;
-            });
+            () ->
+                LoggingTestKit.info("command-received")
+                    .withCustom(
+                        event -> {
+                          return event.loggerName().equals(LoggingBehavior.class.getName())
+                              && event.getMdc().get("akkaSource").equals(ref.path().toString());
+                        })
+                    .expect(
+                        testKit.system(),
+                        () -> {
+                          ref.tell("command");
+                          return null;
+                        }));
 
     Map<String, String> expectedMdc3 = new HashMap<>();
     expectedMdc3.put("persistenceId", "1");
