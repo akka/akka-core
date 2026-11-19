@@ -926,7 +926,6 @@ private[akka] class ShardRegion(
       }
 
     case ShardHome(shard, shardRegionRef) =>
-      instrumentation.receivedShardHome(typeName, shard)
       receiveShardHome(shard, shardRegionRef)
 
     case ShardHomes(homes) =>
@@ -1145,6 +1144,7 @@ private[akka] class ShardRegion(
           s"$typeName: Unexpected change of shard [$shard] from self to [$shardRegionRef]")
       case _ =>
     }
+    instrumentation.receivedShardHome(typeName, shard)
     regionByShard = regionByShard.updated(shard, shardRegionRef)
     regions = regions.updated(shardRegionRef, regions.getOrElse(shardRegionRef, Set.empty) + shard)
 
