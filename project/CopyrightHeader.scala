@@ -5,8 +5,8 @@
 package akka
 
 import akka.AkkaValidatePullRequest.additionalTasks
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
-import de.heikoseeberger.sbtheader.{ CommentCreator, HeaderPlugin }
+import sbtheader.HeaderPlugin.autoImport._
+import sbtheader.{ CommentCreator, HeaderPlugin }
 import com.typesafe.sbt.MultiJvmPlugin.MultiJvmKeys._
 import sbt.Keys._
 import sbt.{ Def, _ }

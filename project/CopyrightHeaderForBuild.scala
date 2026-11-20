@@ -4,7 +4,7 @@
 
 package akka
 
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.{ headerMappings, headerSources, HeaderFileType }
+import sbtheader.HeaderPlugin.autoImport.{ headerMappings, headerSources, HeaderFileType }
 import sbt.Keys.baseDirectory
 import sbt.{ Compile, Def, PluginTrigger, Test, inConfig, _ }
 
