@@ -10,7 +10,7 @@ import com.typesafe.sbt.{ MultiJvmPlugin => SbtMultiJvm }
 import com.typesafe.sbt.MultiJvmPlugin.MultiJvmKeys._
 import sbt.{ Def, _ }
 import sbt.Keys._
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
+import sbtheader.HeaderPlugin.autoImport._
 import org.scalafmt.sbt.ScalafmtPlugin.scalafmtConfigSettings
 import sbtassembly.MergeStrategy
 import sbtassembly.AssemblyKeys._

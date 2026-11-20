@@ -4,8 +4,8 @@
 
 package akka
 
-import de.heikoseeberger.sbtheader.HeaderPlugin
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
+import sbtheader.HeaderPlugin
+import sbtheader.HeaderPlugin.autoImport._
 import sbt.Keys.sourceDirectory
 import sbt.{ Compile, Def, Plugins, Test, inConfig, _ }
 import spray.boilerplate.BoilerplatePlugin

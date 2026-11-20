@@ -360,6 +360,8 @@ lazy val protobufV3 = akkaModule("akka-protobuf-v3")
     assembly / assemblyOption := (assembly / assemblyOption).value.withIncludeScala(false).withIncludeBin(false),
     autoScalaLibrary := false, // do not include scala dependency in pom
     exportJars := true, // in dependent projects, use assembled and shaded jar
+    // only the protobuf dependency is shaded, not our own classes, so the sbt-assembly check doesn't apply
+    assembly / exportJars := false,
     makePomConfiguration := makePomConfiguration.value
         .withConfigurations(Vector(Compile)), // prevent original dependency to be added to pom as runtime dep
     Compile / packageBin := ReproducibleBuildsPlugin
