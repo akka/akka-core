@@ -38,7 +38,7 @@ object Dependencies {
 
   val reactiveStreamsVersion = "1.0.4"
 
-  val graalVmNativeImageVersion = "24.2.1"
+  val graalVmNativeImageVersion = "24.2.2"
 
   val scalaTestVersion = "3.2.17"
 
@@ -61,7 +61,7 @@ object Dependencies {
 
     val sigar = "org.fusesource" % "sigar" % "1.6.4" // ApacheV2
 
-    val jctools = "org.jctools" % "jctools-core" % "4.0.5" // ApacheV2
+    val jctools = "org.jctools" % "jctools-core" % "4.0.7" // ApacheV2
 
     // reactive streams
     val reactiveStreams = "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion // MIT-0
@@ -91,14 +91,14 @@ object Dependencies {
   }
   object Docs {
     val sprayJson = "io.spray" %% "spray-json" % "1.3.6" % Test
-    val gson = "com.google.code.gson" % "gson" % "2.13.2" % Test
+    val gson = "com.google.code.gson" % "gson" % "2.14.0" % Test
   }
 
   object TestDependencies {
     val commonsMath = "org.apache.commons" % "commons-math" % "2.2" % Test // ApacheV2
 
     val commonsIo = "commons-io" % "commons-io" % "2.22.0" % Test // ApacheV2
-    val commonsCodec = "commons-codec" % "commons-codec" % "1.18.0" % Test // ApacheV2
+    val commonsCodec = "commons-codec" % "commons-codec" % "1.22.1" % Test // ApacheV2
     val junit = "junit" % "junit" % junitVersion % "test" // Common Public License 1.0
     val logback = Compile.logback % Test // EPL 1.0
 
@@ -118,7 +118,7 @@ object Dependencies {
     val log4j = "log4j" % "log4j" % "1.2.17" % Test // ApacheV2
 
     // in-memory filesystem for file related tests
-    val jimfs = "com.google.jimfs" % "jimfs" % "1.3.0" % Test // ApacheV2
+    val jimfs = "com.google.jimfs" % "jimfs" % "1.3.2" % Test // ApacheV2
 
     // docker utils
     val dockerClient = "com.spotify" % "docker-client" % "8.16.0" % Test // ApacheV2
@@ -158,7 +158,7 @@ object Dependencies {
     val protobufRuntime = "com.google.protobuf" % "protobuf-java" % protobufJavaVersion % "optional;provided"
 
     // used for classpath scanning in testkit/tests for native-image metadata
-    val classgraph = "io.github.classgraph" % "classgraph" % "4.8.179" % "optional;provided;test" // MIT
+    val classgraph = "io.github.classgraph" % "classgraph" % "4.8.194" % "optional;provided;test" // MIT
     val jacksonCore = Compile.jacksonCore % "optional;provided;test"
     val jacksonScala = Compile.jacksonScala % "optional;provided;test"
     val optionalForNativeImageMetadata = Seq(classgraph, jacksonCore, jacksonScala)
