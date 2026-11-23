@@ -45,7 +45,7 @@ class ClusterShardingInstrumentationSpecTelemetry(@nowarn("msg=never used") syst
       case Some(value) =>
         // a request can be retried arbitrarily many times before getting a response
         value.set(0)
-      case None => () // should not happen
+      case None =>
     }
 
   override def messageDropped(typeName: String): Unit =

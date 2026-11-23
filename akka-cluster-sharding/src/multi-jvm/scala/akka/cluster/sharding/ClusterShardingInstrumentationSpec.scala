@@ -209,6 +209,8 @@ abstract class ClusterShardingInstrumentationSpec
           }
         }
       }
+
+      enterBarrier("shard-home-latency-measured")
     }
 
     "clear buffered messages" in {

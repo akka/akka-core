@@ -145,8 +145,18 @@ trait ClusterShardingInstrumentation {
 
   def shardRegionBufferSizeIncremented(typeName: String): Unit
 
+  /**
+   * Called when the shard region requests a shard home from the coordinator.
+   * May be called multiple times for a given shardId before receivedShardHome
+   * is called (e.g. due to retries)
+   */
   def regionRequestedShardHome(typeName: String, shardId: String): Unit
 
+  /**
+   * Called when the shard region receives a shard home.  The region
+   * may call this in the absence of a preceding request for the
+   * shardId (e.g. after the bulk announcement from a new coordinator).
+   */
   def receivedShardHome(typeName: String, shardId: String): Unit
 
   def messageDropped(typeName: String): Unit
