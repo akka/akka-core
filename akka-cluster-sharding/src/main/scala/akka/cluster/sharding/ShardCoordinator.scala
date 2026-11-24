@@ -656,6 +656,7 @@ object ShardCoordinator {
       region ! BeginHandOff(shard)
     }
     var remaining = regions
+    var fromHasTerminated: Boolean = false
 
     if (isRebalance)
       log.debug("{}: Rebalance [{}] from [{}] regions", typeName, shard, regions.size)
@@ -675,6 +676,10 @@ object ShardCoordinator {
         acked(sender())
       case RebalanceWorker.ShardRegionTerminated(shardRegion) =>
         if (remaining.contains(shardRegion)) {
+          if (shardRegion == shardRegionFrom) {
+            fromHasTerminated = true
+          }
+
           log.debug(
             "{}: ShardRegion [{}] terminated while waiting for BeginHandOffAck for shard [{}].",
             typeName,
@@ -695,8 +700,10 @@ object ShardCoordinator {
       remaining -= shardRegion
       if (remaining.isEmpty) {
         log.debug("{}: All shard regions acked, handing off shard [{}].", typeName, shard)
-        shardRegionFrom ! HandOff(shard)
-        context.become(stoppingShard, discardOld = true)
+        if (!fromHasTerminated) {
+          shardRegionFrom ! HandOff(shard)
+          context.become(stoppingShard, discardOld = true)
+        } else done(ok = true)
       } else {
         log.debug("{}: Remaining shard regions for shard [{}]: {}", typeName, shard, remaining.size)
       }
@@ -1309,7 +1316,7 @@ abstract class ShardCoordinator(
   def receiveTerminated: Receive = {
     case t @ Terminated(ref) =>
       if (state.regions.contains(ref)) {
-        if (removalMargin != Duration.Zero && t.addressTerminated && aliveRegions(ref)) {
+        if (isDelayedByRemovalMargin(t)) {
           scheduleDelayedShardRegionTerminated(ref, removalMargin)
         } else
           regionTerminated(ref)
@@ -1325,10 +1332,14 @@ abstract class ShardCoordinator(
       regionTerminated(ref)
   }
 
-  private[akka] def scheduleDelayedShardRegionTerminated(ref: ActorRef, margin: FiniteDuration): Unit = {
+  private[akka] final def scheduleDelayedShardRegionTerminated(ref: ActorRef, margin: FiniteDuration): Unit = {
     context.system.scheduler.scheduleOnce(margin, self, DelayedShardRegionTerminated(ref))
     regionTerminationInProgress += ref
   }
+
+  /** A region terminated at the address level is held for the down-removal-margin before it is treated as terminated. */
+  private[akka] final def isDelayedByRemovalMargin(t: Terminated): Boolean =
+    removalMargin != Duration.Zero && t.addressTerminated && aliveRegions(t.actor)
 
   def update[E <: DomainEvent](evt: E)(f: E => Unit): Unit
 
@@ -2006,7 +2017,7 @@ private[akka] class DDataShardCoordinator(
       stash()
 
     case t @ Terminated(ref) if state.regions.contains(ref) =>
-      if (removalMargin != Duration.Zero && t.addressTerminated && aliveRegions(ref)) {
+      if (isDelayedByRemovalMargin(t)) {
         scheduleDelayedShardRegionTerminated(ref, removalMargin)
       } else {
         reportTerminationToRebalanceWorkers(ref)

@@ -18,6 +18,7 @@ import akka.cluster.ddata.LWWRegisterKey
 import akka.cluster.ddata.Replicator._
 import akka.cluster.sharding.ShardCoordinator.Internal._
 import akka.cluster.sharding.ShardRegion.ShardId
+import akka.dispatch.sysmsg.DeathWatchNotification
 import akka.testkit._
 
 object DDataCoordinatorTerminatedSpec {
@@ -31,6 +32,7 @@ object DDataCoordinatorTerminatedSpec {
     akka.cluster.sharding.rebalance-interval = 120s
     akka.cluster.sharding.shard-start-timeout = 120s
     akka.cluster.min-nr-of-members = 1
+    akka.cluster.down-removal-margin = 2s
   """)
 
   /**
@@ -412,6 +414,36 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
       val verifyProbe = TestProbe()
       coordinator.tell(GetShardHome("s1"), verifyProbe.ref)
       verifyProbe.expectMsgType[ShardHome](5.seconds).ref should ===(regionA.ref)
+    }
+
+    "hold an address-terminated region for the removal margin, reporting it to workers while the update is pending" in
+    withFixture(regionCount = 2) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe) = f
+      val regionA = regions(0)
+      val regionB = regions(1)
+
+      // Start s1 allocation on regionB -- enter waitingForUpdate
+      strategy.targetRegion = Some(regionB.ref)
+      val s1Probe = TestProbe()
+      coordinator.tell(GetShardHome("s1"), s1Probe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      // Address-level termination of regionA (margin is 2s), delivered as a DeathWatch system message
+      coordinator
+        .asInstanceOf[InternalActorRef]
+        .sendSystemMessage(DeathWatchNotification(regionA.ref, existenceConfirmed = true, addressTerminated = true))
+
+      // Not reported to rebalance workers before the removal margin has elapsed
+      rebalanceWorkerProbe.expectNoMessage(1500.millis)
+      // Reported at the margin, while the ddata update is still pending
+      rebalanceWorkerProbe.expectMsg(3.seconds, ShardCoordinator.RebalanceWorker.ShardRegionTerminated(regionA.ref))
+      replicatorProbe.expectNoMessage(100.millis)
+
+      // Once the update completes, the termination is written exactly once
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      s1Probe.expectMsgType[ShardHome](5.seconds)
+      completeNextUpdateExpecting[ShardRegionTerminated](replicatorProbe).region should ===(regionA.ref)
+      replicatorProbe.expectNoMessage(500.millis)
     }
 
     "process messages normally when no Terminated arrives during waitingForUpdate" in

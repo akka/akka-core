@@ -88,7 +88,6 @@ class ClusterShardingInternalsSpec extends AkkaSpec("""
         Props(new HandOffStopper(typeName, shard, probe.ref, Set(emptyHandlerActor), HandOffStopMessage, 10.millis)))
 
       watch(emptyHandlerActor)
-      // this seems a lot longer than 10ms, but the HandOffStopper clamps the effective timeout to be at least 1 second
       expectTerminated(emptyHandlerActor, 2.seconds)
 
       probe.expectMsg(1.seconds, ShardStopped(shard))
