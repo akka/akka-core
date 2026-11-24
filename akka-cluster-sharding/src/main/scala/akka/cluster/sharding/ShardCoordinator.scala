@@ -9,6 +9,7 @@ import java.util.concurrent.CompletionStage
 
 import scala.annotation.nowarn
 import scala.collection.immutable
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -817,6 +818,26 @@ abstract class ShardCoordinator(
 
   val cluster = Cluster(context.system)
   val removalMargin = cluster.downingProvider.downRemovalMargin
+
+  // Terminated regions and proxies. A stashed Register/RegisterProxy from one of them can be replayed after its
+  // termination, because terminations are stashed at the head, so such registrations are ignored. An ActorRef is
+  // unique to one actor incarnation, so a terminated ref can never register validly. The set dedupes
+  // (Terminated and RegionStopped can both report the same ref); the queue evicts the oldest entry.
+  private val tombstoneExtra =
+    context.system.settings.config.getInt("akka.cluster.sharding.coordinator-tombstone-extra")
+  private val tombstoneSet = mutable.HashSet.empty[ActorRef]
+  private val tombstoneQueue = mutable.Queue.empty[ActorRef]
+
+  private[akka] final def isTombstoned(ref: ActorRef): Boolean = tombstoneSet.contains(ref)
+
+  private[akka] final def addTombstone(ref: ActorRef): Unit =
+    if (tombstoneSet.add(ref)) {
+      tombstoneQueue.enqueue(ref)
+      val limit = state.regions.size + state.regionProxies.size + tombstoneExtra
+      while (tombstoneQueue.size > limit) {
+        tombstoneSet -= tombstoneQueue.dequeue()
+      }
+    }
   val minMembers = settings.role match {
     case None =>
       cluster.settings.MinNrOfMembers
@@ -882,6 +903,9 @@ abstract class ShardCoordinator(
 
   def active: Receive =
     ({
+      case Register(region) if isTombstoned(region) =>
+        log.debug("{}: ignoring Register from terminated ShardRegion [{}]", typeName, region)
+
       case Register(region) =>
         if (isMember(region)) {
           log.debug("{}: ShardRegion registered: [{}]", typeName, region)
@@ -906,6 +930,9 @@ abstract class ShardCoordinator(
             typeName,
             region)
         }
+
+      case RegisterProxy(proxy) if isTombstoned(proxy) =>
+        log.debug("{}: ignoring RegisterProxy from terminated ShardRegion proxy [{}]", typeName, proxy)
 
       case RegisterProxy(proxy) =>
         if (isMember(proxy)) {
@@ -1398,6 +1425,7 @@ abstract class ShardCoordinator(
 
   def regionTerminated(ref: ActorRef): Unit = {
     reportTerminationToRebalanceWorkers(ref)
+    addTombstone(ref)
     if (state.regions.contains(ref)) {
       if (log.isDebugEnabled) {
         log.debug(
@@ -1429,6 +1457,7 @@ abstract class ShardCoordinator(
 
   def regionProxyTerminated(ref: ActorRef): Unit = {
     reportTerminationToRebalanceWorkers(ref)
+    addTombstone(ref)
     if (state.regionProxies.contains(ref)) {
       log.debug("{}: ShardRegion proxy terminated: [{}]", typeName, ref)
       update(ShardRegionProxyTerminated(ref)) { evt =>

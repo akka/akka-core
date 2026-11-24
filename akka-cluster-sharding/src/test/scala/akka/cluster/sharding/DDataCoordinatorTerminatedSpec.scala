@@ -446,6 +446,55 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
       replicatorProbe.expectNoMessage(500.millis)
     }
 
+    "not re-register a region whose retried Register was stashed before its termination" in
+    withFixture(regionCount = 2) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, _) = f
+      val regionA = regions(0)
+      val regionB = regions(1)
+
+      // regionA is already registered (by the fixture). Start s1 allocation on regionB -- enter waitingForUpdate
+      strategy.targetRegion = Some(regionB.ref)
+      val s1Probe = TestProbe()
+      coordinator.tell(GetShardHome("s1"), s1Probe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      // regionA's registration retry (sent before its RegisterAck arrived) is stashed, then regionA stops.
+      // The Terminated is stashed at the head, so on replay it runs before the stale Register.
+      coordinator.tell(Register(regionA.ref), regionA.ref)
+      stopAndWaitForTerminated(regionA.ref)
+
+      // Complete s1 -> unstash: Terminated(regionA) first, then the stale Register(regionA)
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      s1Probe.expectMsgType[ShardHome](5.seconds)
+
+      completeNextUpdateExpecting[ShardRegionTerminated](replicatorProbe).region should ===(regionA.ref)
+      // The stale Register must not register the dead region again
+      replicatorProbe.expectNoMessage(500.millis)
+    }
+
+    "evict the oldest tombstone once the bound is exceeded" in
+    withFixture(regionCount = 1) { (f, _) =>
+      val Fixture(coordinator, replicatorProbe, _, _) = f
+
+      // With one region and one live proxy the bound is 1 + 1 + tombstone-extra (10), so 20 terminations overflow it
+      val proxies = (1 to 20).map { _ =>
+        val proxy = registerProxy(coordinator, replicatorProbe)
+        stopAndWaitForTerminated(proxy.ref)
+        completeNextUpdateExpecting[ShardRegionProxyTerminated](replicatorProbe)
+        proxy
+      }
+      val oldest = proxies.head
+      val newest = proxies.last
+
+      // The newest termination is still remembered, so its stale RegisterProxy is ignored
+      coordinator.tell(RegisterProxy(newest.ref), newest.ref)
+      replicatorProbe.expectNoMessage(500.millis)
+
+      // The oldest termination has been evicted, so its stale RegisterProxy is accepted again
+      coordinator.tell(RegisterProxy(oldest.ref), oldest.ref)
+      completeNextUpdateExpecting[ShardRegionProxyRegistered](replicatorProbe).regionProxy should ===(oldest.ref)
+    }
+
     "process messages normally when no Terminated arrives during waitingForUpdate" in
     withFixture(regionCount = 1) { (f, regions) =>
       val Fixture(coordinator, replicatorProbe, strategy, _) = f
