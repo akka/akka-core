@@ -64,9 +64,9 @@ class ClusterSingletonManagerStalePreviousOldestMultiJvmNode3 extends ClusterSin
  *
  * Nodes join in age order: first (oldest), second, third. The singleton is handed over cleanly
  * from first to second, and then from second to third. The third node was younger than both when
- * it joined, so its list of previous oldest nodes starts as [first, second]. Observing first's
- * replacement must not leave first at the head of that list, otherwise third waits for first's
- * removal (down-removal-margin) before it accepts second's TakeOver request when second leaves.
+ * it joined, so its list of previous oldest nodes starts as [first, second]. first stays at the
+ * head of that list, so third must accept second's TakeOver request when second leaves, without
+ * waiting for first's removal (down-removal-margin).
  */
 class ClusterSingletonManagerStalePreviousOldestSpec
     extends MultiNodeSpec(ClusterSingletonManagerStalePreviousOldestSpec)
