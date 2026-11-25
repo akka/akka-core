@@ -28,6 +28,7 @@ import akka.actor.NoSerializationVerificationNeeded
 import akka.actor.Props
 import akka.actor.Terminated
 import akka.annotation.DoNotInherit
+import akka.annotation.InternalApi
 import akka.annotation.InternalStableApi
 import akka.cluster._
 import akka.cluster.ClusterEvent._
@@ -547,11 +548,20 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
 
   var selfExited = false
 
+  // BecomingOldest, when the hand-over to this node is done but it will be handed over to the next oldest instead of
+  // starting the singleton, because self is exiting
+  private var passOnHandOver = false
+
   // keep track of previously removed members
   var removed = Map.empty[UniqueAddress, Deadline]
 
-  def addRemoved(node: UniqueAddress): Unit =
+  // members that have been removed, but the removal margin hasn't passed
+  private var removalMarginPending = Set.empty[UniqueAddress]
+
+  def addRemoved(node: UniqueAddress): Unit = {
+    removalMarginPending -= node
     removed += node -> (Deadline.now + 15.minutes)
+  }
 
   def cleanupOverdueNotMemberAnyMore(): Unit = {
     removed = removed.filter { case (_, deadline) => deadline.hasTimeLeft() }
@@ -682,15 +692,11 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
     case Event(OldestChanged(oldestOption), YoungerData(previousOldest)) =>
       oldestChangedReceived = true
       if (oldestOption == selfUniqueAddressOption) {
-        logInfo("Younger observed OldestChanged: [{} -> myself]", previousOldest.headOption.map(_.address))
-        if (previousOldest.forall(removed.contains))
-          tryGotoOldest()
-        else {
-          if (!preparingForFullShutdown) {
-            peer(previousOldest.head.address) ! HandOverToMe
-          }
-          goto(BecomingOldest).using(BecomingOldestData(previousOldest))
-        }
+        // Self may be exiting in the same membership change. Other subscribers, such as cluster.selfMember, may not have
+        // seen that yet. Continue when the publisher of the changes has replied with the state, which it does when all
+        // events of the change have been published.
+        requestClusterState()
+        stay()
       } else {
         logInfo(
           "Younger observed OldestChanged: [{} -> {}]",
@@ -702,6 +708,30 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
           case _                                                => previousOldest
         }
         stay().using(YoungerData(newPreviousOldest))
+      }
+
+    case Event(state: CurrentClusterState, YoungerData(previousOldest)) =>
+      // reply to requestClusterState, after OldestChanged to self
+      val exiting = selfExited || state.members.exists(m =>
+          m.uniqueAddress == cluster.selfUniqueAddress && m.status == MemberStatus.Exiting)
+      if (exiting) {
+        // Other nodes don't regard an exiting node as the oldest, so the next oldest will take over from the previous
+        // oldest. The singleton could be lost if it was handed over to this node.
+        logInfo(
+          "Younger observed OldestChanged: [{} -> myself], but not taking over because self is exiting.",
+          previousOldest.headOption.map(_.address))
+        getNextOldestChanged()
+        stay()
+      } else {
+        logInfo("Younger observed OldestChanged: [{} -> myself]", previousOldest.headOption.map(_.address))
+        if (previousOldest.forall(removed.contains))
+          tryGotoOldest()
+        else {
+          if (!preparingForFullShutdown) {
+            peer(previousOldest.head.address) ! HandOverToMe
+          }
+          goto(BecomingOldest).using(BecomingOldestData(previousOldest))
+        }
       }
 
     case Event(event @ MemberRemoved(m, _), _) if event.member.uniqueAddress != cluster.selfUniqueAddress =>
@@ -742,21 +772,46 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       stay()
 
     case Event(HandOverDone, BecomingOldestData(previousOldest)) =>
-      previousOldest.headOption match {
-        case Some(oldest) =>
-          if (sender().path.address == oldest.address)
-            tryGotoOldest()
-          else {
-            logInfo(
-              "Ignoring HandOverDone in BecomingOldest from [{}]. Expected previous oldest [{}]",
-              sender().path.address,
-              oldest.address)
-            stay()
-          }
-        case None =>
-          logInfo("Ignoring HandOverDone in BecomingOldest from [{}].", sender().path.address)
+      // Any of the previous oldest may be the one handing over, see TakeOverFromMe
+      val senderAddress = sender().path.address
+      if (previousOldest.exists(_.address == senderAddress)) {
+        if (selfExited) {
+          // Don't start the singleton when exiting, but this node is now responsible for handing over to
+          // the next oldest, which is given by the next OldestChanged.
+          logInfo("Hand-over done from [{}], but not starting singleton because self is exiting.", senderAddress)
+          passOnHandOver = true
+          cancelTimer(HandOverRetryTimer)
+          getNextOldestChanged()
           stay()
+        } else
+          tryGotoOldest()
+      } else {
+        logInfo(
+          "Ignoring HandOverDone in BecomingOldest from [{}]. Expected one of previous oldest [{}]",
+          senderAddress,
+          previousOldest.map(_.address).mkString(", "))
+        stay()
       }
+
+    case Event(OldestChanged(oldestOption), _) if passOnHandOver =>
+      // hand over to the new oldest without having started the singleton
+      handleOldestChanged(singleton = None, oldestOption)
+
+    case Event(SelfExiting, BecomingOldestData(previousOldest)) =>
+      selfMemberExited()
+      sender() ! Done // reply to ask
+      // A previous oldest may have accepted to hand over to this node, even if that hasn't been confirmed yet, and the
+      // singleton would be lost if exiting was completed now. Complete memberExitingProgress when this node has handed
+      // over to the next oldest, or when there is no previous oldest left that can hand over to this node.
+      // There will not be another MemberRemoved for those that have already been removed, and they may still be in
+      // cluster.state, which is updated asynchronously.
+      becomingOldestWhenExiting(previousOldest.filter(node =>
+        !removalMarginPending(node) && cluster.state.members.exists(_.uniqueAddress == node)))
+
+    case Event(MemberRemoved(m, _), BecomingOldestData(previousOldest))
+        if selfExited && m.uniqueAddress != cluster.selfUniqueAddress =>
+      // no need to wait for the removal margin since the singleton will not be started here
+      becomingOldestWhenExiting(previousOldest.filterNot(_ == m.uniqueAddress))
 
     case Event(event @ MemberRemoved(m, _), _) if event.member.uniqueAddress != cluster.selfUniqueAddress =>
       scheduleDelayedMemberRemoved(m)
@@ -769,7 +824,7 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       if (!selfExited)
         logInfo("Member removed [{}], previous oldest [{}]", m.address, previousOldest.map(_.address).mkString(", "))
       addRemoved(m.uniqueAddress)
-      if (cluster.isTerminated) {
+      if (cluster.isTerminated || selfExited) {
         // don't act on DelayedMemberRemoved (starting singleton) if this node is shutting its self down,
         // just wait for self MemberRemoved
         stay()
@@ -788,23 +843,25 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
           logInfo("Ignoring TakeOver request from unknown node in BecomingOldest from [{}].", senderAddress)
           stay()
         case Some(senderUniqueAddress) =>
-          previousOldest.headOption match {
-            case Some(oldest) =>
-              if (oldest == senderUniqueAddress) {
-                if (!preparingForFullShutdown) {
-                  sender() ! HandOverToMe
-                }
-              } else
-                logInfo(
-                  "Ignoring TakeOver request in BecomingOldest from [{}]. Expected previous oldest [{}]",
-                  sender().path.address,
-                  oldest.address)
+          // The first of previousOldest is not necessarily the one running the singleton, since that depends on the
+          // order in which this node observed the older nodes exiting. TakeOverFromMe is only sent by a node that has
+          // become oldest, i.e. older nodes had handed over or been removed, so accept it from any of previousOldest.
+          // Don't reorder previousOldest based on this, because a delayed TakeOverFromMe may be received from a node
+          // that has already handed over to another of the previousOldest.
+          if (previousOldest.isEmpty || previousOldest.contains(senderUniqueAddress)) {
+            if (!preparingForFullShutdown) {
+              sender() ! HandOverToMe
+            }
+            if (previousOldest.isEmpty)
+              stay().using(BecomingOldestData(senderUniqueAddress :: Nil))
+            else
               stay()
-            case None =>
-              if (!preparingForFullShutdown) {
-                sender() ! HandOverToMe
-              }
-              stay().using(BecomingOldestData(senderUniqueAddress :: previousOldest))
+          } else {
+            logInfo(
+              "Ignoring TakeOver request in BecomingOldest from [{}]. Expected one of previous oldest [{}]",
+              senderAddress,
+              previousOldest.map(_.address).mkString(", "))
+            stay()
           }
       }
 
@@ -816,6 +873,9 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
           startSingleTimer(HandOverRetryTimer, HandOverRetry(count + 1), handOverRetryInterval)
         }
         stay()
+      } else if (selfExited) {
+        logInfo("Timeout in BecomingOldest when self is exiting. Leaving the hand-over to the next oldest.")
+        endWhenExiting()
       } else if (previousOldest.forall(removed.contains)) {
         // can't send HandOverToMe, previousOldest unknown for new node (or restart)
         // previous oldest might be down or removed, so no TakeOverFromMe message is received
@@ -828,7 +888,24 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
           s"Becoming singleton oldest was stuck because previous oldest [${previousOldest.headOption}] is unresponsive")
   }
 
+  private def becomingOldestWhenExiting(remainingPreviousOldest: List[UniqueAddress]): State =
+    if (remainingPreviousOldest.isEmpty && !passOnHandOver) {
+      logInfo("All previous oldest removed when self is exiting. Leaving the hand-over to the next oldest.")
+      endWhenExiting()
+    } else
+      stay().using(BecomingOldestData(remainingPreviousOldest))
+
+  private def endWhenExiting(): State = {
+    memberExitingProgress.trySuccess(Done)
+    goto(End).using(EndData)
+  }
+
+  /** INTERNAL API: overridden in tests */
+  @InternalApi private[akka] def requestClusterState(): Unit =
+    cluster.sendCurrentClusterState(self)
+
   def scheduleDelayedMemberRemoved(m: Member): Unit = {
+    removalMarginPending += m.uniqueAddress
     if (removalMargin > Duration.Zero) {
       log.debug("Schedule DelayedMemberRemoved for [{}]", m.address)
       context.system.scheduler.scheduleOnce(removalMargin, self, DelayedMemberRemoved(m))(context.dispatcher)
@@ -1219,8 +1296,10 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
   }
 
   onTransition {
-    case BecomingOldest -> _ => cancelTimer(HandOverRetryTimer)
-    case WasOldest -> _      => cancelTimer(TakeOverRetryTimer)
+    case BecomingOldest -> _ =>
+      cancelTimer(HandOverRetryTimer)
+      passOnHandOver = false
+    case WasOldest -> _ => cancelTimer(TakeOverRetryTimer)
   }
 
   onTransition {
