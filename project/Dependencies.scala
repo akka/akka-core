@@ -67,7 +67,7 @@ object Dependencies {
     val reactiveStreams = "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion // MIT-0
 
     val lmdb = "org.lmdbjava" % "lmdbjava" % "0.9.1" // ApacheV2, OpenLDAP Public License
-    // override of the version brought in transitively by lmdbjava
+    // not used directly, declared to override the older version brought in transitively by lmdbjava
     val jnrFfi = "com.github.jnr" % "jnr-ffi" % "2.3.7" // ApacheV2
 
     val junit = "junit" % "junit" % junitVersion // Common Public License 1.0
@@ -238,9 +238,7 @@ object Dependencies {
         TestDependencies.logback,
         TestDependencies.scalatestMockito)
 
-  val distributedData = Seq(
-    l ++= Seq(lmdb, TestDependencies.junit, TestDependencies.scalatest),
-    dependencyOverrides += jnrFfi)
+  val distributedData = l ++= Seq(lmdb, jnrFfi, TestDependencies.junit, TestDependencies.scalatest)
 
   val slf4j = l ++= Seq(slf4jApi, TestDependencies.logback)
 
