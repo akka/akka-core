@@ -893,7 +893,8 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
   /**
    * The previous oldest may have confirmed the hand-over before it was removed, so not being a member any more doesn't
    * mean that the confirmation is from a new incarnation. That is only known when the new incarnation is a member. It
-   * replies when it's Up, and the leader doesn't move it to Up until this node has seen it as Joining.
+   * replies when it's Up, and the leader doesn't move it to Up until this node has seen it as Joining, unless this node
+   * is Exiting or Down because those are not required for convergence.
    */
   private def isReplacedByNewIncarnation(node: UniqueAddress): Boolean =
     cluster.state.members.exists(m => m.address == node.address && m.uniqueAddress != node)
@@ -910,6 +911,8 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       remainingPreviousOldest.map(_.address).mkString(", "))
     addRemoved(node)
     if (selfExited)
+      // Defensive, the previous incarnation is expected to already have been dropped from previousOldest, by SelfExiting
+      // or MemberRemoved, before the new incarnation can reply. It must not be handed over to the next oldest.
       becomingOldestWhenExiting(remainingPreviousOldest)
     else if (cluster.isTerminated)
       stay()

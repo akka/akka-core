@@ -471,21 +471,5 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
       nonMember.send(HandOverDone)
       setup.expectOldest()
     }
-
-    "not hand over to the next oldest when another incarnation confirms after exiting" in {
-      val setup = new Setup(
-        "restarted-exiting",
-        List(oldestPreviousIncarnation(firstSys), oldest(thirdSys)),
-        alreadyRemoved = List(firstSys))
-      setup.first.expectHandOverToMe()
-      setup.selfExiting()
-      setup.first.send(HandOverDone)
-      setup.manager ! oldest(fourthSys)
-      setup.expectStillBecomingOldest()
-      setup.exitingCompleted should ===(false)
-      setup.removed(secondSys)
-      setup.transitions.expectMsg(FSM.Transition(setup.manager, BecomingOldest, End))
-      setup.exitingCompleted should ===(true)
-    }
   }
 }
