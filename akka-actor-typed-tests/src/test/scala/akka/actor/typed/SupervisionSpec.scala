@@ -164,11 +164,9 @@ class StubbedSupervisionSpec extends AnyWordSpec with Matchers with LogCapturing
       inbox.receiveMessage() should ===(State(1, Map.empty))
     }
 
-    "support nesting to handle different exceptions" in {
+    def testNestedSupervision[T](supervisedBehavior: Behavior[Command] => Behavior[Command]): Unit = {
       val inbox = TestInbox[Event]("evt")
-      val behv =
-        supervise(supervise(targetBehavior(inbox.ref)).onFailure[Exc2](SupervisorStrategy.resume))
-          .onFailure[Exc3](SupervisorStrategy.restart)
+      val behv = supervisedBehavior(targetBehavior(inbox.ref))
       val testkit = BehaviorTestKit(behv)
       testkit.run(IncrementState)
       testkit.run(GetState)
@@ -190,6 +188,14 @@ class StubbedSupervisionSpec extends AnyWordSpec with Matchers with LogCapturing
         testkit.run(Throw(new Exc1))
       }
       inbox.receiveMessage() should ===(ReceivedSignal(PostStop))
+    }
+
+    "support nesting to handle different exceptions" in testNestedSupervision { behv =>
+      supervise(supervise(behv).onFailure[Exc2](SupervisorStrategy.resume)).onFailure[Exc3](SupervisorStrategy.restart)
+    }
+
+    "flatten support nesting to handle different exceptions" in testNestedSupervision { behv =>
+      supervise(behv).whenFailure[Exc2](SupervisorStrategy.resume).whenFailure[Exc3](SupervisorStrategy.restart)
     }
 
     "not catch fatal error" in {
@@ -397,11 +403,9 @@ class SupervisionSpec extends ScalaTestWithActorTestKit("""
       }
     }
 
-    "support nesting exceptions with different strategies" in {
+    def testNestedSupervision[T](supervisedBehavior: Behavior[Command] => Behavior[Command]): Unit = {
       val probe = TestProbe[Event]("evt")
-      val behv =
-        supervise(supervise(targetBehavior(probe.ref)).onFailure[RuntimeException](SupervisorStrategy.stop))
-          .onFailure[Exception](SupervisorStrategy.restart)
+      val behv = supervisedBehavior(targetBehavior(probe.ref))
 
       val ref = spawn(behv)
 
@@ -416,13 +420,21 @@ class SupervisionSpec extends ScalaTestWithActorTestKit("""
       }
     }
 
-    "support nesting exceptions with outer restart and inner backoff strategies" in {
+    "support nesting exceptions with different strategies" in testNestedSupervision { behv =>
+      supervise(supervise(behv).onFailure[RuntimeException](SupervisorStrategy.stop))
+        .onFailure[Exception](SupervisorStrategy.restart)
+    }
+
+    "flatten support nesting exceptions with different strategies" in testNestedSupervision { behv =>
+      supervise(behv)
+        .whenFailure[RuntimeException](SupervisorStrategy.stop)
+        .whenFailure[Exception](SupervisorStrategy.restart)
+    }
+
+    def testNestedSupervisionWithRestartThenBackoff[T](
+        supervisedBehavior: Behavior[Command] => Behavior[Command]): Unit = {
       val probe = TestProbe[Event]("evt")
-      val behv =
-        supervise(
-          supervise(targetBehavior(probe.ref))
-            .onFailure[IllegalArgumentException](SupervisorStrategy.restartWithBackoff(10.millis, 10.millis, 0.0)))
-          .onFailure[IOException](SupervisorStrategy.restart)
+      val behv = supervisedBehavior(targetBehavior(probe.ref))
 
       val ref = spawn(behv)
 
@@ -444,11 +456,25 @@ class SupervisionSpec extends ScalaTestWithActorTestKit("""
       probe.expectMessage(Pong(2))
     }
 
-    "support nesting exceptions with inner restart and outer backoff strategies" in {
+    "support nesting exceptions with outer restart and inner backoff strategies" in testNestedSupervisionWithRestartThenBackoff {
+      behv =>
+        supervise(
+          supervise(behv).onFailure[IllegalArgumentException](
+            SupervisorStrategy.restartWithBackoff(10.millis, 10.millis, 0.0)))
+          .onFailure[IOException](SupervisorStrategy.restart)
+    }
+
+    "flatten support nesting exceptions with outer restart and inner backoff strategies" in testNestedSupervisionWithRestartThenBackoff {
+      behv =>
+        supervise(behv)
+          .whenFailure[IllegalArgumentException](SupervisorStrategy.restartWithBackoff(10.millis, 10.millis, 0.0))
+          .whenFailure[IOException](SupervisorStrategy.restart)
+    }
+
+    def testNestedSupervisionWithBackoffThenRestart[T](
+        supervisedBehavior: Behavior[Command] => Behavior[Command]): Unit = {
       val probe = TestProbe[Event]("evt")
-      val behv =
-        supervise(supervise(targetBehavior(probe.ref)).onFailure[IllegalArgumentException](SupervisorStrategy.restart))
-          .onFailure[IOException](SupervisorStrategy.restartWithBackoff(10.millis, 10.millis, 0.0))
+      val behv = supervisedBehavior(targetBehavior(probe.ref))
 
       val ref = spawn(behv)
 
@@ -468,6 +494,19 @@ class SupervisionSpec extends ScalaTestWithActorTestKit("""
       // verify that it's still alive and not stopped, IllegalStateException would stop it
       ref ! Ping(2)
       probe.expectMessage(Pong(2))
+    }
+
+    "support nesting exceptions with inner restart and outer backoff strategies" in testNestedSupervisionWithBackoffThenRestart {
+      behv =>
+        supervise(supervise(behv).onFailure[IllegalArgumentException](SupervisorStrategy.restart))
+          .onFailure[IOException](SupervisorStrategy.restartWithBackoff(10.millis, 10.millis, 0.0))
+    }
+
+    "flatten support nesting exceptions with inner restart and outer backoff strategies" in testNestedSupervisionWithBackoffThenRestart {
+      behv =>
+        supervise(behv)
+          .whenFailure[IllegalArgumentException](SupervisorStrategy.restart)
+          .whenFailure[IOException](SupervisorStrategy.restartWithBackoff(10.millis, 10.millis, 0.0))
     }
 
     "stop when not supervised" in {
