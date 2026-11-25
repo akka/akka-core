@@ -774,8 +774,10 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
     case Event(HandOverDone, BecomingOldestData(previousOldest)) =>
       // Any of the previous oldest may be the one handing over, see TakeOverFromMe
       val senderAddress = sender().path.address
-      if (previousOldest.exists(_.address == senderAddress)) {
-        if (selfExited) {
+      previousOldest.find(_.address == senderAddress) match {
+        case Some(node) if isReplacedByNewIncarnation(node) =>
+          previousOldestRestarted(node, previousOldest.filterNot(_ == node))
+        case Some(_) if selfExited =>
           // Don't start the singleton when exiting, but this node is now responsible for handing over to
           // the next oldest, which is given by the next OldestChanged.
           logInfo("Hand-over done from [{}], but not starting singleton because self is exiting.", senderAddress)
@@ -783,14 +785,14 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
           cancelTimer(HandOverRetryTimer)
           getNextOldestChanged()
           stay()
-        } else
+        case Some(_) =>
           tryGotoOldest()
-      } else {
-        logInfo(
-          "Ignoring HandOverDone in BecomingOldest from [{}]. Expected one of previous oldest [{}]",
-          senderAddress,
-          previousOldest.map(_.address).mkString(", "))
-        stay()
+        case None =>
+          logInfo(
+            "Ignoring HandOverDone in BecomingOldest from [{}]. Expected one of previous oldest [{}]",
+            senderAddress,
+            previousOldest.map(_.address).mkString(", "))
+          stay()
       }
 
     case Event(OldestChanged(oldestOption), _) if passOnHandOver =>
@@ -886,6 +888,41 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       else
         throw new ClusterSingletonManagerIsStuck(
           s"Becoming singleton oldest was stuck because previous oldest [${previousOldest.headOption}] is unresponsive")
+  }
+
+  /**
+   * The previous oldest may have confirmed the hand-over before it was removed, so not being a member any more doesn't
+   * mean that the confirmation is from a new incarnation. That is only known when the new incarnation is a member. It
+   * replies when it's Up, and the leader doesn't move it to Up until this node has seen it as Joining.
+   */
+  private def isReplacedByNewIncarnation(node: UniqueAddress): Boolean =
+    cluster.state.members.exists(m => m.address == node.address && m.uniqueAddress != node)
+
+  /**
+   * HandOverDone from a new incarnation confirms that the previous incarnation, and its singleton instance, has been
+   * stopped, so there is no need to wait for the removal margin of that node. It doesn't confirm that the singleton
+   * isn't running, because the previous incarnation may have handed over to one of the remaining previous oldest.
+   */
+  private def previousOldestRestarted(node: UniqueAddress, remainingPreviousOldest: List[UniqueAddress]): State = {
+    logInfo(
+      "HandOverDone in BecomingOldest from new incarnation of previous oldest [{}], remaining previous oldest [{}]",
+      node,
+      remainingPreviousOldest.map(_.address).mkString(", "))
+    addRemoved(node)
+    if (selfExited)
+      becomingOldestWhenExiting(remainingPreviousOldest)
+    else if (cluster.isTerminated)
+      stay()
+    else if (remainingPreviousOldest.forall(removed.contains))
+      tryGotoOldest()
+    else {
+      if (!preparingForFullShutdown) {
+        peer(remainingPreviousOldest.head.address) ! HandOverToMe
+        // the retries may have been stopped by HandOverInProgress
+        startSingleTimer(HandOverRetryTimer, HandOverRetry(1), handOverRetryInterval)
+      }
+      stay().using(BecomingOldestData(remainingPreviousOldest))
+    }
   }
 
   private def becomingOldestWhenExiting(remainingPreviousOldest: List[UniqueAddress]): State =

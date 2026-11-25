@@ -21,6 +21,7 @@ import akka.cluster.ClusterEvent.CurrentClusterState
 import akka.cluster.ClusterEvent.MemberRemoved
 import akka.cluster.Member
 import akka.cluster.MemberStatus
+import akka.cluster.UniqueAddress
 import akka.testkit.AkkaSpec
 import akka.testkit.EventFilter
 import akka.testkit.TestActors
@@ -60,15 +61,23 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
   private val secondSys = ActorSystem(system.name, system.settings.config)
   private val thirdSys = ActorSystem(system.name, system.settings.config)
   private val fourthSys = ActorSystem(system.name, system.settings.config)
+  // not joining the cluster
+  private val nonMemberSys = ActorSystem(system.name, system.settings.config)
   private val systemsByAge = List(firstSys, secondSys, thirdSys, fourthSys)
 
   override def afterTermination(): Unit =
-    systemsByAge.reverse.foreach(shutdown(_))
+    (nonMemberSys :: systemsByAge.reverse).foreach(shutdown(_))
 
   private def exitingMember(sys: ActorSystem): Member =
     Cluster(sys).selfMember.copy(MemberStatus.Leaving).copy(MemberStatus.Exiting)
 
   private def oldest(sys: ActorSystem) = OldestChanged(Some(Cluster(sys).selfUniqueAddress))
+
+  /** A previous incarnation, with the same address, that is not a member any more. */
+  private def oldestPreviousIncarnation(sys: ActorSystem) = {
+    val current = Cluster(sys).selfUniqueAddress
+    OldestChanged(Some(UniqueAddress(current.address, current.longUid + 1)))
+  }
 
   // the changes of oldest that third observes, for the two possible orders of observing the older nodes as exiting
   private val firstExitsBeforeSecond = List(oldest(secondSys), oldest(thirdSys))
@@ -395,6 +404,88 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
       setup.first.handOver()
       setup.transitions.expectMsg(FSM.Transition(setup.manager, Younger, BecomingOldest))
       setup.transitions.expectMsg(FSM.Transition(setup.manager, BecomingOldest, Oldest))
+    }
+
+    "not take over when another incarnation confirms, but a previous oldest may still run the singleton" in {
+      val setup = new Setup(
+        "restarted-head",
+        List(oldestPreviousIncarnation(firstSys), oldest(thirdSys)),
+        alreadyRemoved = List(firstSys))
+      setup.first.expectHandOverToMe()
+      // "probably quickly restarted with same hostname:port", but second may have taken over from the old incarnation
+      setup.first.send(HandOverDone)
+      setup.expectStillBecomingOldest()
+
+      setup.second.expectHandOverToMe()
+      // and retries
+      setup.second.expectHandOverToMe()
+      setup.first.expectNoHandOverToMe()
+      setup.second.handOver()
+      setup.expectOldest()
+    }
+
+    "ask the next previous oldest again when another incarnation confirms after hand-over in progress" in {
+      val setup = new Setup(
+        "restarted-in-progress",
+        List(oldestPreviousIncarnation(firstSys), oldest(thirdSys)),
+        alreadyRemoved = List(firstSys))
+      setup.second.send(TakeOverFromMe)
+      setup.second.expectHandOverToMe()
+      // stops the retries
+      setup.second.send(HandOverInProgress)
+      setup.first.send(HandOverDone)
+      setup.expectStillBecomingOldest()
+      setup.second.expectHandOverToMe()
+      setup.second.handOver()
+      setup.expectOldest()
+    }
+
+    "not take over when another incarnation, that isn't the first of previous oldest, confirms" in {
+      val setup = new Setup(
+        "restarted-not-head",
+        List(oldestPreviousIncarnation(firstSys), oldest(nonMemberSys), oldest(thirdSys)),
+        alreadyRemoved = List(firstSys))
+      setup.first.send(HandOverDone)
+      setup.expectStillBecomingOldest()
+      setup.second.handOver()
+      setup.expectOldest()
+    }
+
+    "take over, without waiting for the removal margin, when all previous oldest are other incarnations" in {
+      val setup = new Setup(
+        "restarted-all",
+        List(oldestPreviousIncarnation(secondSys), oldestPreviousIncarnation(firstSys), oldest(thirdSys)),
+        alreadyRemoved = List(firstSys, secondSys))
+      setup.first.expectHandOverToMe()
+      setup.first.send(HandOverDone)
+      setup.expectStillBecomingOldest()
+      setup.second.expectHandOverToMe()
+      setup.second.send(HandOverDone)
+      setup.expectOldest()
+    }
+
+    "take over when a previous oldest, that is not a member any more, confirms" in {
+      val setup =
+        new Setup("not-member", List(oldest(nonMemberSys), oldest(thirdSys)), alreadyRemoved = List(firstSys))
+      val nonMember = new Peer(nonMemberSys, "not-member")
+      nonMember.send(HandOverDone)
+      setup.expectOldest()
+    }
+
+    "not hand over to the next oldest when another incarnation confirms after exiting" in {
+      val setup = new Setup(
+        "restarted-exiting",
+        List(oldestPreviousIncarnation(firstSys), oldest(thirdSys)),
+        alreadyRemoved = List(firstSys))
+      setup.first.expectHandOverToMe()
+      setup.selfExiting()
+      setup.first.send(HandOverDone)
+      setup.manager ! oldest(fourthSys)
+      setup.expectStillBecomingOldest()
+      setup.exitingCompleted should ===(false)
+      setup.removed(secondSys)
+      setup.transitions.expectMsg(FSM.Transition(setup.manager, BecomingOldest, End))
+      setup.exitingCompleted should ===(true)
     }
   }
 }
