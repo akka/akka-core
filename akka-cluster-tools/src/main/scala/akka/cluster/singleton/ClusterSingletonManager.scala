@@ -686,24 +686,12 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
   when(Younger) {
     case Event(OldestChanged(oldestOption), YoungerData(previousOldest)) =>
       oldestChangedReceived = true
-      if (oldestOption == selfUniqueAddressOption && (selfExited || isSelfExiting)) {
-        // Other nodes don't regard an exiting node as the oldest, so the next oldest will take over from the previous
-        // oldest. The singleton could be lost if it was handed over to this node.
-        logInfo(
-          "Younger observed OldestChanged: [{} -> myself], but not taking over because self is exiting.",
-          previousOldest.headOption.map(_.address))
-        getNextOldestChanged()
+      if (oldestOption == selfUniqueAddressOption) {
+        // Self may be exiting in the same membership change. Other subscribers, such as cluster.selfMember, may not have
+        // seen that yet. Continue when the publisher of the changes has replied with the state, which it does when all
+        // events of the change have been published.
+        requestClusterState()
         stay()
-      } else if (oldestOption == selfUniqueAddressOption) {
-        logInfo("Younger observed OldestChanged: [{} -> myself]", previousOldest.headOption.map(_.address))
-        if (previousOldest.forall(removed.contains))
-          tryGotoOldest()
-        else {
-          if (!preparingForFullShutdown) {
-            peer(previousOldest.head.address) ! HandOverToMe
-          }
-          goto(BecomingOldest).using(BecomingOldestData(previousOldest))
-        }
       } else {
         logInfo(
           "Younger observed OldestChanged: [{} -> {}]",
@@ -715,6 +703,30 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
           case _                                                => previousOldest
         }
         stay().using(YoungerData(newPreviousOldest))
+      }
+
+    case Event(state: CurrentClusterState, YoungerData(previousOldest)) =>
+      // reply to requestClusterState, after OldestChanged to self
+      val exiting = selfExited || state.members.exists(m =>
+          m.uniqueAddress == cluster.selfUniqueAddress && m.status == MemberStatus.Exiting)
+      if (exiting) {
+        // Other nodes don't regard an exiting node as the oldest, so the next oldest will take over from the previous
+        // oldest. The singleton could be lost if it was handed over to this node.
+        logInfo(
+          "Younger observed OldestChanged: [{} -> myself], but not taking over because self is exiting.",
+          previousOldest.headOption.map(_.address))
+        getNextOldestChanged()
+        stay()
+      } else {
+        logInfo("Younger observed OldestChanged: [{} -> myself]", previousOldest.headOption.map(_.address))
+        if (previousOldest.forall(removed.contains))
+          tryGotoOldest()
+        else {
+          if (!preparingForFullShutdown) {
+            peer(previousOldest.head.address) ! HandOverToMe
+          }
+          goto(BecomingOldest).using(BecomingOldestData(previousOldest))
+        }
       }
 
     case Event(event @ MemberRemoved(m, _), _) if event.member.uniqueAddress != cluster.selfUniqueAddress =>
@@ -881,8 +893,8 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
   }
 
   /** INTERNAL API: overridden in tests */
-  @InternalApi private[akka] def isSelfExiting: Boolean =
-    cluster.selfMember.status == MemberStatus.Exiting
+  @InternalApi private[akka] def requestClusterState(): Unit =
+    cluster.sendCurrentClusterState(self)
 
   def scheduleDelayedMemberRemoved(m: Member): Unit = {
     if (removalMargin > Duration.Zero) {

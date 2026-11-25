@@ -4,6 +4,7 @@
 
 package akka.cluster.singleton
 
+import scala.collection.immutable.SortedSet
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -16,6 +17,7 @@ import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.actor.RootActorPath
 import akka.cluster.Cluster
+import akka.cluster.ClusterEvent.CurrentClusterState
 import akka.cluster.ClusterEvent.MemberRemoved
 import akka.cluster.Member
 import akka.cluster.MemberStatus
@@ -97,7 +99,8 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
     val second = new Peer(secondSys, name)
     val fourth = new Peer(fourthSys, name)
 
-    @volatile var selfExitingStatus = false
+    // when false the test replies to the manager's request for the cluster state
+    @volatile var replyWithClusterState = true
     @volatile private var exitingProgress: Future[Done] = _
     val transitions = TestProbe()(thirdSys)
     val manager = thirdSys.actorOf(
@@ -107,7 +110,8 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
           PoisonPill,
           ClusterSingletonManagerSettings(thirdSys).withRemovalMargin(1.minute)) {
           exitingProgress = memberExitingProgress.future
-          override private[akka] def isSelfExiting: Boolean = selfExitingStatus
+          override private[akka] def requestClusterState(): Unit =
+            if (replyWithClusterState) super.requestClusterState()
         }),
       name)
 
@@ -130,10 +134,16 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
     /** The manager sees that the node has been removed from the cluster. */
     def removed(sys: ActorSystem): Unit =
       manager ! MemberRemoved(exitingMember(sys).copy(MemberStatus.Removed), MemberStatus.Exiting)
+
+    /** The manager sees that the removal margin has passed for the node, i.e. it's not previous oldest any more. */
+    def removalMarginPassed(sys: ActorSystem): Unit =
+      manager ! DelayedMemberRemoved(exitingMember(sys).copy(MemberStatus.Removed))
   }
 
   /** A new singleton manager at third, that has observed the given changes and is becoming oldest. */
-  private class Setup(name: String, observed: List[OldestChanged]) extends YoungerSetup(name) {
+  private class Setup(name: String, observed: List[OldestChanged], alreadyRemoved: List[ActorSystem] = Nil)
+      extends YoungerSetup(name) {
+    alreadyRemoved.foreach(removalMarginPassed)
     observed.foreach(manager ! _)
     transitions.expectMsg(FSM.Transition(manager, Younger, BecomingOldest))
 
@@ -205,6 +215,16 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
       setup.second.send(TakeOverFromMe)
       setup.second.expectHandOverToMe()
       setup.second.handOver()
+      setup.expectOldest()
+    }
+
+    "take over from the oldest, when it's not the first of previous oldest" in {
+      // second is dropped from the initial list [first, second], and then added first when it's observed as oldest
+      val setup = new Setup("head-not-oldest", firstExitsBeforeSecond, alreadyRemoved = List(secondSys))
+      setup.second.expectHandOverToMe()
+      setup.first.send(TakeOverFromMe)
+      setup.first.expectHandOverToMe()
+      setup.first.handOver()
       setup.expectOldest()
     }
 
@@ -315,15 +335,40 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
     }
 
     "not request hand-over when becoming oldest while the own status is Exiting" in {
-      // the Exiting status is seen before CoordinatedShutdown has reached the singleton
       val setup = new YoungerSetup("exiting-status")
-      setup.selfExitingStatus = true
+      setup.replyWithClusterState = false
       setup.manager ! oldest(thirdSys)
+      // Exiting in the same membership change, but that has not been seen via cluster.selfMember, and
+      // CoordinatedShutdown hasn't reached the singleton
+      setup.manager ! CurrentClusterState(members = SortedSet(exitingMember(thirdSys)))
       setup.first.expectNoHandOverToMe()
       setup.transitions.expectNoMessage(500.millis)
       // doesn't have to wait for anything
       setup.selfExiting()
       setup.exitingCompleted should ===(true)
+    }
+
+    "not request hand-over when exiting before the own status has been confirmed" in {
+      val setup = new YoungerSetup("exiting-before-status")
+      setup.replyWithClusterState = false
+      setup.manager ! oldest(thirdSys)
+      setup.selfExiting()
+      setup.exitingCompleted should ===(true)
+      setup.manager ! Cluster(thirdSys).state
+      setup.first.expectNoHandOverToMe()
+      setup.transitions.expectNoMessage(500.millis)
+    }
+
+    "request hand-over when the own status has been confirmed" in {
+      val setup = new YoungerSetup("confirmed-status")
+      setup.replyWithClusterState = false
+      setup.manager ! oldest(thirdSys)
+      setup.first.expectNoHandOverToMe()
+      setup.manager ! Cluster(thirdSys).state
+      setup.first.expectHandOverToMe()
+      setup.first.handOver()
+      setup.transitions.expectMsg(FSM.Transition(setup.manager, Younger, BecomingOldest))
+      setup.transitions.expectMsg(FSM.Transition(setup.manager, BecomingOldest, Oldest))
     }
   }
 }
