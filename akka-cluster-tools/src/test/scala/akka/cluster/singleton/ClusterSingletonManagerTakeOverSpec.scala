@@ -314,6 +314,32 @@ class ClusterSingletonManagerTakeOverSpec extends AkkaSpec("""
       setup.exitingCompleted should ===(true)
     }
 
+    // In these tests the removed nodes are still in cluster.state, which is updated asynchronously.
+    "complete exiting when previous oldest were removed before exiting" in {
+      val setup = new Setup("exiting-already-removed", secondExitsBeforeFirst)
+      setup.first.expectHandOverToMe()
+      setup.removed(firstSys)
+      setup.selfExiting()
+      // second could still hand over
+      setup.transitions.expectNoMessage(500.millis)
+      setup.exitingCompleted should ===(false)
+      setup.removed(secondSys)
+      setup.transitions.expectMsg(FSM.Transition(setup.manager, BecomingOldest, End))
+      setup.exitingCompleted should ===(true)
+    }
+
+    "complete exiting when previous oldest were removed before becoming oldest" in {
+      val setup = new YoungerSetup("exiting-removed-younger")
+      setup.removed(firstSys)
+      setup.removed(secondSys)
+      setup.manager ! oldest(thirdSys)
+      // the removal margin hasn't passed
+      setup.transitions.expectMsg(FSM.Transition(setup.manager, Younger, BecomingOldest))
+      setup.selfExiting()
+      setup.transitions.expectMsg(FSM.Transition(setup.manager, BecomingOldest, End))
+      setup.exitingCompleted should ===(true)
+    }
+
     "not complete exiting when previous oldest is removed after its hand-over was done" in {
       val setup = new Setup("exiting-removed-after-done", secondExitsBeforeFirst)
       setup.first.expectHandOverToMe()

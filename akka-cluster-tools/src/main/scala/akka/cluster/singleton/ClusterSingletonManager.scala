@@ -555,8 +555,13 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
   // keep track of previously removed members
   var removed = Map.empty[UniqueAddress, Deadline]
 
-  def addRemoved(node: UniqueAddress): Unit =
+  // members that have been removed, but the removal margin hasn't passed
+  private var removalMarginPending = Set.empty[UniqueAddress]
+
+  def addRemoved(node: UniqueAddress): Unit = {
+    removalMarginPending -= node
     removed += node -> (Deadline.now + 15.minutes)
+  }
 
   def cleanupOverdueNotMemberAnyMore(): Unit = {
     removed = removed.filter { case (_, deadline) => deadline.hasTimeLeft() }
@@ -798,7 +803,10 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
       // A previous oldest may have accepted to hand over to this node, even if that hasn't been confirmed yet, and the
       // singleton would be lost if exiting was completed now. Complete memberExitingProgress when this node has handed
       // over to the next oldest, or when there is no previous oldest left that can hand over to this node.
-      becomingOldestWhenExiting(previousOldest.filter(node => cluster.state.members.exists(_.uniqueAddress == node)))
+      // There will not be another MemberRemoved for those that have already been removed, and they may still be in
+      // cluster.state, which is updated asynchronously.
+      becomingOldestWhenExiting(previousOldest.filter(node =>
+        !removalMarginPending(node) && cluster.state.members.exists(_.uniqueAddress == node)))
 
     case Event(MemberRemoved(m, _), BecomingOldestData(previousOldest))
         if selfExited && m.uniqueAddress != cluster.selfUniqueAddress =>
@@ -897,6 +905,7 @@ class ClusterSingletonManager(singletonProps: Props, terminationMessage: Any, se
     cluster.sendCurrentClusterState(self)
 
   def scheduleDelayedMemberRemoved(m: Member): Unit = {
+    removalMarginPending += m.uniqueAddress
     if (removalMargin > Duration.Zero) {
       log.debug("Schedule DelayedMemberRemoved for [{}]", m.address)
       context.system.scheduler.scheduleOnce(removalMargin, self, DelayedMemberRemoved(m))(context.dispatcher)
