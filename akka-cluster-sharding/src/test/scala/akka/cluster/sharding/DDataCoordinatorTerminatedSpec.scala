@@ -18,6 +18,7 @@ import akka.cluster.ddata.LWWRegisterKey
 import akka.cluster.ddata.Replicator._
 import akka.cluster.sharding.ShardCoordinator.Internal._
 import akka.cluster.sharding.ShardRegion.ShardId
+import akka.dispatch.sysmsg.DeathWatchNotification
 import akka.testkit._
 
 object DDataCoordinatorTerminatedSpec {
@@ -31,6 +32,7 @@ object DDataCoordinatorTerminatedSpec {
     akka.cluster.sharding.rebalance-interval = 120s
     akka.cluster.sharding.shard-start-timeout = 120s
     akka.cluster.min-nr-of-members = 1
+    akka.cluster.down-removal-margin = 2s
   """)
 
   /**
@@ -66,7 +68,11 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
 
   private type CoordinatorUpdate = Update[LWWRegister[State]]
 
-  private case class Fixture(coordinator: ActorRef, replicatorProbe: TestProbe, strategy: TestAllocationStrategy)
+  private case class Fixture(
+      coordinator: ActorRef,
+      replicatorProbe: TestProbe,
+      strategy: TestAllocationStrategy,
+      rebalanceWorkerProbe: TestProbe)
 
   private var testCounter = 0
 
@@ -91,14 +97,18 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
     val typeName = nextTypeName()
     val strategy = new TestAllocationStrategy
     val replicatorProbe = TestProbe()
+    val rebalanceWorkerProbe = TestProbe()
     val coordinator = system.actorOf(
-      ShardCoordinator.props(
-        typeName,
-        ClusterShardingSettings(system),
-        strategy,
-        replicatorProbe.ref,
-        majorityMinCap = 0,
-        rememberEntitiesStoreProvider = None))
+      Props(
+        new DDataShardCoordinator(
+          typeName,
+          ClusterShardingSettings(system),
+          strategy,
+          replicatorProbe.ref,
+          majorityMinCap = 0,
+          rememberEntitiesStoreProvider = None) {
+          rebalanceWorkers += rebalanceWorkerProbe.ref
+        }).withDeploy(Deploy.local))
 
     // Bootstrap: respond to the initial ddata Get with empty state
     replicatorProbe.expectMsgType[Get[_]](5.seconds)
@@ -113,7 +123,7 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
       region
     }
 
-    try body(Fixture(coordinator, replicatorProbe, strategy), regions)
+    try body(Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe), regions)
     finally system.stop(coordinator)
   }
 
@@ -148,6 +158,14 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
     probe.expectMsgType[ShardHome](5.seconds)
   }
 
+  private def registerProxy(coordinator: ActorRef, replicatorProbe: TestProbe): TestProbe = {
+    val proxy = TestProbe()
+    coordinator.tell(RegisterProxy(proxy.ref), proxy.ref)
+    completeNextUpdateExpecting[ShardRegionProxyRegistered](replicatorProbe).regionProxy should ===(proxy.ref)
+    proxy.expectMsgType[RegisterAck](5.seconds)
+    proxy
+  }
+
   /** Stop an actor and wait for its Terminated to be dispatched to the coordinator. */
   private def stopAndWaitForTerminated(ref: ActorRef): Unit = {
     watch(ref)
@@ -171,7 +189,7 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
 
     "process Terminated during ddata update -- not silently dropped" in
     withFixture(regionCount = 2) { (f, regions) =>
-      val Fixture(coordinator, replicatorProbe, strategy) = f
+      val Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe) = f
       val regionA = regions(0)
       val regionB = regions(1)
 
@@ -188,6 +206,8 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
 
       // Kill regionA while coordinator is busy with ddata
       stopAndWaitForTerminated(regionA.ref)
+      rebalanceWorkerProbe.expectMsg(ShardCoordinator.RebalanceWorker.ShardRegionTerminated(regionA.ref))
+      replicatorProbe.expectNoMessage(100.millis)
 
       // Complete s3 -> coordinator unstashes Terminated(regionA)
       completeInterceptedUpdate(replicatorProbe, pendingUpdate)
@@ -205,9 +225,100 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
       verifyProbe.expectMsgType[ShardHome](5.seconds).ref should ===(regionB.ref)
     }
 
+    "notify rebalance workers and prioritize RegionStopped over RebalanceDone" in
+    withFixture(regionCount = 2) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe) = f
+      val regionA = regions(0)
+      val regionB = regions(1)
+
+      strategy.targetRegion = Some(regionA.ref)
+      allocateShard(coordinator, "s1", replicatorProbe)
+
+      strategy.targetRegion = Some(regionB.ref)
+      val s2Probe = TestProbe()
+      coordinator.tell(GetShardHome("s2"), s2Probe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      coordinator.tell(createRebalanceDone("s1", true), ActorRef.noSender)
+      coordinator ! RegionStopped(regionA.ref)
+      rebalanceWorkerProbe.expectMsg(ShardCoordinator.RebalanceWorker.ShardRegionTerminated(regionA.ref))
+      replicatorProbe.expectNoMessage(100.millis)
+
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      s2Probe.expectMsgType[ShardHome](5.seconds)
+      // RegionStopped must precede RebalanceDone, which would otherwise deallocate s1.
+      completeNextUpdateExpecting[ShardRegionTerminated](replicatorProbe).region should ===(regionA.ref)
+    }
+
+    "notify rebalance workers and prioritize delayed termination over RebalanceDone" in
+    withFixture(regionCount = 2) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe) = f
+      val regionA = regions(0)
+      val regionB = regions(1)
+
+      strategy.targetRegion = Some(regionA.ref)
+      allocateShard(coordinator, "s1", replicatorProbe)
+
+      strategy.targetRegion = Some(regionB.ref)
+      val s2Probe = TestProbe()
+      coordinator.tell(GetShardHome("s2"), s2Probe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      coordinator.tell(createRebalanceDone("s1", true), ActorRef.noSender)
+      coordinator ! ShardCoordinator.DelayedShardRegionTerminated(regionA.ref)
+      rebalanceWorkerProbe.expectMsg(ShardCoordinator.RebalanceWorker.ShardRegionTerminated(regionA.ref))
+      replicatorProbe.expectNoMessage(100.millis)
+
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      s2Probe.expectMsgType[ShardHome](5.seconds)
+      // Delayed termination must precede RebalanceDone for the same shard.
+      completeNextUpdateExpecting[ShardRegionTerminated](replicatorProbe).region should ===(regionA.ref)
+    }
+
+    "notify rebalance workers and prioritize proxy Terminated over RebalanceDone" in
+    withFixture(regionCount = 1) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe) = f
+      val region = regions.head
+      val proxy = registerProxy(coordinator, replicatorProbe)
+
+      strategy.targetRegion = Some(region.ref)
+      val shardProbe = TestProbe()
+      coordinator.tell(GetShardHome("s1"), shardProbe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      coordinator.tell(createRebalanceDone("s1", true), ActorRef.noSender)
+      stopAndWaitForTerminated(proxy.ref)
+      rebalanceWorkerProbe.expectMsg(ShardCoordinator.RebalanceWorker.ShardRegionTerminated(proxy.ref))
+      replicatorProbe.expectNoMessage(100.millis)
+
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      shardProbe.expectMsgType[ShardHome](5.seconds)
+      completeNextUpdateExpecting[ShardRegionProxyTerminated](replicatorProbe).regionProxy should ===(proxy.ref)
+    }
+
+    "notify rebalance workers of proxy RegionStopped before the ddata update completes" in
+    withFixture(regionCount = 1) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe) = f
+      val region = regions.head
+      val proxy = registerProxy(coordinator, replicatorProbe)
+
+      strategy.targetRegion = Some(region.ref)
+      val shardProbe = TestProbe()
+      coordinator.tell(GetShardHome("s1"), shardProbe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      coordinator ! RegionStopped(proxy.ref)
+      rebalanceWorkerProbe.expectMsg(ShardCoordinator.RebalanceWorker.ShardRegionTerminated(proxy.ref))
+      replicatorProbe.expectNoMessage(100.millis)
+
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      shardProbe.expectMsgType[ShardHome](5.seconds)
+      replicatorProbe.expectNoMessage(100.millis)
+    }
+
     "give Terminated priority over stashed RebalanceDone during waitingForUpdate" in
     withFixture(regionCount = 2) { (f, regions) =>
-      val Fixture(coordinator, replicatorProbe, strategy) = f
+      val Fixture(coordinator, replicatorProbe, strategy, _) = f
       val regionA = regions(0)
       val regionB = regions(1)
 
@@ -241,7 +352,7 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
 
     "handle multiple Terminated messages during a single waitingForUpdate" in
     withFixture(regionCount = 3) { (f, regions) =>
-      val Fixture(coordinator, replicatorProbe, strategy) = f
+      val Fixture(coordinator, replicatorProbe, strategy, _) = f
       val regionA = regions(0)
       val regionB = regions(1)
       val regionC = regions(2)
@@ -276,7 +387,7 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
 
     "handle Terminated for region with zero shards via stashAtHead" in
     withFixture(regionCount = 2) { (f, regions) =>
-      val Fixture(coordinator, replicatorProbe, strategy) = f
+      val Fixture(coordinator, replicatorProbe, strategy, _) = f
       val regionA = regions(0)
       val regionB = regions(1)
 
@@ -305,9 +416,88 @@ class DDataCoordinatorTerminatedSpec extends AkkaSpec(DDataCoordinatorTerminated
       verifyProbe.expectMsgType[ShardHome](5.seconds).ref should ===(regionA.ref)
     }
 
+    "hold an address-terminated region for the removal margin, reporting it to workers while the update is pending" in
+    withFixture(regionCount = 2) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, rebalanceWorkerProbe) = f
+      val regionA = regions(0)
+      val regionB = regions(1)
+
+      // Start s1 allocation on regionB -- enter waitingForUpdate
+      strategy.targetRegion = Some(regionB.ref)
+      val s1Probe = TestProbe()
+      coordinator.tell(GetShardHome("s1"), s1Probe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      // Address-level termination of regionA (margin is 2s), delivered as a DeathWatch system message
+      coordinator
+        .asInstanceOf[InternalActorRef]
+        .sendSystemMessage(DeathWatchNotification(regionA.ref, existenceConfirmed = true, addressTerminated = true))
+
+      // Not reported to rebalance workers before the removal margin has elapsed
+      rebalanceWorkerProbe.expectNoMessage(1500.millis)
+      // Reported at the margin, while the ddata update is still pending
+      rebalanceWorkerProbe.expectMsg(3.seconds, ShardCoordinator.RebalanceWorker.ShardRegionTerminated(regionA.ref))
+      replicatorProbe.expectNoMessage(100.millis)
+
+      // Once the update completes, the termination is written exactly once
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      s1Probe.expectMsgType[ShardHome](5.seconds)
+      completeNextUpdateExpecting[ShardRegionTerminated](replicatorProbe).region should ===(regionA.ref)
+      replicatorProbe.expectNoMessage(500.millis)
+    }
+
+    "not re-register a region whose retried Register was stashed before its termination" in
+    withFixture(regionCount = 2) { (f, regions) =>
+      val Fixture(coordinator, replicatorProbe, strategy, _) = f
+      val regionA = regions(0)
+      val regionB = regions(1)
+
+      // regionA is already registered (by the fixture). Start s1 allocation on regionB -- enter waitingForUpdate
+      strategy.targetRegion = Some(regionB.ref)
+      val s1Probe = TestProbe()
+      coordinator.tell(GetShardHome("s1"), s1Probe.ref)
+      val pendingUpdate = interceptNextUpdate(replicatorProbe)
+
+      // regionA's registration retry (sent before its RegisterAck arrived) is stashed, then regionA stops.
+      // The Terminated is stashed at the head, so on replay it runs before the stale Register.
+      coordinator.tell(Register(regionA.ref), regionA.ref)
+      stopAndWaitForTerminated(regionA.ref)
+
+      // Complete s1 -> unstash: Terminated(regionA) first, then the stale Register(regionA)
+      completeInterceptedUpdate(replicatorProbe, pendingUpdate)
+      s1Probe.expectMsgType[ShardHome](5.seconds)
+
+      completeNextUpdateExpecting[ShardRegionTerminated](replicatorProbe).region should ===(regionA.ref)
+      // The stale Register must not register the dead region again
+      replicatorProbe.expectNoMessage(500.millis)
+    }
+
+    "evict the oldest tombstone once the bound is exceeded" in
+    withFixture(regionCount = 1) { (f, _) =>
+      val Fixture(coordinator, replicatorProbe, _, _) = f
+
+      // With one region and one live proxy the bound is 1 + 1 + tombstone-extra (10), so 20 terminations overflow it
+      val proxies = (1 to 20).map { _ =>
+        val proxy = registerProxy(coordinator, replicatorProbe)
+        stopAndWaitForTerminated(proxy.ref)
+        completeNextUpdateExpecting[ShardRegionProxyTerminated](replicatorProbe)
+        proxy
+      }
+      val oldest = proxies.head
+      val newest = proxies.last
+
+      // The newest termination is still remembered, so its stale RegisterProxy is ignored
+      coordinator.tell(RegisterProxy(newest.ref), newest.ref)
+      replicatorProbe.expectNoMessage(500.millis)
+
+      // The oldest termination has been evicted, so its stale RegisterProxy is accepted again
+      coordinator.tell(RegisterProxy(oldest.ref), oldest.ref)
+      completeNextUpdateExpecting[ShardRegionProxyRegistered](replicatorProbe).regionProxy should ===(oldest.ref)
+    }
+
     "process messages normally when no Terminated arrives during waitingForUpdate" in
     withFixture(regionCount = 1) { (f, regions) =>
-      val Fixture(coordinator, replicatorProbe, strategy) = f
+      val Fixture(coordinator, replicatorProbe, strategy, _) = f
       val regionA = regions(0)
 
       strategy.targetRegion = Some(regionA.ref)

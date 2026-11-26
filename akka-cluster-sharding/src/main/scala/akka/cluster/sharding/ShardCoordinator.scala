@@ -9,6 +9,7 @@ import java.util.concurrent.CompletionStage
 
 import scala.annotation.nowarn
 import scala.collection.immutable
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -604,7 +605,7 @@ object ShardCoordinator {
    */
   private final case class ResendShardHost(shard: ShardId, region: ActorRef)
 
-  private final case class DelayedShardRegionTerminated(region: ActorRef)
+  private[sharding] final case class DelayedShardRegionTerminated(region: ActorRef)
 
   private case object StaleRegionCheckTick
 
@@ -656,6 +657,7 @@ object ShardCoordinator {
       region ! BeginHandOff(shard)
     }
     var remaining = regions
+    var fromHasTerminated: Boolean = false
 
     if (isRebalance)
       log.debug("{}: Rebalance [{}] from [{}] regions", typeName, shard, regions.size)
@@ -675,6 +677,10 @@ object ShardCoordinator {
         acked(sender())
       case RebalanceWorker.ShardRegionTerminated(shardRegion) =>
         if (remaining.contains(shardRegion)) {
+          if (shardRegion == shardRegionFrom) {
+            fromHasTerminated = true
+          }
+
           log.debug(
             "{}: ShardRegion [{}] terminated while waiting for BeginHandOffAck for shard [{}].",
             typeName,
@@ -695,8 +701,10 @@ object ShardCoordinator {
       remaining -= shardRegion
       if (remaining.isEmpty) {
         log.debug("{}: All shard regions acked, handing off shard [{}].", typeName, shard)
-        shardRegionFrom ! HandOff(shard)
-        context.become(stoppingShard, discardOld = true)
+        if (!fromHasTerminated) {
+          shardRegionFrom ! HandOff(shard)
+          context.become(stoppingShard, discardOld = true)
+        } else done(ok = true)
       } else {
         log.debug("{}: Remaining shard regions for shard [{}]: {}", typeName, shard, remaining.size)
       }
@@ -810,6 +818,26 @@ abstract class ShardCoordinator(
 
   val cluster = Cluster(context.system)
   val removalMargin = cluster.downingProvider.downRemovalMargin
+
+  // Terminated regions and proxies. A stashed Register/RegisterProxy from one of them can be replayed after its
+  // termination, because terminations are stashed at the head, so such registrations are ignored. An ActorRef is
+  // unique to one actor incarnation, so a terminated ref can never register validly. The set dedupes
+  // (Terminated and RegionStopped can both report the same ref); the queue evicts the oldest entry.
+  private val tombstoneExtra =
+    context.system.settings.config.getInt("akka.cluster.sharding.coordinator-tombstone-extra")
+  private val tombstoneSet = mutable.HashSet.empty[ActorRef]
+  private val tombstoneQueue = mutable.Queue.empty[ActorRef]
+
+  private[akka] final def isTombstoned(ref: ActorRef): Boolean = tombstoneSet.contains(ref)
+
+  private[akka] final def addTombstone(ref: ActorRef): Unit =
+    if (tombstoneSet.add(ref)) {
+      tombstoneQueue.enqueue(ref)
+      val limit = state.regions.size + state.regionProxies.size + tombstoneExtra
+      while (tombstoneQueue.size > limit) {
+        tombstoneSet -= tombstoneQueue.dequeue()
+      }
+    }
   val minMembers = settings.role match {
     case None =>
       cluster.settings.MinNrOfMembers
@@ -875,6 +903,9 @@ abstract class ShardCoordinator(
 
   def active: Receive =
     ({
+      case Register(region) if isTombstoned(region) =>
+        log.debug("{}: ignoring Register from terminated ShardRegion [{}]", typeName, region)
+
       case Register(region) =>
         if (isMember(region)) {
           log.debug("{}: ShardRegion registered: [{}]", typeName, region)
@@ -899,6 +930,9 @@ abstract class ShardCoordinator(
             typeName,
             region)
         }
+
+      case RegisterProxy(proxy) if isTombstoned(proxy) =>
+        log.debug("{}: ignoring RegisterProxy from terminated ShardRegion proxy [{}]", typeName, proxy)
 
       case RegisterProxy(proxy) =>
         if (isMember(proxy)) {
@@ -1309,9 +1343,8 @@ abstract class ShardCoordinator(
   def receiveTerminated: Receive = {
     case t @ Terminated(ref) =>
       if (state.regions.contains(ref)) {
-        if (removalMargin != Duration.Zero && t.addressTerminated && aliveRegions(ref)) {
-          context.system.scheduler.scheduleOnce(removalMargin, self, DelayedShardRegionTerminated(ref))
-          regionTerminationInProgress += ref
+        if (isDelayedByRemovalMargin(t)) {
+          scheduleDelayedShardRegionTerminated(ref, removalMargin)
         } else
           regionTerminated(ref)
       } else if (state.regionProxies.contains(ref)) {
@@ -1325,6 +1358,15 @@ abstract class ShardCoordinator(
     case DelayedShardRegionTerminated(ref) =>
       regionTerminated(ref)
   }
+
+  private[akka] final def scheduleDelayedShardRegionTerminated(ref: ActorRef, margin: FiniteDuration): Unit = {
+    context.system.scheduler.scheduleOnce(margin, self, DelayedShardRegionTerminated(ref))
+    regionTerminationInProgress += ref
+  }
+
+  /** A region terminated at the address level is held for the down-removal-margin before it is treated as terminated. */
+  private[akka] final def isDelayedByRemovalMargin(t: Terminated): Boolean =
+    removalMargin != Duration.Zero && t.addressTerminated && aliveRegions(t.actor)
 
   def update[E <: DomainEvent](evt: E)(f: E => Unit): Unit
 
@@ -1378,12 +1420,16 @@ abstract class ShardCoordinator(
     }
   }
 
-  def regionTerminated(ref: ActorRef): Unit = {
+  private[akka] final def reportTerminationToRebalanceWorkers(ref: ActorRef): Unit =
     rebalanceWorkers.foreach(_ ! RebalanceWorker.ShardRegionTerminated(ref))
+
+  def regionTerminated(ref: ActorRef): Unit = {
+    reportTerminationToRebalanceWorkers(ref)
+    addTombstone(ref)
     if (state.regions.contains(ref)) {
       if (log.isDebugEnabled) {
         log.debug(
-          "{}: ShardRegion terminated{}: [{}] {}",
+          "{}: ShardRegion terminated{}: [{}]",
           typeName,
           if (gracefulShutdownInProgress.contains(ref)) " (gracefully)" else "",
           ref)
@@ -1410,7 +1456,8 @@ abstract class ShardCoordinator(
   }
 
   def regionProxyTerminated(ref: ActorRef): Unit = {
-    rebalanceWorkers.foreach(_ ! RebalanceWorker.ShardRegionTerminated(ref))
+    reportTerminationToRebalanceWorkers(ref)
+    addTombstone(ref)
     if (state.regionProxies.contains(ref)) {
       log.debug("{}: ShardRegion proxy terminated: [{}]", typeName, ref)
       update(ShardRegionProxyTerminated(ref)) { evt =>
@@ -1709,6 +1756,7 @@ private[akka] class DDataShardCoordinator(
     with Stash
     with Timers {
   import DDataShardCoordinator._
+  import ShardCoordinator.DelayedShardRegionTerminated
   import ShardCoordinator.Internal._
   import ShardCoordinator.PendingGetShardHomes
 
@@ -1997,7 +2045,25 @@ private[akka] class DDataShardCoordinator(
       log.debug("{}: Late arrival of remembered shards while waiting for update, stashing", typeName)
       stash()
 
-    case Terminated(ref) if state.regions.contains(ref) =>
+    case t @ Terminated(ref) if state.regions.contains(ref) =>
+      if (isDelayedByRemovalMargin(t)) {
+        scheduleDelayedShardRegionTerminated(ref, removalMargin)
+      } else {
+        reportTerminationToRebalanceWorkers(ref)
+        stashAtHead()
+      }
+
+    case Terminated(ref) if state.regionProxies.contains(ref) =>
+      // proxies are never subject to removal margin
+      reportTerminationToRebalanceWorkers(ref)
+      stashAtHead()
+
+    case RegionStopped(ref) if state.regions.contains(ref) || state.regionProxies.contains(ref) =>
+      reportTerminationToRebalanceWorkers(ref)
+      stashAtHead()
+
+    case DelayedShardRegionTerminated(ref) if state.regions.contains(ref) =>
+      reportTerminationToRebalanceWorkers(ref)
       stashAtHead()
 
     case _ => stash()
