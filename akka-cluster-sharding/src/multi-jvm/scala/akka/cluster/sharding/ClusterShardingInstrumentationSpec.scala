@@ -198,6 +198,19 @@ abstract class ClusterShardingInstrumentationSpec
         }
       }
       enterBarrier("measure-shard-home-latency")
+
+      runOn(second) {
+        eventually(timeout(Span(5, Seconds))) {
+          val idRequests = shardHomeRequests.filter(_._1.startsWith("id"))
+          idRequests shouldNot be(empty)
+          idRequests.foreach {
+            case (_, value) =>
+              value.get() shouldBe 0
+          }
+        }
+      }
+
+      enterBarrier("shard-home-latency-measured")
     }
 
     "clear buffered messages" in {

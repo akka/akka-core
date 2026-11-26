@@ -926,7 +926,6 @@ private[akka] class ShardRegion(
       }
 
     case ShardHome(shard, shardRegionRef) =>
-      instrumentation.receivedShardHome(typeName, shard)
       receiveShardHome(shard, shardRegionRef)
 
     case ShardHomes(homes) =>
@@ -1138,6 +1137,7 @@ private[akka] class ShardRegion(
 
   def receiveShardHome(shard: ShardId, shardRegionRef: ActorRef): Unit = {
     log.debug("{}: Shard [{}] located at [{}]", typeName, shard, shardRegionRef)
+    instrumentation.receivedShardHome(typeName, shard)
     regionByShard.get(shard) match {
       case Some(r) if r == self && shardRegionRef != self =>
         // should not happen, inconsistency between ShardRegion and ShardCoordinator

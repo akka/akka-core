@@ -43,8 +43,9 @@ class ClusterShardingInstrumentationSpecTelemetry(@nowarn("msg=never used") syst
   override def receivedShardHome(typeName: String, shardId: String): Unit =
     shardHomeRequests.get(shardId) match {
       case Some(value) =>
-        value.decrementAndGet()
-      case None => () // should not happen
+        // a request can be retried arbitrarily many times before getting a response
+        value.set(0)
+      case None =>
     }
 
   override def messageDropped(typeName: String): Unit =

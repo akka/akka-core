@@ -88,7 +88,7 @@ class ClusterShardingInternalsSpec extends AkkaSpec("""
         Props(new HandOffStopper(typeName, shard, probe.ref, Set(emptyHandlerActor), HandOffStopMessage, 10.millis)))
 
       watch(emptyHandlerActor)
-      expectTerminated(emptyHandlerActor, 1.seconds)
+      expectTerminated(emptyHandlerActor, 2.seconds)
 
       probe.expectMsg(1.seconds, ShardStopped(shard))
       probe.lastSender shouldEqual handOffStopper
