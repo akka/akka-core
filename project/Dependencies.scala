@@ -40,7 +40,7 @@ object Dependencies {
 
   val graalVmNativeImageVersion = "24.2.2"
 
-  val scalaTestVersion = "3.2.17"
+  val scalaTestVersion = "3.2.20"
 
   val scalaTestScalaCheckVersion = "1-17"
 

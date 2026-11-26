@@ -43,82 +43,82 @@
         <dependency>
             <groupId>org.scalactic</groupId>
             <artifactId>scalactic_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-compatible</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-core_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-diagrams_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-featurespec_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-flatspec_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-freespec_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-funspec_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-funsuite_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-matchers-core_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-mustmatchers_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-propspec_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-refspec_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-shouldmatchers_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest-wordspec_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.13</artifactId>
-            <version>3.2.17</version>
+            <version>3.2.20</version>
         </dependency>
     </dependencies>
 </project>
