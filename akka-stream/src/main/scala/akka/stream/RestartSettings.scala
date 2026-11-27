@@ -4,6 +4,8 @@
 
 package akka.stream
 
+import java.util.function.{ Consumer => JConsumer }
+
 import scala.jdk.DurationConverters._
 import scala.jdk.FunctionConverters._
 import scala.concurrent.duration.FiniteDuration
@@ -116,7 +118,7 @@ object RestartSettings {
       val criticalLogLevel: LogLevel,
       val criticalLogLevelAfter: Int,
       val verboseLogsAfter: Option[Int],
-      val failureLogging: Option[java.util.function.Consumer[RestartFailure]]) {
+      val failureLogging: Option[JConsumer[RestartFailure]]) {
 
     // For source and binary compatibility
     def this(
@@ -165,7 +167,7 @@ object RestartSettings {
      *
      * Restarts because of stream completion are not passed to the callback.
      */
-    def withFailureLogging(logFailure: java.util.function.Consumer[RestartFailure]): LogSettings =
+    def withFailureLogging(logFailure: JConsumer[RestartFailure]): LogSettings =
       copy(failureLogging = Some(logFailure))
 
     private def copy(
@@ -173,7 +175,7 @@ object RestartSettings {
         criticalLogLevel: LogLevel = criticalLogLevel,
         criticalLogLevelAfter: Int = criticalLogLevelAfter,
         verboseLogsAfter: Option[Int] = verboseLogsAfter,
-        failureLogging: Option[java.util.function.Consumer[RestartFailure]] = failureLogging): LogSettings =
+        failureLogging: Option[JConsumer[RestartFailure]] = failureLogging): LogSettings =
       new LogSettings(
         logLevel = logLevel,
         criticalLogLevel = criticalLogLevel,

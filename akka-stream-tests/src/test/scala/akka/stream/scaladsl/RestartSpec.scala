@@ -4,6 +4,7 @@
 
 package akka.stream.scaladsl
 
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -97,7 +98,7 @@ class RestartSpec
     }
 
     "let the failure logging replace the default logging of failures" taggedAs TimingTest in {
-      val failures = new java.util.concurrent.LinkedBlockingQueue[RestartSettings.RestartFailure]()
+      val failures = new LinkedBlockingQueue[RestartSettings.RestartFailure]()
       val settings = shortRestartSettings.withLogSettings(logSettings.withFailureLogging(failure => {
         failures.add(failure)
       }))
@@ -154,7 +155,7 @@ class RestartSpec
     }
 
     "call the failure logging also when logging is disabled" taggedAs TimingTest in {
-      val failures = new java.util.concurrent.LinkedBlockingQueue[RestartSettings.RestartFailure]()
+      val failures = new LinkedBlockingQueue[RestartSettings.RestartFailure]()
       val settings = shortRestartSettings.withLogSettings(logSettings.withFailureLogging(failure => {
         failure.logDefault()
         failures.add(failure)
