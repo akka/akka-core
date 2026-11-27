@@ -4,13 +4,18 @@
 
 package akka.stream
 
+import java.util.function.{ Consumer => JConsumer }
+
 import scala.jdk.DurationConverters._
 import scala.jdk.FunctionConverters._
 import scala.concurrent.duration.FiniteDuration
 
+import akka.annotation.InternalApi
 import akka.event.Logging
 import akka.event.Logging.LogLevel
+import akka.event.LoggingAdapter
 import akka.util.ConstantFun
+import akka.util.OptionVal
 
 final class RestartSettings private (
     val minBackoff: FiniteDuration,
@@ -110,11 +115,23 @@ object RestartSettings {
 
   }
 
-  final class LogSettings(
+  final class LogSettings private (
       val logLevel: LogLevel,
       val criticalLogLevel: LogLevel,
       val criticalLogLevelAfter: Int,
-      val verboseLogsAfter: Option[Int]) {
+      val verboseLogsAfter: Option[Int],
+      failureLoggingCallback: OptionVal[JConsumer[RestartFailure]]) {
+
+    /** INTERNAL API */
+    @InternalApi private[akka] def failureLogging: OptionVal[JConsumer[RestartFailure]] = failureLoggingCallback
+
+    // For source and binary compatibility
+    def this(
+        logLevel: LogLevel,
+        criticalLogLevel: LogLevel,
+        criticalLogLevelAfter: Int,
+        verboseLogsAfter: Option[Int]) =
+      this(logLevel, criticalLogLevel, criticalLogLevelAfter, verboseLogsAfter, OptionVal.None)
 
     // For source and binary compatibility
     def this(logLevel: LogLevel, criticalLogLevel: LogLevel, criticalLogLevelAfter: Int) =
@@ -144,15 +161,81 @@ object RestartSettings {
     def withVerboseLogsAfter(afterErrors: Int): LogSettings =
       copy(verboseLogsAfter = Some(afterErrors))
 
+    /**
+     * Replace the logging of failures that restart the stream with a custom callback, for example to log some
+     * failures to a different logger or at a different level.
+     *
+     * The callback is called for each failure that restarts the stream, also when logging is disabled for the
+     * stream, and then is the only logging of the failure. [[RestartFailure.defaultLogLevel]] tells what the
+     * default logging would have done, and [[RestartFailure.logDefault]] does it. The callback should be
+     * lightweight, if it throws the stream fails.
+     *
+     * Restarts because of stream completion are not passed to the callback.
+     */
+    def withFailureLogging(logFailure: JConsumer[RestartFailure]): LogSettings =
+      copy(failureLogging = OptionVal.Some(logFailure))
+
     private def copy(
         logLevel: LogLevel = logLevel,
         criticalLogLevel: LogLevel = criticalLogLevel,
         criticalLogLevelAfter: Int = criticalLogLevelAfter,
-        verboseLogsAfter: Option[Int] = verboseLogsAfter): LogSettings =
+        verboseLogsAfter: Option[Int] = verboseLogsAfter,
+        failureLogging: OptionVal[JConsumer[RestartFailure]] = failureLogging): LogSettings =
       new LogSettings(
         logLevel = logLevel,
         criticalLogLevel = criticalLogLevel,
         criticalLogLevelAfter = criticalLogLevelAfter,
-        verboseLogsAfter = verboseLogsAfter)
+        verboseLogsAfter = verboseLogsAfter,
+        failureLoggingCallback = failureLogging)
+  }
+
+  /**
+   * A failure that restarts the stream, passed to the callback of [[LogSettings.withFailureLogging]].
+   *
+   * Instances are created by Akka streams. It is a trait so that a callback can be unit tested with
+   * an instance created by the test, but it should not be implemented for other purposes, as members may be added
+   * in future releases.
+   */
+  trait RestartFailure {
+
+    /** The failure that restarts the stream */
+    def cause: Throwable
+
+    /** The number of consecutive failures, including this one, as shown in the default log message */
+    def consecutiveFailures: Int
+
+    /**
+     * The level the default logging would log this failure at, as decided by the [[LogSettings]] and the stream
+     * attributes. `Logging.OffLevel` if it would not be logged.
+     */
+    def defaultLogLevel: LogLevel
+
+    /** If the default logging would include the stack trace of the failure */
+    def defaultVerbose: Boolean
+
+    /** The logging adapter of the restarting stage */
+    def log: LoggingAdapter
+
+    /**
+     * Log the failure in the same way as the default logging, for failures the callback does not handle itself.
+     * Must only be called from within the callback, on the thread that invokes it.
+     */
+    def logDefault(): Unit
+  }
+
+  /** INTERNAL API */
+  @InternalApi private[akka] final class RestartFailureImpl(
+      override val cause: Throwable,
+      override val consecutiveFailures: Int,
+      override val defaultLogLevel: LogLevel,
+      override val defaultVerbose: Boolean,
+      override val log: LoggingAdapter,
+      logDefaultFunction: () => Unit)
+      extends RestartFailure {
+
+    override def logDefault(): Unit = logDefaultFunction()
+
+    override def toString: String =
+      s"RestartFailure(cause=$cause,consecutiveFailures=$consecutiveFailures,defaultLogLevel=$defaultLogLevel)"
   }
 }

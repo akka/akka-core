@@ -1,0 +1,2 @@
+# Private method of the restart logic changed with the failure logging callback
+ProblemFilters.exclude[DirectMissingMethodProblem]("akka.stream.scaladsl.RestartWithBackoffLogic.akka$stream$scaladsl$RestartWithBackoffLogic$$logIt$default$3")
