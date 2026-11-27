@@ -191,7 +191,7 @@ private abstract class RestartWithBackoffLogic[S <: Shape](
         if (finishing || maxRestartsReached() || !settings.restartOn(ex)) {
           fail(out, ex)
         } else {
-          logIt(s"Restarting stream due to failure [${restartCount + 1}]: $ex", OptionVal.Some(ex))
+          logFailure(ex)
           scheduleRestartTimer()
         }
       }
@@ -211,6 +211,23 @@ private abstract class RestartWithBackoffLogic[S <: Shape](
     val level =
       if (restartCount >= logSettings.criticalLogLevelAfter) logSettings.criticalLogLevel else logSettings.logLevel
     if (level >= minLogLevel || level == Logging.OffLevel) level else minLogLevel
+  }
+
+  private def logFailure(ex: Throwable): Unit = {
+    def logDefault(): Unit = logIt(s"Restarting stream due to failure [${restartCount + 1}]: $ex", OptionVal.Some(ex))
+    logSettings.failureLogging match {
+      case Some(callback) =>
+        val defaultLevel = if (loggingEnabled) logLevel(Logging.ErrorLevel) else Logging.OffLevel
+        callback.accept(
+          new RestartSettings.RestartFailureImpl(
+            ex,
+            restartCount + 1,
+            defaultLevel,
+            logFullStackTrace,
+            log,
+            () => logDefault()))
+      case None => logDefault()
+    }
   }
 
   private def logFullStackTrace: Boolean = logSettings.verboseLogsAfter.forall(_ <= restartCount)

@@ -4,6 +4,7 @@
 
 package akka.stream.scaladsl
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.concurrent.Await
@@ -93,6 +94,105 @@ class RestartSpec
       created.get() should ===(3)
 
       probe.cancel()
+    }
+
+    "let the failure logging replace the default logging of failures" taggedAs TimingTest in {
+      val failures = new java.util.concurrent.LinkedBlockingQueue[RestartSettings.RestartFailure]()
+      val settings = shortRestartSettings.withLogSettings(logSettings.withFailureLogging(failure => {
+        failures.add(failure)
+      }))
+      val probe = RestartSource
+        .withBackoff(settings) { () =>
+          Source(List("a", "b", "c")).map {
+            case "c"   => throw TE("failed")
+            case other => other
+          }
+        }
+        .runWith(TestSink())
+
+      EventFilter.info(start = "Restarting stream due to failure", occurrences = 0).intercept {
+        EventFilter.warning(start = "Restarting stream due to failure", occurrences = 0).intercept {
+          probe.requestNext("a")
+          probe.requestNext("b")
+          probe.requestNext("a")
+          probe.requestNext("b")
+          probe.requestNext("a")
+          probe.requestNext("b")
+          probe.request(1) // the third failure
+        }
+      }
+
+      val first = failures.poll(3, TimeUnit.SECONDS)
+      first.cause should ===(TE("failed"))
+      first.consecutiveFailures should ===(1)
+      first.defaultLogLevel should ===(Logging.InfoLevel)
+      val second = failures.poll(3, TimeUnit.SECONDS)
+      second.consecutiveFailures should ===(2)
+      second.defaultLogLevel should ===(Logging.InfoLevel)
+      val third = failures.poll(3, TimeUnit.SECONDS)
+      third.consecutiveFailures should ===(3)
+      third.defaultLogLevel should ===(Logging.WarningLevel) // critical after 2
+    }
+
+    "let the failure logging do the default logging" taggedAs TimingTest in {
+      val settings =
+        shortRestartSettings.withLogSettings(logSettings.withFailureLogging(failure => failure.logDefault()))
+      val probe = RestartSource
+        .withBackoff(settings) { () =>
+          Source(List("a", "b", "c")).map {
+            case "c"   => throw TE("failed")
+            case other => other
+          }
+        }
+        .runWith(TestSink())
+
+      EventFilter.info(start = "Restarting stream due to failure [1]", occurrences = 1).intercept {
+        probe.requestNext("a")
+        probe.requestNext("b")
+        probe.requestNext("a")
+      }
+    }
+
+    "call the failure logging also when logging is disabled" taggedAs TimingTest in {
+      val failures = new java.util.concurrent.LinkedBlockingQueue[RestartSettings.RestartFailure]()
+      val settings = shortRestartSettings.withLogSettings(logSettings.withFailureLogging(failure => {
+        failure.logDefault()
+        failures.add(failure)
+      }))
+      val probe = RestartSource
+        .withBackoff(settings) { () =>
+          Source(List("a", "b", "c")).map {
+            case "c"   => throw TE("failed")
+            case other => other
+          }
+        }
+        .withAttributes(Attributes.logLevels(onFailure = Attributes.LogLevels.Off))
+        .runWith(TestSink())
+
+      EventFilter.info(start = "Restarting stream due to failure", occurrences = 0).intercept {
+        probe.requestNext("a")
+        probe.requestNext("b")
+        probe.requestNext("a")
+      }
+      failures.poll(3, TimeUnit.SECONDS).defaultLogLevel should ===(Logging.OffLevel)
+    }
+
+    "fail the stream when the failure logging throws" taggedAs TimingTest in {
+      val settings =
+        shortRestartSettings.withLogSettings(logSettings.withFailureLogging(_ => throw TE("logging failed")))
+      val probe = RestartSource
+        .withBackoff(settings) { () =>
+          Source(List("a", "b", "c")).map {
+            case "c"   => throw TE("failed")
+            case other => other
+          }
+        }
+        .runWith(TestSink())
+
+      probe.requestNext("a")
+      probe.requestNext("b")
+      probe.request(1)
+      probe.expectError(TE("logging failed"))
     }
 
     "restart on failure" taggedAs TimingTest in {
