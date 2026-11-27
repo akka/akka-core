@@ -10,6 +10,7 @@ import scala.jdk.DurationConverters._
 import scala.jdk.FunctionConverters._
 import scala.concurrent.duration.FiniteDuration
 
+import akka.annotation.InternalApi
 import akka.event.Logging
 import akka.event.Logging.LogLevel
 import akka.event.LoggingAdapter
@@ -119,7 +120,10 @@ object RestartSettings {
       val criticalLogLevel: LogLevel,
       val criticalLogLevelAfter: Int,
       val verboseLogsAfter: Option[Int],
-      private[akka] val failureLogging: OptionVal[JConsumer[RestartFailure]]) {
+      failureLoggingCallback: OptionVal[JConsumer[RestartFailure]]) {
+
+    /** INTERNAL API */
+    @InternalApi private[akka] def failureLogging: OptionVal[JConsumer[RestartFailure]] = failureLoggingCallback
 
     // For source and binary compatibility
     def this(
@@ -182,7 +186,7 @@ object RestartSettings {
         criticalLogLevel = criticalLogLevel,
         criticalLogLevelAfter = criticalLogLevelAfter,
         verboseLogsAfter = verboseLogsAfter,
-        failureLogging = failureLogging)
+        failureLoggingCallback = failureLogging)
   }
 
   /**
@@ -219,7 +223,8 @@ object RestartSettings {
     def logDefault(): Unit
   }
 
-  private[akka] final class RestartFailureImpl(
+  /** INTERNAL API */
+  @InternalApi private[akka] final class RestartFailureImpl(
       override val cause: Throwable,
       override val consecutiveFailures: Int,
       override val defaultLogLevel: LogLevel,
