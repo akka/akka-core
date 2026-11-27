@@ -213,8 +213,10 @@ private abstract class RestartWithBackoffLogic[S <: Shape](
     if (level >= minLogLevel || level == Logging.OffLevel) level else minLogLevel
   }
 
+  private def logFailureDefault(ex: Throwable): Unit =
+    logIt(s"Restarting stream due to failure [${restartCount + 1}]: $ex", OptionVal.Some(ex))
+
   private def logFailure(ex: Throwable): Unit = {
-    def logDefault(): Unit = logIt(s"Restarting stream due to failure [${restartCount + 1}]: $ex", OptionVal.Some(ex))
     logSettings.failureLogging match {
       case OptionVal.Some(callback) =>
         val defaultLevel = if (loggingEnabled) logLevel(Logging.ErrorLevel) else Logging.OffLevel
@@ -225,8 +227,8 @@ private abstract class RestartWithBackoffLogic[S <: Shape](
             defaultLevel,
             logFullStackTrace,
             log,
-            () => logDefault()))
-      case _ => logDefault()
+            () => logFailureDefault(ex)))
+      case _ => logFailureDefault(ex)
     }
   }
 
