@@ -14,6 +14,7 @@ import akka.event.Logging
 import akka.event.Logging.LogLevel
 import akka.event.LoggingAdapter
 import akka.util.ConstantFun
+import akka.util.OptionVal
 
 final class RestartSettings private (
     val minBackoff: FiniteDuration,
@@ -118,7 +119,7 @@ object RestartSettings {
       val criticalLogLevel: LogLevel,
       val criticalLogLevelAfter: Int,
       val verboseLogsAfter: Option[Int],
-      val failureLogging: Option[JConsumer[RestartFailure]]) {
+      private[akka] val failureLogging: OptionVal[JConsumer[RestartFailure]]) {
 
     // For source and binary compatibility
     def this(
@@ -126,7 +127,7 @@ object RestartSettings {
         criticalLogLevel: LogLevel,
         criticalLogLevelAfter: Int,
         verboseLogsAfter: Option[Int]) =
-      this(logLevel, criticalLogLevel, criticalLogLevelAfter, verboseLogsAfter, None)
+      this(logLevel, criticalLogLevel, criticalLogLevelAfter, verboseLogsAfter, OptionVal.None)
 
     // For source and binary compatibility
     def this(logLevel: LogLevel, criticalLogLevel: LogLevel, criticalLogLevelAfter: Int) =
@@ -168,14 +169,14 @@ object RestartSettings {
      * Restarts because of stream completion are not passed to the callback.
      */
     def withFailureLogging(logFailure: JConsumer[RestartFailure]): LogSettings =
-      copy(failureLogging = Some(logFailure))
+      copy(failureLogging = OptionVal.Some(logFailure))
 
     private def copy(
         logLevel: LogLevel = logLevel,
         criticalLogLevel: LogLevel = criticalLogLevel,
         criticalLogLevelAfter: Int = criticalLogLevelAfter,
         verboseLogsAfter: Option[Int] = verboseLogsAfter,
-        failureLogging: Option[JConsumer[RestartFailure]] = failureLogging): LogSettings =
+        failureLogging: OptionVal[JConsumer[RestartFailure]] = failureLogging): LogSettings =
       new LogSettings(
         logLevel = logLevel,
         criticalLogLevel = criticalLogLevel,
