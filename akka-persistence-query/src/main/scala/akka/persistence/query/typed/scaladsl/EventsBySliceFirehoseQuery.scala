@@ -14,6 +14,7 @@ import com.typesafe.config.Config
 
 import akka.NotUsed
 import akka.actor.ExtendedActorSystem
+import akka.annotation.InternalApi
 import akka.persistence.Persistence
 import akka.persistence.query.Offset
 import akka.persistence.query.PersistenceQuery
@@ -45,7 +46,10 @@ object EventsBySliceFirehoseQuery {
  * for the default [[EventsBySliceFirehoseQuery#Identifier]]. See `reference.conf`.
  */
 @nowarn("msg=never used")
-final class EventsBySliceFirehoseQuery(system: ExtendedActorSystem, config: Config, cfgPath: String)
+final class EventsBySliceFirehoseQuery(
+    @InternalApi /** Internal API */ private[akka] val system: ExtendedActorSystem,
+    config: Config,
+    cfgPath: String)
     extends ReadJournal
     with EventsBySliceQuery
     with EventsBySliceStartingFromSnapshotsQuery
